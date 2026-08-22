@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-from .content import ARMORS, ATTRIBUTES, MAX_ATTRIBUTE, SECTORS, WEAPONS
+from .content import ARMORS, ATTRIBUTES, SECTORS, WEAPONS
 from .game import GameService
 
 
@@ -71,11 +71,11 @@ def character(game: GameService, telegram_id: int) -> InlineKeyboardMarkup:
     player = game.get_player(telegram_id)
     rows: list[list[tuple[str, str]]] = []
     if game.attribute_points(player) > 0:
-        for key, meta in ATTRIBUTES.items():
-            if player[key] < MAX_ATTRIBUTE:
-                rows.append(
-                    [(f"⬆️ {meta['icon']} {meta['name']}", f"attribute:{key}")]
-                )
+        buttons = [
+            (f"⬆️ {meta['icon']}", f"attribute:{key}")
+            for key, meta in ATTRIBUTES.items()
+        ]
+        rows.extend([buttons[:2], buttons[2:]])
     rows.append([("◀️ Меню", "menu:home")])
     return _kb(rows)
 
