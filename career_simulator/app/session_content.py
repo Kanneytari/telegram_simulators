@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-INBOX_PER_DAY = 6
+INBOX_PER_DAY = 4
 
 INBOX_CARDS = [
     {
