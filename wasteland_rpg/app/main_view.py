@@ -32,5 +32,6 @@ def main_screen(game, telegram_id: int) -> str:
         f"💰 {player['credits']} жет. · 📦 склад {stash} · 🚚 груз {cargo}\n"
         f"✨ Опыт {player['xp']}\n\n"
         f"{gear}\n\n"
+        "<b>Статы:</b>\n"
         f"💪 {player['strength']} · 🏃 {player['agility']} · 👁 {player['perception']} · 🧠 {player['intelligence']}"
     )
