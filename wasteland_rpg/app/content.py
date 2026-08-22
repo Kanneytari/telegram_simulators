@@ -3,11 +3,11 @@ from __future__ import annotations
 GAME_TITLE = "КОНТУР"
 BASE_NAME = "Приют-7"
 XP_PER_LEVEL = 40
-MAX_ATTRIBUTE = 10
+MAX_ATTRIBUTE = float("inf")
 
 ATTRIBUTES = {
     "strength": {"name": "Сила", "icon": "💪"},
-    "agility": {"name": "Ловкость", "icon": "⚡"},
+    "agility": {"name": "Ловкость", "icon": "🏃"},
     "perception": {"name": "Восприятие", "icon": "👁"},
     "intelligence": {"name": "Интеллект", "icon": "🧠"},
 }
