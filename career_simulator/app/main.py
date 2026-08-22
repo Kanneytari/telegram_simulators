@@ -12,6 +12,8 @@ from .config import load_config
 from .db import Database
 from .game import GameService
 from .handlers import router
+from .opportunities import OpportunityService
+from .project_play import ProjectPlayService
 from .session import SessionService
 
 
@@ -23,6 +25,8 @@ async def main() -> None:
     db.init()
     game = GameService(db)
     session = SessionService(game)
+    opportunities = OpportunityService(game)
+    project_play = ProjectPlayService(game)
     admin = AdminService(db, game, config.admin_ids)
 
     bot = Bot(
@@ -33,6 +37,8 @@ async def main() -> None:
     dp.include_router(router)
     dp["game"] = game
     dp["session"] = session
+    dp["opportunities"] = opportunities
+    dp["project_play"] = project_play
     dp["admin"] = admin
 
     await bot.delete_webhook(drop_pending_updates=True)
