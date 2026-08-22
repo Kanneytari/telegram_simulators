@@ -40,6 +40,7 @@ async def main() -> None:
     dp = Dispatcher()
     dp.include_router(router)
     dp["game"] = game
+    dp["config"] = config
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
