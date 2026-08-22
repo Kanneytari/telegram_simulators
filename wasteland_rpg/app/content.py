@@ -65,10 +65,83 @@ ROUTES = {
 }
 
 SECTORS = {
-    "rust_belt": {"name": "Ржавый пояс", "icon": "🏚", "hub": "refuge7", "danger": 1, "runs": 0, "level": 1, "description": "Развалины у внешнего контура. Много лома, мало хороших причин расслабляться.", "loot": ["scrap", "scrap", "wire", "wire", "chem"], "enemies": ["bone_dog", "scavenger"]},
-    "quarry": {"name": "Старый карьер", "icon": "🪨", "hub": "miners", "danger": 1, "runs": 1, "level": 1, "description": "Открытая выработка с техникой под слоями пыли. Хорошее место для металла и деталей.", "loot": ["scrap", "scrap", "wire", "parts", "parts"], "enemies": ["bone_dog", "scavenger", "raider"]},
-    "plant_12": {"name": "Промзона-12", "icon": "🏭", "hub": "station", "danger": 2, "runs": 3, "level": 2, "description": "Цеха, склады и затопленные тоннели. Добыча дороже, встречи хуже.", "loot": ["wire", "chem", "chem", "parts", "parts"], "enemies": ["scavenger", "crawler", "raider"]},
-    "black_contour": {"name": "Чёрный контур", "icon": "☣️", "hub": "promgorod", "danger": 3, "runs": 7, "level": 4, "description": "Место, где карты быстро устаревают. Редкие находки здесь действительно стоят риска.", "loot": ["chem", "parts", "parts", "parts", "shard"], "enemies": ["crawler", "raider", "stitched"]},
+    # Приют-7 сохраняет все три исходные вылазки.
+    "rust_belt": {
+        "name": "Ржавый пояс", "icon": "🏚", "hub": "refuge7", "danger": 1,
+        "runs": 0, "level": 1,
+        "description": "Развалины у внешнего контура. Много лома, мало хороших причин расслабляться.",
+        "loot": ["scrap", "scrap", "wire", "wire", "chem"],
+        "enemies": ["bone_dog", "scavenger"],
+    },
+    "plant_12": {
+        "name": "Промзона-12", "icon": "🏭", "hub": "refuge7", "danger": 2,
+        "runs": 3, "level": 2,
+        "description": "Цеха, склады и затопленные тоннели. Добыча дороже, встречи хуже.",
+        "loot": ["wire", "chem", "chem", "parts", "parts"],
+        "enemies": ["scavenger", "crawler", "raider"],
+    },
+    "black_contour": {
+        "name": "Чёрный контур", "icon": "☣️", "hub": "refuge7", "danger": 3,
+        "runs": 7, "level": 4,
+        "description": "Место, где карты быстро устаревают. Редкие находки здесь действительно стоят риска.",
+        "loot": ["chem", "parts", "parts", "parts", "shard"],
+        "enemies": ["crawler", "raider", "stitched"],
+    },
+
+    # Шахтёрский.
+    "quarry": {
+        "name": "Старый карьер", "icon": "🪨", "hub": "miners", "danger": 1,
+        "runs": 0, "level": 1,
+        "description": "Открытая выработка с техникой под слоями пыли. Хорошее место для металла и деталей.",
+        "loot": ["scrap", "scrap", "wire", "parts", "parts"],
+        "enemies": ["bone_dog", "scavenger", "raider"],
+    },
+    "north_mine": {
+        "name": "Шахта Север-4", "icon": "⛏️", "hub": "miners", "danger": 2,
+        "runs": 2, "level": 2,
+        "description": "Полузатопленные штреки, старые конвейеры и провалы в нижние горизонты. В глубине осталось много техники.",
+        "loot": ["scrap", "wire", "wire", "parts", "parts", "chem"],
+        "enemies": ["scavenger", "crawler", "raider"],
+    },
+
+    # Станция Северная.
+    "freight_yard": {
+        "name": "Грузовой терминал", "icon": "🚧", "hub": "station", "danger": 2,
+        "runs": 0, "level": 2,
+        "description": "Ряды контейнеров и разбитых платформ. Грузы давно разграблены, но самые тяжёлые ящики так и не увезли.",
+        "loot": ["wire", "wire", "chem", "parts", "parts"],
+        "enemies": ["scavenger", "raider", "crawler"],
+    },
+    "depot_6": {
+        "name": "Депо-6", "icon": "🚂", "hub": "station", "danger": 3,
+        "runs": 4, "level": 3,
+        "description": "Тёмное ремонтное депо с техническими тоннелями. Здесь много полезных механизмов и слишком много слепых зон.",
+        "loot": ["wire", "chem", "parts", "parts", "parts", "shard"],
+        "enemies": ["crawler", "raider", "stitched"],
+    },
+
+    # Промгород.
+    "foundry": {
+        "name": "Литейный квартал", "icon": "🔥", "hub": "promgorod", "danger": 3,
+        "runs": 0, "level": 4,
+        "description": "Остывшие печи, шлаковые поля и полуразрушенные цеха. Металла здесь больше, чем безопасных маршрутов.",
+        "loot": ["scrap", "parts", "parts", "parts", "chem"],
+        "enemies": ["raider", "crawler", "stitched"],
+    },
+    "dead_substation": {
+        "name": "Мёртвая подстанция", "icon": "⚡", "hub": "promgorod", "danger": 3,
+        "runs": 8, "level": 5,
+        "description": "Силовой узел, вокруг которого до сих пор гуляют нестабильные поля. Хорошее место для редких компонентов и плохое для ошибок.",
+        "loot": ["wire", "chem", "chem", "parts", "shard"],
+        "enemies": ["crawler", "raider", "stitched"],
+    },
+    "reactor_yard": {
+        "name": "Реакторный двор", "icon": "☢️", "hub": "promgorod", "danger": 3,
+        "runs": 11, "level": 6,
+        "description": "Закрытая промышленная зона у старого энергоблока. Самые ценные находки лежат там, где долго не задерживаются даже опытные ходоки.",
+        "loot": ["chem", "parts", "parts", "shard", "shard"],
+        "enemies": ["raider", "stitched", "stitched", "crawler"],
+    },
 }
 
 ENEMIES = {
