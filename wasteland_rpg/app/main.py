@@ -16,6 +16,7 @@ from .main_view import main_screen
 from .progression_view import character_screen
 from .sector_view import sector_screen
 from .service import GameService
+from .travel_handlers import router as travel_router
 
 # Handlers call these module functions dynamically. Keep the existing modules as the
 # single routing surface while specialized presentations stay isolated.
@@ -39,6 +40,7 @@ async def main() -> None:
     )
     dp = Dispatcher()
     dp.include_router(router)
+    dp.include_router(travel_router)
     dp["game"] = game
     dp["config"] = config
 
