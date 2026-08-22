@@ -23,10 +23,10 @@ class SessionServiceTest(unittest.TestCase):
     def tearDown(self) -> None:
         self.tmp.cleanup()
 
-    def test_inbox_has_six_items(self) -> None:
+    def test_inbox_has_four_items(self) -> None:
         progress = self.session.inbox_progress(self.player_id)
-        self.assertEqual(progress["total"], 6)
-        self.assertEqual(progress["unread"], 6)
+        self.assertEqual(progress["total"], 4)
+        self.assertEqual(progress["unread"], 4)
 
     def test_resolving_inbox_does_not_spend_action(self) -> None:
         before = self.game.get_player(self.player_id)["actions_left"]
@@ -34,7 +34,7 @@ class SessionServiceTest(unittest.TestCase):
         self.session.resolve_inbox(self.player_id, item["slot"], 0)
         after = self.game.get_player(self.player_id)["actions_left"]
         self.assertEqual(before, after)
-        self.assertEqual(self.session.inbox_progress(self.player_id)["unread"], 5)
+        self.assertEqual(self.session.inbox_progress(self.player_id)["unread"], 3)
 
     def test_inbox_choice_cannot_be_repeated(self) -> None:
         item = self.session.next_inbox_item(self.player_id)
