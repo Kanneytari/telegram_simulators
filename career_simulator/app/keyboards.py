@@ -87,6 +87,7 @@ def opportunity_choice_menu(view: dict) -> ReplyKeyboardMarkup:
         [f"🎲 {choice['index'] + 1} · {choice['title']} · {choice['chance']}%"]
         for choice in view["choices"]
     ]
+    rows.append([BACK])
     return _markup(rows, "Выбери подход")
 
 
