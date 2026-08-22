@@ -21,32 +21,27 @@ def button_texts(game: GameService) -> list[str]:
     return [button.text for row in markup.inline_keyboard for button in row]
 
 
-def test_wait_appears_only_when_out_of_ammo_and_enemy_is_far(tmp_path: Path) -> None:
+def test_out_of_ammo_requires_real_waiting_not_a_wait_button(tmp_path: Path) -> None:
     game = make_game(tmp_path)
     game.start_expedition(1, "rust_belt")
     with game.db.connect() as conn:
         game._start_combat(conn, 1, "bone_dog", return_state="expedition")
         conn.execute("UPDATE combat_state SET distance = 3 WHERE telegram_id = 1")
-
-    assert "⏳ Ждать" not in button_texts(game)
-
-    with game.db.connect() as conn:
         conn.execute("UPDATE players SET ammo = 0 WHERE telegram_id = 1")
 
     far_buttons = button_texts(game)
-    assert "⏳ Ждать" in far_buttons
-    assert "🔫 Выстрел" not in far_buttons
-    assert "🔪 Ближний бой" not in far_buttons
+    assert all("Ждать" not in text for text in far_buttons)
+    assert all("Выстрел" not in text for text in far_buttons)
+    assert all("Ближний бой" not in text for text in far_buttons)
 
-    game.combat_action(1, "wait")
+    timeline = game.combat_timeline(1)
+    game.tick_all_combats(float(timeline["enemy_action_due"]) + 0.01)
     assert game.combat_state(1)["distance"] == 2
-    assert "⏳ Ждать" in button_texts(game)
 
-    game.combat_action(1, "wait")
+    timeline = game.combat_timeline(1)
+    game.tick_all_combats(float(timeline["enemy_action_due"]) + 0.01)
     assert game.combat_state(1)["distance"] == 1
-    close_buttons = button_texts(game)
-    assert "⏳ Ждать" not in close_buttons
-    assert "🔪 Ближний бой" in close_buttons
+    assert any("Ближний бой" in text for text in button_texts(game))
 
 
 def test_load_stash_to_cargo_does_not_insert_negative_inventory_qty(tmp_path: Path) -> None:
