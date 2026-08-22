@@ -94,12 +94,14 @@ def test_travel_view_shows_current_destination_and_turn_button(tmp_path: Path) -
     with game.db.connect() as conn:
         conn.execute("UPDATE travel SET step = 6 WHERE telegram_id = 1")
 
-    assert "До Шахтёрский: 4 участков" in travel_screen(game, 1)
-    assert "👣 Дальше к Шахтёрский" in button_texts(game)
-    assert "↩️ Повернуть к Приют-7" in button_texts(game)
+    assert "👣 Осталось участков: 4" in travel_screen(game, 1)
+    assert "☢️ Приют-7 → ⛏️ Шахтёрский" in travel_screen(game, 1)
+    assert "👣 Дальше: ⛏️ Шахтёрский" in button_texts(game)
+    assert "↩️ Развернуться: ☢️ Приют-7" in button_texts(game)
 
     turn_travel(game, 1)
 
-    assert "До Приют-7: 6 участков" in travel_screen(game, 1)
-    assert "👣 Дальше к Приют-7" in button_texts(game)
-    assert "↩️ Повернуть к Шахтёрский" in button_texts(game)
+    assert "👣 Осталось участков: 6" in travel_screen(game, 1)
+    assert "⛏️ Шахтёрский → ☢️ Приют-7" in travel_screen(game, 1)
+    assert "👣 Дальше: ☢️ Приют-7" in button_texts(game)
+    assert "↩️ Развернуться: ⛏️ Шахтёрский" in button_texts(game)
