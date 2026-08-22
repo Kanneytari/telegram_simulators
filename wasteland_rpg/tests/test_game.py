@@ -90,6 +90,24 @@ def test_local_sector_depends_on_location(game: GameService) -> None:
     assert game.sector_unlocked(game.get_player(1), "quarry")
 
 
+def test_settlements_expand_sectors_without_moving_refuge_content(game: GameService) -> None:
+    assert [sid for sid, _ in game.local_sectors(1)] == [
+        "rust_belt",
+        "plant_12",
+        "black_contour",
+    ]
+
+    expected = {
+        "miners": {"quarry", "north_mine"},
+        "station": {"freight_yard", "depot_6"},
+        "promgorod": {"foundry", "dead_substation", "reactor_yard"},
+    }
+    with game.db.connect() as conn:
+        for location_id, sector_ids in expected.items():
+            conn.execute("UPDATE player_world SET location_id=? WHERE telegram_id=1", (location_id,))
+            assert {sid for sid, _ in game.local_sectors(1)} == sector_ids
+
+
 def test_branching_scene_can_resolve_by_attribute(game: GameService) -> None:
     game.start_expedition(1, "rust_belt")
     with game.db.connect() as conn:
