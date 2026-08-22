@@ -99,7 +99,14 @@ class AdminService:
                     "SELECT name FROM sqlite_master WHERE type = 'table'"
                 ).fetchall()
             }
-            for table in ("daily_events", "purchases", "inbox_items", "focus_runs"):
+            for table in (
+                "daily_events",
+                "purchases",
+                "inbox_items",
+                "focus_runs",
+                "opportunity_board",
+                "opportunity_runs",
+            ):
                 if table not in existing_tables:
                     continue
                 conn.execute(
