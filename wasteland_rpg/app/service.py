@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from .content import SECTORS
+import sqlite3
+
+from .content import ENEMIES, SECTORS
+from .game import GameError
 from .gameplay import GameService as GameplayService
 from .progression import level_from_xp, progress_from_xp, xp_required_for_next
 from .sector_progression import SECTOR_NEXT, SECTOR_PREVIOUS
@@ -82,3 +85,98 @@ class GameService(GameplayService):
                 (telegram_id, sector_id, threat),
             )
         return old_max < 100 <= threat
+
+    def _change_item(
+        self,
+        conn: sqlite3.Connection,
+        telegram_id: int,
+        item_id: str,
+        qty: int,
+        *,
+        secured: int,
+    ) -> None:
+        """Change inventory quantity without ever inserting a negative CHECK value."""
+        qty = int(qty)
+        if qty > 0:
+            conn.execute(
+                "INSERT INTO inventory (telegram_id, item_id, secured, qty) VALUES (?, ?, ?, ?) "
+                "ON CONFLICT (telegram_id, item_id, secured) DO UPDATE SET qty = qty + excluded.qty",
+                (telegram_id, item_id, secured, qty),
+            )
+        elif qty < 0:
+            conn.execute(
+                "UPDATE inventory SET qty = MAX(0, qty + ?) "
+                "WHERE telegram_id = ? AND item_id = ? AND secured = ?",
+                (qty, telegram_id, item_id, secured),
+            )
+        conn.execute(
+            "DELETE FROM inventory WHERE telegram_id = ? AND item_id = ? AND secured = ? AND qty <= 0",
+            (telegram_id, item_id, secured),
+        )
+
+    def _change_cargo(
+        self,
+        conn: sqlite3.Connection,
+        telegram_id: int,
+        item_id: str,
+        qty: int,
+    ) -> None:
+        """Change cargo quantity without violating the non-negative CHECK constraint."""
+        qty = int(qty)
+        if qty > 0:
+            conn.execute(
+                "INSERT INTO cargo (telegram_id, item_id, qty) VALUES (?, ?, ?) "
+                "ON CONFLICT (telegram_id, item_id) DO UPDATE SET qty = qty + excluded.qty",
+                (telegram_id, item_id, qty),
+            )
+        elif qty < 0:
+            conn.execute(
+                "UPDATE cargo SET qty = MAX(0, qty + ?) WHERE telegram_id = ? AND item_id = ?",
+                (qty, telegram_id, item_id),
+            )
+        conn.execute(
+            "DELETE FROM cargo WHERE telegram_id = ? AND item_id = ? AND qty <= 0",
+            (telegram_id, item_id),
+        )
+
+    def combat_action(self, telegram_id: int, action: str) -> dict:
+        if action != "wait":
+            return super().combat_action(telegram_id, action)
+
+        with self.db.connect() as conn:
+            player = self._player(conn, telegram_id)
+            if player["state"] != "combat" or not player["enemy_id"]:
+                raise GameError("Бой уже закончен.")
+
+            combat = conn.execute(
+                "SELECT * FROM combat_state WHERE telegram_id = ?", (telegram_id,)
+            ).fetchone()
+            if not combat:
+                raise GameError("Состояние боя потеряно.")
+            if int(player["ammo"]) > 0:
+                raise GameError("Ждать можно только когда закончились патроны.")
+            if int(combat["distance"]) <= 1:
+                raise GameError("Противник уже вплотную — используй ближний бой.")
+
+            lines: list[str] = []
+            if int(combat["bleeding"]) > 0:
+                bleed_damage = int(combat["bleeding"])
+                hp = int(player["hp"]) - bleed_damage
+                lines.append(f"🩸 Кровотечение: -{bleed_damage} HP.")
+                if hp <= 0:
+                    lines.append(self._kill(conn, telegram_id))
+                    return {"text": "\n".join(lines), "dead": True}
+                conn.execute(
+                    "UPDATE players SET hp = ? WHERE telegram_id = ?", (hp, telegram_id)
+                )
+
+            enemy = ENEMIES[player["enemy_id"]]
+            new_distance = max(1, int(combat["distance"]) - 1)
+            conn.execute(
+                "UPDATE combat_state SET distance = ?, cover = 0 WHERE telegram_id = ?",
+                (new_distance, telegram_id),
+            )
+            lines.append(f"Ты выжидаешь. {enemy['name']} сокращает дистанцию.")
+            if new_distance == 1:
+                lines.append("Противник подошёл вплотную — теперь доступен ближний бой.")
+            return {"text": "\n".join(lines)}
