@@ -18,8 +18,7 @@ def _seconds_left(due_at: float | None, now: float) -> int:
 
 
 def _duration_text(seconds: float) -> str:
-    seconds = float(seconds)
-    return str(int(seconds)) if seconds.is_integer() else f"{seconds:g}"
+    return str(int(math.ceil(float(seconds))))
 
 
 def _enemy_intent(action: str) -> str:
