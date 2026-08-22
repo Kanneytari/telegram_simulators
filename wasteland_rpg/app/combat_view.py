@@ -17,14 +17,19 @@ def _seconds_left(due_at: float | None, now: float) -> int:
     return max(0, int(math.ceil(float(due_at) - now)))
 
 
-def _enemy_intent(enemy: dict, action: str) -> str:
+def _duration_text(seconds: float) -> str:
+    seconds = float(seconds)
+    return str(int(seconds)) if seconds.is_integer() else f"{seconds:g}"
+
+
+def _enemy_intent(action: str) -> str:
     if action == "approach":
-        return f"🏃 {enemy['name']} приближается"
+        return "🏃 Сближение"
     if action == "retreat":
-        return f"↩️ {enemy['name']} отходит"
+        return "↩️ Отход"
     if action == "ranged_attack":
-        return f"🔫 {enemy['name']} готовит выстрел"
-    return f"🔪 {enemy['name']} готовит атаку"
+        return "🔫 Выстрел"
+    return "🔪 Атака"
 
 
 def _queued_button_text(action: str, text: str, queued: str | None) -> str:
@@ -39,7 +44,7 @@ def combat_screen(game, telegram_id: int) -> str:
     combat = game.combat_state(telegram_id)
     timeline = game.combat_timeline(telegram_id)
     queued = game.combat_queued_action(telegram_id)
-    log = game.combat_log(telegram_id)
+    log = [entry for entry in game.combat_log(telegram_id) if "готовит" not in entry.lower()]
 
     lines = [
         f"⚔️ <b>БОЙ · {escape(enemy['name']).upper()}</b>",
@@ -81,7 +86,7 @@ def combat_screen(game, telegram_id: int) -> str:
 
         enemy_action = str(timeline["enemy_action"])
         enemy_left = _seconds_left(timeline["enemy_action_due"], now)
-        lines.append(f"Противник: {_enemy_intent(enemy, enemy_action)} · {enemy_left}с")
+        lines.append(f"Противник: {_enemy_intent(enemy_action)} · {enemy_left}с")
 
         opportunity = str(timeline["opportunity_kind"] or "")
         if float(timeline["opportunity_until"]) > now:
@@ -110,7 +115,7 @@ def combat_keyboard(game, telegram_id: int) -> InlineKeyboardMarkup:
             InlineKeyboardButton(
                 text=_queued_button_text(
                     "shoot",
-                    f"🔫 Выстрел · {int(PLAYER_ACTION_SECONDS['shoot'])}с",
+                    f"🔫 Выстрел · {_duration_text(PLAYER_ACTION_SECONDS['shoot'])}с",
                     queued,
                 ),
                 callback_data="combat:shoot",
@@ -118,7 +123,7 @@ def combat_keyboard(game, telegram_id: int) -> InlineKeyboardMarkup:
             InlineKeyboardButton(
                 text=_queued_button_text(
                     "aimed_shot",
-                    f"🎯 Прицельный · {int(PLAYER_ACTION_SECONDS['aimed_shot'])}с",
+                    f"🎯 Прицельный · {_duration_text(PLAYER_ACTION_SECONDS['aimed_shot'])}с",
                     queued,
                 ),
                 callback_data="combat:aimed_shot",
@@ -129,7 +134,7 @@ def combat_keyboard(game, telegram_id: int) -> InlineKeyboardMarkup:
                 InlineKeyboardButton(
                     text=_queued_button_text(
                         "burst",
-                        f"💥 Очередь ×3 · {int(PLAYER_ACTION_SECONDS['burst'])}с",
+                        f"💥 Очередь ×3 · {_duration_text(PLAYER_ACTION_SECONDS['burst'])}с",
                         queued,
                     ),
                     callback_data="combat:burst",
@@ -141,7 +146,7 @@ def combat_keyboard(game, telegram_id: int) -> InlineKeyboardMarkup:
             InlineKeyboardButton(
                 text=_queued_button_text(
                     "melee",
-                    f"🔪 Ближний бой · {int(PLAYER_ACTION_SECONDS['melee'])}с",
+                    f"🔪 Ближний бой · {_duration_text(PLAYER_ACTION_SECONDS['melee'])}с",
                     queued,
                 ),
                 callback_data="combat:melee",
@@ -155,7 +160,7 @@ def combat_keyboard(game, telegram_id: int) -> InlineKeyboardMarkup:
                 InlineKeyboardButton(
                     text=_queued_button_text(
                         "cover",
-                        f"🧱 В укрытие · {int(PLAYER_ACTION_SECONDS['cover'])}с",
+                        f"🧱 В укрытие · {_duration_text(PLAYER_ACTION_SECONDS['cover'])}с",
                         queued,
                     ),
                     callback_data="combat:cover",
@@ -166,7 +171,7 @@ def combat_keyboard(game, telegram_id: int) -> InlineKeyboardMarkup:
                 InlineKeyboardButton(
                     text=_queued_button_text(
                         "stim",
-                        f"💉 Стимулятор · {int(PLAYER_ACTION_SECONDS['stim'])}с",
+                        f"💉 Стимулятор · {_duration_text(PLAYER_ACTION_SECONDS['stim'])}с",
                         queued,
                     ),
                     callback_data="combat:stim",
@@ -179,7 +184,7 @@ def combat_keyboard(game, telegram_id: int) -> InlineKeyboardMarkup:
             InlineKeyboardButton(
                 text=_queued_button_text(
                     "medkit",
-                    f"🩹 Аптечка · {int(PLAYER_ACTION_SECONDS['medkit'])}с",
+                    f"🩹 Аптечка · {_duration_text(PLAYER_ACTION_SECONDS['medkit'])}с",
                     queued,
                 ),
                 callback_data="combat:medkit",
@@ -189,7 +194,7 @@ def combat_keyboard(game, telegram_id: int) -> InlineKeyboardMarkup:
         InlineKeyboardButton(
             text=_queued_button_text(
                 "flee",
-                f"🏃 Отступить · {int(PLAYER_ACTION_SECONDS['flee'])}с",
+                f"🏃 Отступить · {_duration_text(PLAYER_ACTION_SECONDS['flee'])}с",
                 queued,
             ),
             callback_data="combat:flee",
