@@ -11,12 +11,14 @@ from . import keyboards, ui
 from .combat_view import combat_keyboard, combat_screen
 from .config import load_config
 from .db import Database
-from .gameplay import GameService
 from .handlers import router
+from .progression_view import character_screen
+from .service import GameService
 
 # Handlers call these module functions dynamically. Keep the existing modules as the
-# single routing surface while the current combat presentation stays isolated.
+# single routing surface while specialized presentations stay isolated.
 ui.combat_screen = combat_screen
+ui.character_screen = character_screen
 keyboards.combat = combat_keyboard
 
 
