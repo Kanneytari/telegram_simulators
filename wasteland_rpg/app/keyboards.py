@@ -18,6 +18,10 @@ def back_home() -> InlineKeyboardMarkup:
     return _kb([[('◀️ Меню', 'menu:home')]])
 
 
+def reset_confirm() -> InlineKeyboardMarkup:
+    return _kb([[('🗑 Да, сбросить всё', 'reset:confirm')], [('Отмена', 'reset:cancel')]])
+
+
 def map_routes(game: GameService, telegram_id: int) -> InlineKeyboardMarkup:
     rows = []
     for route in game.connected_routes(telegram_id):
