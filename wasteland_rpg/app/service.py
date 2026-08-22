@@ -62,12 +62,11 @@ class GameService(GameplayService):
             next_sector_id = SECTOR_NEXT.get(str(sector_id))
             if next_sector_id:
                 next_sector = SECTORS[next_sector_id]
-                result["text"] += (
-                    f"\n\n☣️ Угроза достигла 100/100. Сектор освоен до предела. "
-                    f"Открыта новая вылазка: {next_sector['icon']} {next_sector['name']}."
+                result["progress_notice"] = (
+                    f"Сектор пройден\nОткрыта новая локация: {next_sector['name']}"
                 )
             else:
-                result["text"] += "\n\n☣️ Угроза достигла 100/100. Сектор освоен до предела."
+                result["progress_notice"] = "Сектор пройден"
         return result
 
     def _record_sector_progress(self, telegram_id: int, sector_id: str, threat: int) -> bool:
