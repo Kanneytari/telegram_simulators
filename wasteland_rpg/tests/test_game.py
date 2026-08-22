@@ -134,3 +134,49 @@ def test_return_secures_field_loot(game: GameService) -> None:
     game.return_base(1)
     assert game.inventory(1, secured=0) == []
     assert game.inventory(1, secured=1)[0]["qty"] == 3
+
+
+def test_reset_player_clears_all_game_state(game: GameService) -> None:
+    with game.db.connect() as conn:
+        conn.execute(
+            "UPDATE players SET xp=240, credits=999, ammo=77, medkits=9, "
+            "strength=5, agility=4, perception=3, intelligence=6, successful_runs=8, "
+            "deaths=2, weapon_id='short_carbine', armor_id='field_vest', state='travel' "
+            "WHERE telegram_id=1"
+        )
+        conn.execute("UPDATE player_world SET location_id='miners' WHERE telegram_id=1")
+        conn.execute("INSERT OR IGNORE INTO visited_locations VALUES (1, 'miners')")
+        conn.execute("UPDATE equipment SET backpack_id='field_pack' WHERE telegram_id=1")
+        conn.execute("INSERT INTO inventory VALUES (1, 'scrap', 1, 4)")
+        conn.execute("INSERT INTO cargo VALUES (1, 'wire', 3)")
+        conn.execute("INSERT INTO travel VALUES (1, 'refuge_miners', 'refuge7', 'miners', 4)")
+        conn.execute("INSERT INTO combat_state VALUES (1, 'travel', 2, 1, 2)")
+
+    game.db.reset_player(1)
+
+    with pytest.raises(GameError, match="Персонаж не найден"):
+        game.get_player(1)
+
+    game.ensure_player(1, "tester")
+    player = game.get_player(1)
+    assert player["hp"] == 40
+    assert player["credits"] == 70
+    assert player["ammo"] == 12
+    assert player["medkits"] == 1
+    assert player["xp"] == 0
+    assert [player[k] for k in ("strength", "agility", "perception", "intelligence")] == [1, 1, 1, 1]
+    assert player["successful_runs"] == 0
+    assert player["deaths"] == 0
+    assert player["weapon_id"] == "pipe_pistol"
+    assert player["armor_id"] == "old_coat"
+    assert player["state"] == "base"
+    assert game.location_id(1) == "refuge7"
+    assert game.visited_locations(1) == {"refuge7"}
+    assert game.equipment(1)["backpack_id"] == "canvas_pack"
+    assert game.cargo(1) == []
+    assert game.inventory(1, secured=0) == []
+    assert game.inventory(1, secured=1) == []
+    assert game.travel_state(1) is None
+    with game.db.connect() as conn:
+        combat = conn.execute("SELECT 1 FROM combat_state WHERE telegram_id=1").fetchone()
+    assert combat is None
