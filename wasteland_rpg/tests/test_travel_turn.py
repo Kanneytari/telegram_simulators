@@ -34,7 +34,26 @@ def test_turning_around_mirrors_position_and_swaps_destination(tmp_path: Path) -
     assert state["origin_id"] == "miners"
     assert state["target_id"] == "refuge7"
     assert state["step"] == 4
-    assert "До города: 6 участков" in result["text"]
+    assert "Осталось участков: 6" in result["text"]
+
+
+def test_backward_section_uses_normal_road_event_flow(tmp_path: Path) -> None:
+    game = make_game(tmp_path)
+    game.start_travel(1, "refuge_miners")
+    with game.db.connect() as conn:
+        conn.execute("UPDATE travel SET step = 6 WHERE telegram_id = 1")
+
+    turn_travel(game, 1)
+    game.advance_travel(1)
+
+    state = game.travel_state(1)
+    assert state is not None
+    assert state["target_id"] == "refuge7"
+    assert state["step"] == 5
+
+    names = [row["event_name"] for row in game.analytics_events(1)]
+    assert "travel_turned" in names
+    assert names[-1] in {"travel_advanced", "combat_started"}
 
 
 def test_player_can_turn_around_more_than_once(tmp_path: Path) -> None:
