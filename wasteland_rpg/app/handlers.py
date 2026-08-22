@@ -28,45 +28,38 @@ def _shop_view(category: str, game: GameService, telegram_id: int):
     if category == "equipment":
         return ui.shop_equipment_screen(game, telegram_id), keyboards.shop_equipment(game, telegram_id)
     if category == "medicine":
-        return ui.shop_medicine_screen(game, telegram_id), keyboards.shop_medicine()
+        return ui.shop_medicine_screen(game, telegram_id), keyboards.shop_medicine(game, telegram_id)
     raise GameError("Неизвестная категория товаров.")
+
+
+def _state_view(game: GameService, telegram_id: int):
+    player = game.get_player(telegram_id)
+    if player["state"] == "combat":
+        return ui.combat_screen(game, telegram_id), keyboards.combat(game, telegram_id)
+    if player["state"] == "travel":
+        return ui.travel_screen(game, telegram_id), keyboards.travel(game, telegram_id)
+    if player["state"] == "expedition":
+        if game.pending_scene(telegram_id):
+            return ui.choice_screen(game, telegram_id), keyboards.choice(game, telegram_id)
+        if player["pending_event"]:
+            return ui.event_screen(game, telegram_id), keyboards.event()
+        return ui.expedition_screen(game, telegram_id), keyboards.expedition()
+    return ui.main_screen(game, telegram_id), keyboards.home()
 
 
 @router.message(CommandStart())
 async def start(message: Message, game: GameService) -> None:
     game.ensure_player(message.from_user.id, message.from_user.username)
-    await message.answer(
-        f"<blockquote>{START_INTRO}</blockquote>",
-        reply_markup=ReplyKeyboardRemove(),
-    )
-    await message.answer(
-        ui.main_screen(game, message.from_user.id),
-        reply_markup=keyboards.home(),
-    )
+    await message.answer(f"<blockquote>{START_INTRO}</blockquote>", reply_markup=ReplyKeyboardRemove())
+    text, markup = _state_view(game, message.from_user.id)
+    await message.answer(text, reply_markup=markup)
 
 
 @router.message(Command("menu"))
 async def menu(message: Message, game: GameService) -> None:
     game.ensure_player(message.from_user.id, message.from_user.username)
-    player = game.get_player(message.from_user.id)
-    if player["state"] == "combat":
-        await message.answer(
-            ui.combat_screen(game, message.from_user.id),
-            reply_markup=keyboards.combat(),
-        )
-    elif player["state"] == "expedition":
-        markup = keyboards.event() if player["pending_event"] else keyboards.expedition()
-        screen = (
-            ui.event_screen(game, message.from_user.id)
-            if player["pending_event"]
-            else ui.expedition_screen(game, message.from_user.id)
-        )
-        await message.answer(screen, reply_markup=markup)
-    else:
-        await message.answer(
-            ui.main_screen(game, message.from_user.id),
-            reply_markup=keyboards.home(),
-        )
+    text, markup = _state_view(game, message.from_user.id)
+    await message.answer(text, reply_markup=markup)
 
 
 @router.callback_query(F.data == "menu:home")
@@ -74,47 +67,190 @@ async def open_home(callback: CallbackQuery, game: GameService) -> None:
     await _edit(callback, ui.main_screen(game, callback.from_user.id), keyboards.home())
 
 
+@router.callback_query(F.data == "menu:map")
+async def open_map(callback: CallbackQuery, game: GameService) -> None:
+    await _edit(callback, ui.map_screen(game, callback.from_user.id), keyboards.map_routes(game, callback.from_user.id))
+
+
+@router.callback_query(F.data.startswith("route:"))
+async def start_route(callback: CallbackQuery, game: GameService) -> None:
+    try:
+        message = game.start_travel(callback.from_user.id, callback.data.split(":", 1)[1])
+    except GameError as exc:
+        await _error(callback, exc)
+        return
+    await _edit(callback, ui.notice(ui.travel_screen(game, callback.from_user.id), message), keyboards.travel(game, callback.from_user.id))
+
+
+@router.callback_query(F.data == "road:advance")
+async def advance_route(callback: CallbackQuery, game: GameService) -> None:
+    try:
+        result = game.advance_travel(callback.from_user.id)
+    except GameError as exc:
+        await _error(callback, exc)
+        return
+    player = game.get_player(callback.from_user.id)
+    if player["state"] == "combat":
+        screen, markup = ui.combat_screen(game, callback.from_user.id), keyboards.combat(game, callback.from_user.id)
+    elif result.get("arrived"):
+        screen, markup = ui.main_screen(game, callback.from_user.id), keyboards.home()
+    else:
+        screen, markup = ui.travel_screen(game, callback.from_user.id), keyboards.travel(game, callback.from_user.id)
+    await _edit(callback, ui.notice(screen, result["text"]), markup)
+
+
+@router.callback_query(F.data == "road:cargo")
+async def road_cargo(callback: CallbackQuery, game: GameService) -> None:
+    await _edit(callback, ui.inventory_screen(game, callback.from_user.id), keyboards.travel_inventory())
+
+
+@router.callback_query(F.data == "road:back")
+async def road_back(callback: CallbackQuery, game: GameService) -> None:
+    await _edit(callback, ui.travel_screen(game, callback.from_user.id), keyboards.travel(game, callback.from_user.id))
+
+
+@router.callback_query(F.data == "menu:market")
+async def open_market(callback: CallbackQuery, game: GameService) -> None:
+    await _edit(callback, ui.market_screen(game, callback.from_user.id), keyboards.market(game, callback.from_user.id))
+
+
+@router.callback_query(F.data.startswith("market:"))
+async def market_action(callback: CallbackQuery, game: GameService) -> None:
+    parts = callback.data.split(":")
+    try:
+        if parts[1] == "buy":
+            message = game.buy_trade_good(callback.from_user.id, parts[2])
+        elif parts[1] == "sell_cargo":
+            message = game.sell_cargo(callback.from_user.id)
+        elif parts[1] == "load":
+            message = game.load_stash_to_cargo(callback.from_user.id)
+        elif parts[1] == "unload":
+            message = game.unload_cargo(callback.from_user.id)
+        else:
+            raise GameError("Неизвестное действие рынка.")
+    except GameError as exc:
+        await _error(callback, exc)
+        return
+    await _edit(callback, ui.notice(ui.market_screen(game, callback.from_user.id), message), keyboards.market(game, callback.from_user.id))
+
+
 @router.callback_query(F.data == "menu:sectors")
 async def open_sectors(callback: CallbackQuery, game: GameService) -> None:
-    await _edit(
-        callback,
-        ui.sector_screen(game, callback.from_user.id),
-        keyboards.sectors(game, callback.from_user.id),
-    )
+    await _edit(callback, ui.sector_screen(game, callback.from_user.id), keyboards.sectors(game, callback.from_user.id))
+
+
+@router.callback_query(F.data.startswith("sector:"))
+async def start_sector(callback: CallbackQuery, game: GameService) -> None:
+    try:
+        text = game.start_expedition(callback.from_user.id, callback.data.split(":", 1)[1])
+    except GameError as exc:
+        await _error(callback, exc)
+        return
+    await _edit(callback, ui.notice(ui.expedition_screen(game, callback.from_user.id), text), keyboards.expedition())
+
+
+@router.callback_query(F.data == "expedition:explore")
+async def explore(callback: CallbackQuery, game: GameService) -> None:
+    try:
+        result = game.explore(callback.from_user.id)
+    except GameError as exc:
+        await _error(callback, exc)
+        return
+    player = game.get_player(callback.from_user.id)
+    if player["state"] == "combat":
+        screen, markup = ui.combat_screen(game, callback.from_user.id), keyboards.combat(game, callback.from_user.id)
+    elif result.get("kind") == "choice":
+        screen, markup = ui.choice_screen(game, callback.from_user.id), keyboards.choice(game, callback.from_user.id)
+    elif player["pending_event"]:
+        screen, markup = ui.event_screen(game, callback.from_user.id), keyboards.event()
+    else:
+        screen, markup = ui.expedition_screen(game, callback.from_user.id), keyboards.expedition()
+    await _edit(callback, ui.notice(screen, result["text"]), markup)
+
+
+@router.callback_query(F.data.startswith("choice:"))
+async def resolve_choice(callback: CallbackQuery, game: GameService) -> None:
+    try:
+        result = game.resolve_choice(callback.from_user.id, callback.data.split(":", 1)[1])
+    except GameError as exc:
+        await _error(callback, exc)
+        return
+    screen, markup = _state_view(game, callback.from_user.id)
+    await _edit(callback, ui.notice(screen, result["text"]), markup)
+
+
+@router.callback_query(F.data.startswith("event:"))
+async def resolve_event(callback: CallbackQuery, game: GameService) -> None:
+    try:
+        result = game.resolve_event(callback.from_user.id, "bypass" if callback.data.endswith("bypass") else "try")
+    except GameError as exc:
+        await _error(callback, exc)
+        return
+    screen, markup = _state_view(game, callback.from_user.id)
+    await _edit(callback, ui.notice(screen, result["text"]), markup)
+
+
+@router.callback_query(F.data.startswith("combat:"))
+async def combat_action(callback: CallbackQuery, game: GameService) -> None:
+    try:
+        result = game.combat_action(callback.from_user.id, callback.data.split(":", 1)[1])
+    except GameError as exc:
+        await _error(callback, exc)
+        return
+    screen, markup = _state_view(game, callback.from_user.id)
+    await _edit(callback, ui.notice(screen, result["text"]), markup)
 
 
 @router.callback_query(F.data == "menu:inventory")
 async def open_inventory(callback: CallbackQuery, game: GameService) -> None:
-    await _edit(
-        callback,
-        ui.inventory_screen(game, callback.from_user.id),
-        keyboards.back_home(),
-    )
+    await _edit(callback, ui.inventory_screen(game, callback.from_user.id), keyboards.back_home())
+
+
+@router.callback_query(F.data == "expedition:inventory")
+async def expedition_inventory(callback: CallbackQuery, game: GameService) -> None:
+    await _edit(callback, ui.inventory_screen(game, callback.from_user.id), keyboards.expedition_inventory())
+
+
+@router.callback_query(F.data == "expedition:back")
+async def expedition_back(callback: CallbackQuery, game: GameService) -> None:
+    screen, markup = _state_view(game, callback.from_user.id)
+    await _edit(callback, screen, markup)
+
+
+@router.callback_query(F.data == "expedition:return")
+async def return_home(callback: CallbackQuery, game: GameService) -> None:
+    try:
+        result = game.return_base(callback.from_user.id)
+    except GameError as exc:
+        await _error(callback, exc)
+        return
+    await _edit(callback, ui.notice(ui.main_screen(game, callback.from_user.id), result["text"]), keyboards.home())
 
 
 @router.callback_query(F.data == "menu:character")
 async def open_character(callback: CallbackQuery, game: GameService) -> None:
-    await _edit(
-        callback,
-        ui.character_screen(game, callback.from_user.id),
-        keyboards.character(game, callback.from_user.id),
-    )
+    await _edit(callback, ui.character_screen(game, callback.from_user.id), keyboards.character(game, callback.from_user.id))
+
+
+@router.callback_query(F.data.startswith("attribute:"))
+async def upgrade_attribute(callback: CallbackQuery, game: GameService) -> None:
+    try:
+        message = game.upgrade_attribute(callback.from_user.id, callback.data.split(":", 1)[1])
+    except GameError as exc:
+        await _error(callback, exc)
+        return
+    await _edit(callback, ui.notice(ui.character_screen(game, callback.from_user.id), message), keyboards.character(game, callback.from_user.id))
 
 
 @router.callback_query(F.data == "menu:shop")
 async def open_shop(callback: CallbackQuery, game: GameService) -> None:
-    await _edit(
-        callback,
-        ui.shop_screen(game, callback.from_user.id),
-        keyboards.shop(),
-    )
+    await _edit(callback, ui.shop_screen(game, callback.from_user.id), keyboards.shop())
 
 
 @router.callback_query(F.data.startswith("shopcat:"))
 async def open_shop_category(callback: CallbackQuery, game: GameService) -> None:
-    category = callback.data.split(":", 1)[1]
     try:
-        screen, markup = _shop_view(category, game, callback.from_user.id)
+        screen, markup = _shop_view(callback.data.split(":", 1)[1], game, callback.from_user.id)
     except GameError as exc:
         await _error(callback, exc)
         return
@@ -128,11 +264,7 @@ async def sell_stash(callback: CallbackQuery, game: GameService) -> None:
     except GameError as exc:
         await _error(callback, exc)
         return
-    await _edit(
-        callback,
-        ui.notice(ui.shop_screen(game, callback.from_user.id), message),
-        keyboards.shop(),
-    )
+    await _edit(callback, ui.notice(ui.shop_screen(game, callback.from_user.id), message), keyboards.shop())
 
 
 @router.callback_query(F.data.startswith("shopbuy:"))
@@ -150,159 +282,3 @@ async def buy_from_shop(callback: CallbackQuery, game: GameService) -> None:
 @router.callback_query(F.data == "menu:rules")
 async def open_rules(callback: CallbackQuery) -> None:
     await _edit(callback, ui.rules_screen(), keyboards.back_home())
-
-
-@router.callback_query(F.data.startswith("sector:"))
-async def start_sector(callback: CallbackQuery, game: GameService) -> None:
-    try:
-        text = game.start_expedition(callback.from_user.id, callback.data.split(":", 1)[1])
-    except GameError as exc:
-        await _error(callback, exc)
-        return
-    await _edit(
-        callback,
-        ui.notice(ui.expedition_screen(game, callback.from_user.id), text),
-        keyboards.expedition(),
-    )
-
-
-@router.callback_query(F.data == "expedition:explore")
-async def explore(callback: CallbackQuery, game: GameService) -> None:
-    try:
-        result = game.explore(callback.from_user.id)
-    except GameError as exc:
-        await _error(callback, exc)
-        return
-    player = game.get_player(callback.from_user.id)
-    if player["state"] == "combat":
-        await _edit(
-            callback,
-            ui.notice(ui.combat_screen(game, callback.from_user.id), result["text"]),
-            keyboards.combat(),
-        )
-    elif player["pending_event"]:
-        await _edit(
-            callback,
-            ui.notice(ui.event_screen(game, callback.from_user.id), result["text"]),
-            keyboards.event(),
-        )
-    else:
-        await _edit(
-            callback,
-            ui.notice(ui.expedition_screen(game, callback.from_user.id), result["text"]),
-            keyboards.expedition(),
-        )
-
-
-@router.callback_query(F.data == "expedition:inventory")
-async def expedition_inventory(callback: CallbackQuery, game: GameService) -> None:
-    await _edit(
-        callback,
-        ui.inventory_screen(game, callback.from_user.id),
-        keyboards.expedition_inventory(),
-    )
-
-
-@router.callback_query(F.data == "expedition:back")
-async def expedition_back(callback: CallbackQuery, game: GameService) -> None:
-    player = game.get_player(callback.from_user.id)
-    if player["pending_event"]:
-        await _edit(
-            callback,
-            ui.event_screen(game, callback.from_user.id),
-            keyboards.event(),
-        )
-    else:
-        await _edit(
-            callback,
-            ui.expedition_screen(game, callback.from_user.id),
-            keyboards.expedition(),
-        )
-
-
-@router.callback_query(F.data == "expedition:return")
-async def return_home(callback: CallbackQuery, game: GameService) -> None:
-    try:
-        result = game.return_base(callback.from_user.id)
-    except GameError as exc:
-        await _error(callback, exc)
-        return
-    await _edit(
-        callback,
-        ui.notice(ui.main_screen(game, callback.from_user.id), result["text"]),
-        keyboards.home(),
-    )
-
-
-@router.callback_query(F.data.startswith("event:"))
-async def resolve_event(callback: CallbackQuery, game: GameService) -> None:
-    action = callback.data.split(":", 1)[1]
-    try:
-        result = game.resolve_event(
-            callback.from_user.id,
-            "bypass" if action == "bypass" else "try",
-        )
-    except GameError as exc:
-        await _error(callback, exc)
-        return
-    player = game.get_player(callback.from_user.id)
-    if player["state"] == "base":
-        await _edit(
-            callback,
-            ui.notice(ui.main_screen(game, callback.from_user.id), result["text"]),
-            keyboards.home(),
-        )
-    else:
-        await _edit(
-            callback,
-            ui.notice(ui.expedition_screen(game, callback.from_user.id), result["text"]),
-            keyboards.expedition(),
-        )
-
-
-@router.callback_query(F.data.startswith("combat:"))
-async def combat_action(callback: CallbackQuery, game: GameService) -> None:
-    try:
-        result = game.combat_action(
-            callback.from_user.id,
-            callback.data.split(":", 1)[1],
-        )
-    except GameError as exc:
-        await _error(callback, exc)
-        return
-    player = game.get_player(callback.from_user.id)
-    if player["state"] == "base":
-        await _edit(
-            callback,
-            ui.notice(ui.main_screen(game, callback.from_user.id), result["text"]),
-            keyboards.home(),
-        )
-    elif player["state"] == "expedition":
-        await _edit(
-            callback,
-            ui.notice(ui.expedition_screen(game, callback.from_user.id), result["text"]),
-            keyboards.expedition(),
-        )
-    else:
-        await _edit(
-            callback,
-            ui.notice(ui.combat_screen(game, callback.from_user.id), result["text"]),
-            keyboards.combat(),
-        )
-
-
-@router.callback_query(F.data.startswith("attribute:"))
-async def upgrade_attribute(callback: CallbackQuery, game: GameService) -> None:
-    try:
-        message = game.upgrade_attribute(
-            callback.from_user.id,
-            callback.data.split(":", 1)[1],
-        )
-    except GameError as exc:
-        await _error(callback, exc)
-        return
-    await _edit(
-        callback,
-        ui.notice(ui.character_screen(game, callback.from_user.id), message),
-        keyboards.character(game, callback.from_user.id),
-    )

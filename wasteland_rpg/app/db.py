@@ -14,6 +14,7 @@ class Database:
     def connect(self) -> Iterator[sqlite3.Connection]:
         conn = sqlite3.connect(self.path)
         conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON")
         try:
             yield conn
             conn.commit()
@@ -58,5 +59,59 @@ class Database:
                     PRIMARY KEY (telegram_id, item_id, secured),
                     FOREIGN KEY (telegram_id) REFERENCES players(telegram_id) ON DELETE CASCADE
                 );
+
+                CREATE TABLE IF NOT EXISTS player_world (
+                    telegram_id INTEGER PRIMARY KEY,
+                    location_id TEXT NOT NULL DEFAULT 'refuge7',
+                    FOREIGN KEY (telegram_id) REFERENCES players(telegram_id) ON DELETE CASCADE
+                );
+
+                CREATE TABLE IF NOT EXISTS visited_locations (
+                    telegram_id INTEGER NOT NULL,
+                    location_id TEXT NOT NULL,
+                    PRIMARY KEY (telegram_id, location_id),
+                    FOREIGN KEY (telegram_id) REFERENCES players(telegram_id) ON DELETE CASCADE
+                );
+
+                CREATE TABLE IF NOT EXISTS equipment (
+                    telegram_id INTEGER PRIMARY KEY,
+                    backpack_id TEXT NOT NULL DEFAULT 'canvas_pack',
+                    headgear_id TEXT NOT NULL DEFAULT 'cloth_hood',
+                    gadget_id TEXT NOT NULL DEFAULT 'none',
+                    FOREIGN KEY (telegram_id) REFERENCES players(telegram_id) ON DELETE CASCADE
+                );
+
+                CREATE TABLE IF NOT EXISTS cargo (
+                    telegram_id INTEGER NOT NULL,
+                    item_id TEXT NOT NULL,
+                    qty INTEGER NOT NULL CHECK (qty >= 0),
+                    PRIMARY KEY (telegram_id, item_id),
+                    FOREIGN KEY (telegram_id) REFERENCES players(telegram_id) ON DELETE CASCADE
+                );
+
+                CREATE TABLE IF NOT EXISTS travel (
+                    telegram_id INTEGER PRIMARY KEY,
+                    route_id TEXT NOT NULL,
+                    origin_id TEXT NOT NULL,
+                    target_id TEXT NOT NULL,
+                    step INTEGER NOT NULL DEFAULT 0,
+                    FOREIGN KEY (telegram_id) REFERENCES players(telegram_id) ON DELETE CASCADE
+                );
+
+                CREATE TABLE IF NOT EXISTS combat_state (
+                    telegram_id INTEGER PRIMARY KEY,
+                    return_state TEXT NOT NULL DEFAULT 'expedition',
+                    distance INTEGER NOT NULL DEFAULT 2,
+                    cover INTEGER NOT NULL DEFAULT 0,
+                    bleeding INTEGER NOT NULL DEFAULT 0,
+                    FOREIGN KEY (telegram_id) REFERENCES players(telegram_id) ON DELETE CASCADE
+                );
+
+                INSERT OR IGNORE INTO player_world (telegram_id, location_id)
+                SELECT telegram_id, 'refuge7' FROM players;
+                INSERT OR IGNORE INTO visited_locations (telegram_id, location_id)
+                SELECT telegram_id, 'refuge7' FROM players;
+                INSERT OR IGNORE INTO equipment (telegram_id)
+                SELECT telegram_id FROM players;
                 """
             )

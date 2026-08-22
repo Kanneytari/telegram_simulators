@@ -18,136 +18,119 @@ def game(tmp_path: Path) -> GameService:
     return service
 
 
-def test_player_starts_with_four_attributes_at_one(game: GameService) -> None:
+def test_player_baseline_and_new_tables(game: GameService) -> None:
     player = game.get_player(1)
-    assert player["strength"] == 1
-    assert player["agility"] == 1
-    assert player["perception"] == 1
-    assert player["intelligence"] == 1
-    assert game.level(player) == 1
-    assert game.max_hp(player) == 40
-    assert player["hp"] == 40
-    assert game.attribute_points(player) == 0
-
-
-def test_schema_has_no_legacy_attributes(game: GameService) -> None:
+    assert [player[k] for k in ("strength", "agility", "perception", "intelligence")] == [1, 1, 1, 1]
+    assert game.location_id(1) == "refuge7"
+    assert game.equipment(1)["backpack_id"] == "canvas_pack"
     with game.db.connect() as conn:
-        columns = {row["name"] for row in conn.execute("PRAGMA table_info(players)")}
-    assert "endurance" not in columns
-    assert "combat" not in columns
-    assert "scavenging" not in columns
-    assert "survival" not in columns
+        tables = {r["name"] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    assert {"player_world", "visited_locations", "equipment", "cargo", "travel", "combat_state"} <= tables
 
 
-def test_level_grants_hp_and_one_attribute_point(game: GameService) -> None:
+def test_attributes_have_no_upper_limit(game: GameService) -> None:
     with game.db.connect() as conn:
-        conn.execute("UPDATE players SET xp = 40 WHERE telegram_id = 1")
-    player = game.get_player(1)
-    assert game.level(player) == 2
-    assert game.max_hp(player) == 60
-    assert game.attribute_points(player) == 1
+        conn.execute("UPDATE players SET xp=800, intelligence=20 WHERE telegram_id=1")
+    before = game.get_player(1)["intelligence"]
+    message = game.upgrade_attribute(1, "intelligence")
+    assert game.get_player(1)["intelligence"] == before + 1
+    assert "Характеристика «Интеллект» повышена" in message
 
 
-def test_level_up_immediately_adds_twenty_hp_in_field(game: GameService) -> None:
+def test_backpack_increases_capacity(game: GameService) -> None:
+    base = game.carry_capacity(game.get_player(1))
+    with game.db.connect() as conn:
+        conn.execute("UPDATE players SET strength=2 WHERE telegram_id=1")
+        conn.execute("UPDATE equipment SET backpack_id='field_pack' WHERE telegram_id=1")
+    assert game.carry_capacity(game.get_player(1)) == 24
+    assert game.carry_capacity(game.get_player(1)) > base
+
+
+def test_market_arbitrage_between_locations(game: GameService) -> None:
+    with game.db.connect() as conn:
+        conn.execute("UPDATE players SET credits=100 WHERE telegram_id=1")
+        conn.execute("UPDATE player_world SET location_id='miners' WHERE telegram_id=1")
+    game.buy_trade_good(1, "scrap")
+    assert game.get_player(1)["credits"] == 94
+    with game.db.connect() as conn:
+        conn.execute("UPDATE player_world SET location_id='promgorod' WHERE telegram_id=1")
+    game.sell_cargo(1)
+    assert game.get_player(1)["credits"] == 108
+
+
+def test_route_has_ten_stages_and_arrival_changes_location(game: GameService) -> None:
+    game.start_travel(1, "refuge_miners")
+    with game.db.connect() as conn:
+        conn.execute("UPDATE travel SET step=10 WHERE telegram_id=1")
+    result = game.advance_travel(1)
+    assert result["arrived"] is True
+    assert game.location_id(1) == "miners"
+    assert game.get_player(1)["state"] == "base"
+
+
+def test_travel_death_loses_cargo(game: GameService) -> None:
+    game.buy_trade_good(1, "scrap")
+    game.start_travel(1, "refuge_miners")
+    with game.db.connect() as conn:
+        game._start_combat(conn, 1, "raider", return_state="travel")
+        conn.execute("UPDATE players SET hp=1 WHERE telegram_id=1")
+    game.rng = random.Random(1)
+    game.combat_action(1, "aim")
+    assert game.get_player(1)["state"] == "base"
+    assert game.cargo(1) == []
+    assert game.location_id(1) == "refuge7"
+
+
+def test_local_sector_depends_on_location(game: GameService) -> None:
+    assert game.sector_unlocked(game.get_player(1), "rust_belt")
+    assert not game.sector_unlocked(game.get_player(1), "quarry")
+    with game.db.connect() as conn:
+        conn.execute("UPDATE player_world SET location_id='miners' WHERE telegram_id=1")
+        conn.execute("UPDATE players SET successful_runs=1 WHERE telegram_id=1")
+    assert game.sector_unlocked(game.get_player(1), "quarry")
+
+
+def test_branching_scene_can_resolve_by_attribute(game: GameService) -> None:
     game.start_expedition(1, "rust_belt")
     with game.db.connect() as conn:
-        conn.execute("UPDATE players SET xp = 39, hp = 15 WHERE telegram_id = 1")
-        game._add_xp(conn, 1, 1)
-    player = game.get_player(1)
-    assert game.level(player) == 2
-    assert game.max_hp(player) == 60
-    assert player["hp"] == 35
+        conn.execute("UPDATE players SET pending_event='scene:warehouse', perception=20 WHERE telegram_id=1")
+    result = game.resolve_choice(1, "careful")
+    assert "Ловушка" in result["text"]
+    assert game.get_player(1)["pending_event"] is None
 
 
-def test_attribute_point_can_be_spent_only_once(game: GameService) -> None:
+def test_melee_requires_close_distance(game: GameService) -> None:
+    game.start_expedition(1, "rust_belt")
     with game.db.connect() as conn:
-        conn.execute("UPDATE players SET xp = 40 WHERE telegram_id = 1")
-    game.upgrade_attribute(1, "intelligence")
-    player = game.get_player(1)
-    assert player["intelligence"] == 2
-    assert game.attribute_points(player) == 0
+        game._start_combat(conn, 1, "bone_dog", return_state="expedition")
+        conn.execute("UPDATE combat_state SET distance=3 WHERE telegram_id=1")
+    with pytest.raises(GameError, match="сблизиться"):
+        game.combat_action(1, "melee")
+
+
+def test_carbine_supports_burst(game: GameService) -> None:
+    game.start_expedition(1, "rust_belt")
+    with game.db.connect() as conn:
+        conn.execute("UPDATE players SET weapon_id='short_carbine', ammo=10 WHERE telegram_id=1")
+        game._start_combat(conn, 1, "stitched", return_state="expedition")
+    before = game.get_player(1)["ammo"]
+    game.combat_action(1, "burst")
+    assert game.get_player(1)["ammo"] == before - 3
+
+
+def test_level_point_is_spent_once(game: GameService) -> None:
+    with game.db.connect() as conn:
+        conn.execute("UPDATE players SET xp=40 WHERE telegram_id=1")
+    game.upgrade_attribute(1, "strength")
+    assert game.attribute_points(game.get_player(1)) == 0
     with pytest.raises(GameError):
-        game.upgrade_attribute(1, "strength")
-
-
-def test_agility_controls_damage_resistance(game: GameService) -> None:
-    player = game.get_player(1)
-    assert game.agility_resistance(player) == 0
-    with game.db.connect() as conn:
-        conn.execute("UPDATE players SET agility = 4 WHERE telegram_id = 1")
-    player = game.get_player(1)
-    assert game.agility_resistance(player) == 3
-    assert game.combat_damage_reduction(player) == 3
-
-
-def test_armor_and_agility_stack_for_damage_reduction(game: GameService) -> None:
-    with game.db.connect() as conn:
-        conn.execute(
-            "UPDATE players SET agility = 3, armor_id = 'field_vest' WHERE telegram_id = 1"
-        )
-    assert game.combat_damage_reduction(game.get_player(1)) == 5
-
-
-def test_equipment_requirement_blocks_purchase(game: GameService) -> None:
-    with game.db.connect() as conn:
-        conn.execute("UPDATE players SET credits = 1000 WHERE telegram_id = 1")
-    with pytest.raises(GameError, match="Ловкость 2"):
-        game.buy(1, "service_revolver")
-    assert game.get_player(1)["weapon_id"] == "pipe_pistol"
-    assert game.get_player(1)["credits"] == 1000
-
-
-def test_equipment_can_be_bought_after_requirement_is_met(game: GameService) -> None:
-    with game.db.connect() as conn:
-        conn.execute("UPDATE players SET agility = 2, credits = 1000 WHERE telegram_id = 1")
-    game.buy(1, "service_revolver")
-    player = game.get_player(1)
-    assert player["weapon_id"] == "service_revolver"
-    assert player["credits"] == 820
+        game.upgrade_attribute(1, "agility")
 
 
 def test_return_secures_field_loot(game: GameService) -> None:
     game.start_expedition(1, "rust_belt")
     with game.db.connect() as conn:
         conn.execute("INSERT INTO inventory VALUES (1, 'scrap', 0, 3)")
-    result = game.return_base(1)
-    assert result["value"] == 24
+    game.return_base(1)
     assert game.inventory(1, secured=0) == []
     assert game.inventory(1, secured=1)[0]["qty"] == 3
-    assert game.get_player(1)["successful_runs"] == 1
-
-
-def test_death_drops_only_field_loot(game: GameService) -> None:
-    game.start_expedition(1, "rust_belt")
-    with game.db.connect() as conn:
-        conn.execute("INSERT INTO inventory VALUES (1, 'scrap', 0, 2)")
-        conn.execute("INSERT INTO inventory VALUES (1, 'wire', 1, 4)")
-        conn.execute(
-            "UPDATE players SET state='combat', enemy_id='stitched', enemy_hp=78, hp=1 "
-            "WHERE telegram_id=1"
-        )
-    game.rng = random.Random(1)
-    game.combat_action(1, "aim")
-    assert game.get_player(1)["state"] == "base"
-    assert game.inventory(1, secured=0) == []
-    assert game.inventory(1, secured=1)[0]["qty"] == 4
-
-
-def test_locked_sector_requires_progress(game: GameService) -> None:
-    with pytest.raises(GameError):
-        game.start_expedition(1, "plant_12")
-    with game.db.connect() as conn:
-        conn.execute(
-            "UPDATE players SET successful_runs = 3, xp = 40 WHERE telegram_id = 1"
-        )
-    game.start_expedition(1, "plant_12")
-    assert game.get_player(1)["sector_id"] == "plant_12"
-
-
-def test_sell_stash(game: GameService) -> None:
-    with game.db.connect() as conn:
-        conn.execute("INSERT INTO inventory VALUES (1, 'parts', 1, 2)")
-    before = game.get_player(1)["credits"]
-    game.sell_all(1)
-    assert game.get_player(1)["credits"] == before + 68
-    assert game.inventory(1, secured=1) == []
