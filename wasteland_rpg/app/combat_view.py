@@ -38,7 +38,7 @@ def combat_screen(game: GameService, telegram_id: int) -> str:
         f"🔫 {escape(weapon['name'])} · {player['ammo']} патр.",
         f"🛡 Защита: {game.combat_damage_reduction(player)}",
         "",
-        "<i>Стреляй, используй расходники или отходи. Ближний бой появляется только когда противник сам подошёл вплотную.</i>",
+        "<i>Стреляй, используй расходники или отходи. Если патроны закончились, можно выждать, пока противник не подойдёт для ближнего боя.</i>",
     ]
     return "\n".join(lines)
 
@@ -50,12 +50,18 @@ def combat_keyboard(game: GameService, telegram_id: int) -> InlineKeyboardMarkup
     combat = game.combat_state(telegram_id)
 
     rows: list[list[InlineKeyboardButton]] = []
-    fire_row = [InlineKeyboardButton(text="🔫 Выстрел", callback_data="combat:shoot")]
-    if "burst" in weapon.get("modes", ()):
-        fire_row.append(InlineKeyboardButton(text="💥 Очередь ×3", callback_data="combat:burst"))
-    rows.append(fire_row)
+    ammo = int(player["ammo"])
+    distance = int(combat["distance"])
 
-    if int(combat["distance"]) <= 1:
+    if ammo > 0:
+        fire_row = [InlineKeyboardButton(text="🔫 Выстрел", callback_data="combat:shoot")]
+        if "burst" in weapon.get("modes", ()) and ammo >= 3:
+            fire_row.append(InlineKeyboardButton(text="💥 Очередь ×3", callback_data="combat:burst"))
+        rows.append(fire_row)
+    elif distance > 1:
+        rows.append([InlineKeyboardButton(text="⏳ Ждать", callback_data="combat:wait")])
+
+    if distance <= 1:
         rows.append([InlineKeyboardButton(text="🔪 Ближний бой", callback_data="combat:melee")])
 
     utility_row: list[InlineKeyboardButton] = []
