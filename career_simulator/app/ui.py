@@ -145,7 +145,7 @@ def project_screen(
         f"⏳ Дедлайн: {_deadline(project, player['career_day'])}\n"
         f"{_quality_marker(project['quality'])} Качество: <b>{project_play.quality_label(project['quality'])}</b> ({project['quality']})\n"
         f"{_risk_marker(project['risk'])} Риск: <b>{project_play.risk_label(project['risk'])}</b> ({project['risk']})\n"
-        f"💰 База: {money(project['reward_money'])}\n\n"
+        f"💰 Награда: {money(project['reward_money'])}\n\n"
         f"<b>ТАКТИКА</b>\n"
         f"{TACTICS['fast']['title']} · +24-30 прогресса · риск +18 · стресс +9\n"
         f"{TACTICS['careful']['title']} · +16-21 прогресса · качество +16 · риск -4\n"
