@@ -44,6 +44,26 @@ def _review_text(career_day: int) -> str:
     return f"через {left} дн."
 
 
+def _effect_text(effects: dict[str, int]) -> str:
+    labels = {
+        "skill": "навык",
+        "reputation": "репутация",
+        "visibility": "заметность",
+        "network": "связи",
+        "stress": "стресс",
+        "money": "деньги",
+    }
+    parts: list[str] = []
+    for key in ("skill", "reputation", "visibility", "network", "stress", "money"):
+        value = effects.get(key, 0)
+        if not value:
+            continue
+        sign = "+" if value > 0 else ""
+        suffix = " ₽" if key == "money" else ""
+        parts.append(f"{labels[key]} {sign}{value}{suffix}")
+    return " · ".join(parts) if parts else "без изменения показателей"
+
+
 def home_screen(
     game: GameService,
     session: SessionService,
@@ -73,7 +93,7 @@ def home_screen(
         project_block = "📌 <b>ПРОЕКТ</b>\nАктивного проекта нет."
 
     stress = player["stress"]
-    stress_marker = "●" if stress < 45 else "▲" if stress < 75 else "!"
+    stress_marker = "🟢" if stress < 45 else "🟡" if stress < 75 else "🔴"
     opportunity_text = "в процессе" if active_opportunity else f"доступно {runs_left}/2"
     fast = "\n🧪 Тестовый режим включён" if fast_mode else ""
 
@@ -88,8 +108,8 @@ def home_screen(
         f"✉️ Входящие: {inbox['unread']}\n"
         f"{stress_marker} Стресс: {stress}/100\n\n"
         f"📈 <b>КАРЬЕРА</b>\n"
-        f"🧠 {player['skill']}  ·  ⭐ {player['reputation']}  ·  "
-        f"👁 {player['visibility']}  ·  🤝 {player['network']}\n"
+        f"🧠 Навык: {player['skill']} · ⭐ Репутация: {player['reputation']}\n"
+        f"👁 Заметность: {player['visibility']} · 🤝 Связи: {player['network']}\n"
         f"💰 {money(player['money'])}\n"
         f"🔎 Ревью: {_review_text(player['career_day'])}{fast}"
     )
@@ -116,9 +136,9 @@ def project_screen(
         f"▲ Риск: <b>{project_play.risk_label(project['risk'])}</b> ({project['risk']})\n"
         f"💰 База: {money(project['reward_money'])}\n\n"
         f"<b>ТАКТИКА</b>\n"
-        f"{TACTICS['fast']['title']} — быстро двигает проект, но копит риск.\n"
-        f"{TACTICS['careful']['title']} — растит качество и шанс на бонус.\n"
-        f"{TACTICS['team']['title']} — снижает риск и укрепляет связи.\n\n"
+        f"{TACTICS['fast']['title']} · +24-30 прогресса · риск +18 · стресс +9\n"
+        f"{TACTICS['careful']['title']} · +16-21 прогресса · качество +16 · риск -4\n"
+        f"{TACTICS['team']['title']} · +18-24 прогресса · риск -8 · связи +1\n\n"
         f"⚡ Осталось действий: {player['actions_left']}/{ACTIONS_PER_DAY}\n"
         f"<i>Высокий риск может вызвать переделку. Высокое качество при низком риске повышает награду.</i>"
     )
@@ -172,14 +192,18 @@ def opportunity_screen(opportunities: OpportunityService, telegram_id: int) -> s
         "<b>ВАРИАНТЫ</b>",
     ]
     for choice in view["choices"]:
-        lines.append(
-            f"{choice['index'] + 1}. {escape(choice['title'])} — "
-            f"<b>{choice['chance']}%</b> · {choice['stat_label']}"
+        lines.extend(
+            [
+                f"{choice['index'] + 1}. <b>{escape(choice['title'])}</b> · "
+                f"{choice['chance']}% · {choice['stat_label']}",
+                f"   ✓ {_effect_text(choice['success_effects'])}",
+                f"   ✕ {_effect_text(choice['fail_effects'])}",
+            ]
         )
     lines.extend(
         [
             "",
-            "<i>Шанс рассчитывается из твоих текущих характеристик. Сильные стороны персонажа здесь дают реальное преимущество.</i>",
+            "<i>Здесь нет универсально лучшей кнопки: шанс зависит от прокачки, а варианты дают разные карьерные эффекты.</i>",
         ]
     )
     return "\n".join(lines)
