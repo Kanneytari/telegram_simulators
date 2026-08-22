@@ -7,6 +7,7 @@ from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
 from . import keyboards, ui
+from .config import Config
 from .content import START_INTRO
 from .game import GameError, GameService
 
@@ -22,6 +23,10 @@ async def _edit(callback: CallbackQuery, text: str, markup) -> None:
 
 async def _error(callback: CallbackQuery, exc: GameError) -> None:
     await callback.answer(str(exc), show_alert=True)
+
+
+def _is_admin(user_id: int, config: Config) -> bool:
+    return int(user_id) in config.admin_ids
 
 
 def _shop_view(category: str, game: GameService, telegram_id: int):
@@ -65,13 +70,15 @@ async def menu(message: Message, game: GameService) -> None:
 
 
 @router.message(Command("reset"))
-async def reset_progress(message: Message, game: GameService) -> None:
+async def reset_progress(message: Message, game: GameService, config: Config) -> None:
+    if not _is_admin(message.from_user.id, config):
+        return
     game.ensure_player(message.from_user.id, message.from_user.username)
     await message.answer(
-        "⚠️ <b>ПОЛНЫЙ СБРОС ПРОГРЕССА</b>\n"
+        "⚠️ <b>ПОЛНЫЙ СБРОС ПРОГРЕССА И АНАЛИТИКИ</b>\n"
         "━━━━━━━━━━━━\n"
         "Будут удалены уровень, характеристики, деньги, предметы, склад, груз, "
-        "экипировка, открытые поселения и текущая вылазка/дорога.\n\n"
+        "экипировка, открытые поселения, текущая вылазка/дорога и вся история действий.\n\n"
         "Персонаж будет создан заново с начальными параметрами. "
         "Это действие нельзя отменить.",
         reply_markup=keyboards.reset_confirm(),
@@ -79,17 +86,23 @@ async def reset_progress(message: Message, game: GameService) -> None:
 
 
 @router.callback_query(F.data == "reset:cancel")
-async def cancel_reset(callback: CallbackQuery, game: GameService) -> None:
+async def cancel_reset(callback: CallbackQuery, game: GameService, config: Config) -> None:
+    if not _is_admin(callback.from_user.id, config):
+        await callback.answer()
+        return
     screen, markup = _state_view(game, callback.from_user.id)
     await _edit(callback, ui.notice(screen, "Сброс отменён."), markup)
 
 
 @router.callback_query(F.data == "reset:confirm")
-async def confirm_reset(callback: CallbackQuery, game: GameService) -> None:
+async def confirm_reset(callback: CallbackQuery, game: GameService, config: Config) -> None:
+    if not _is_admin(callback.from_user.id, config):
+        await callback.answer()
+        return
     game.db.reset_player(callback.from_user.id)
     game.ensure_player(callback.from_user.id, callback.from_user.username)
     text = (
-        "<blockquote>🗑 Прогресс полностью сброшен.</blockquote>\n\n"
+        "<blockquote>🗑 Прогресс и аналитика полностью сброшены.</blockquote>\n\n"
         f"<blockquote>{START_INTRO}</blockquote>\n\n"
         f"{ui.main_screen(game, callback.from_user.id)}"
     )
