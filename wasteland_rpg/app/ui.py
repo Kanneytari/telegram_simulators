@@ -33,7 +33,7 @@ def _level_line(game: GameService, player: dict) -> str:
 def requirements_text(item: dict) -> str:
     req = item.get("requirements", {})
     return "без требований" if not req else " · ".join(
-        f"{ATTRIBUTES[k]['icon']} {ATTRIBUTES[k]['name']} {v}" for k, v in req.items()
+        f"{ATTRIBUTES[k]['icon']} {v}" for k, v in req.items()
     )
 
 
