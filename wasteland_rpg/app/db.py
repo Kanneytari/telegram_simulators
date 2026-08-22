@@ -124,6 +124,13 @@ class Database:
                     FOREIGN KEY (telegram_id) REFERENCES players(telegram_id) ON DELETE CASCADE
                 );
 
+                CREATE TABLE IF NOT EXISTS combat_queue (
+                    telegram_id INTEGER PRIMARY KEY,
+                    action TEXT NOT NULL,
+                    queued_at REAL NOT NULL,
+                    FOREIGN KEY (telegram_id) REFERENCES players(telegram_id) ON DELETE CASCADE
+                );
+
                 CREATE TABLE IF NOT EXISTS combat_log (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     telegram_id INTEGER NOT NULL,
