@@ -21,18 +21,12 @@ def _duration_text(seconds: float) -> str:
     return str(int(math.ceil(float(seconds))))
 
 
-def _enemy_intent(enemy: dict, action: str) -> str:
-    if action == "approach":
-        return f"🏃 {enemy['name']} приближается"
-    if action == "retreat":
-        return f"↩️ {enemy['name']} отходит"
-    if action == "ranged_attack":
-        return f"🔫 {enemy['name']} готовит выстрел"
-    return f"🔪 {enemy['name']} готовит атаку"
-
-
-def _queued_button_text(action: str, text: str, queued: str | None) -> str:
-    return f"✓ {text}" if queued == action else text
+def _button_text(action: str, text: str, queued: str | None, available: bool) -> str:
+    if queued == action:
+        return f"🕒 {text}"
+    if not available:
+        return f"▫️ {text}"
+    return text
 
 
 def combat_screen(game, telegram_id: int) -> str:
@@ -42,7 +36,6 @@ def combat_screen(game, telegram_id: int) -> str:
     weapon = WEAPONS[player["weapon_id"]]
     combat = game.combat_state(telegram_id)
     timeline = game.combat_timeline(telegram_id)
-    queued = game.combat_queued_action(telegram_id)
     log = [entry for entry in game.combat_log(telegram_id) if "готовит" not in entry.lower()]
 
     lines = [
@@ -80,20 +73,6 @@ def combat_screen(game, telegram_id: int) -> str:
         else:
             lines.append("Ты: готов к действию")
 
-        if queued:
-            lines.append(f"Следующее: {PLAYER_ACTION_LABELS.get(queued, queued)}")
-
-        enemy_action = str(timeline["enemy_action"])
-        enemy_left = _seconds_left(timeline["enemy_action_due"], now)
-        lines.append(f"Противник: {_enemy_intent(enemy, enemy_action)} · {enemy_left}с")
-
-        opportunity = str(timeline["opportunity_kind"] or "")
-        if float(timeline["opportunity_until"]) > now:
-            if opportunity == "cover":
-                lines += ["", "🧱 Есть возможность занять укрытие."]
-            elif opportunity == "stim":
-                lines += ["", "💉 Рядом найден стимулятор."]
-
     return "\n".join(lines)
 
 
@@ -107,98 +86,46 @@ def combat_keyboard(game, telegram_id: int) -> InlineKeyboardMarkup:
 
     ammo, medkits = game.combat_queue_resources(telegram_id)
     distance = int(combat["distance"])
-    rows: list[list[InlineKeyboardButton]] = []
+    opportunity = str(timeline["opportunity_kind"] or "") if timeline else ""
+    opportunity_valid = bool(timeline and float(timeline["opportunity_until"]) > now)
 
-    if ammo > 0:
-        rows.append([
-            InlineKeyboardButton(
-                text=_queued_button_text(
-                    "shoot",
-                    f"🔫 Выстрел · {_duration_text(PLAYER_ACTION_SECONDS['shoot'])}с",
-                    queued,
-                ),
-                callback_data="combat:shoot",
-            ),
-            InlineKeyboardButton(
-                text=_queued_button_text(
-                    "aimed_shot",
-                    f"🎯 Прицельный · {_duration_text(PLAYER_ACTION_SECONDS['aimed_shot'])}с",
-                    queued,
-                ),
-                callback_data="combat:aimed_shot",
-            ),
-        ])
-        if "burst" in weapon.get("modes", ()) and ammo >= 3:
-            rows.append([
-                InlineKeyboardButton(
-                    text=_queued_button_text(
-                        "burst",
-                        f"💥 Очередь ×3 · {_duration_text(PLAYER_ACTION_SECONDS['burst'])}с",
-                        queued,
-                    ),
-                    callback_data="combat:burst",
-                )
-            ])
+    availability = {
+        "shoot": ammo >= 1,
+        "aimed_shot": ammo >= 1,
+        "burst": "burst" in weapon.get("modes", ()) and ammo >= 3,
+        "melee": distance <= 1,
+        "cover": opportunity_valid and opportunity == "cover",
+        "stim": opportunity_valid and opportunity == "stim",
+        "medkit": medkits >= 1,
+        "flee": True,
+    }
 
-    if distance <= 1:
-        rows.append([
-            InlineKeyboardButton(
-                text=_queued_button_text(
-                    "melee",
-                    f"🔪 Ближний бой · {_duration_text(PLAYER_ACTION_SECONDS['melee'])}с",
-                    queued,
-                ),
-                callback_data="combat:melee",
-            )
-        ])
-
-    if timeline and float(timeline["opportunity_until"]) > now:
-        opportunity = str(timeline["opportunity_kind"] or "")
-        if opportunity == "cover":
-            rows.append([
-                InlineKeyboardButton(
-                    text=_queued_button_text(
-                        "cover",
-                        f"🧱 В укрытие · {_duration_text(PLAYER_ACTION_SECONDS['cover'])}с",
-                        queued,
-                    ),
-                    callback_data="combat:cover",
-                )
-            ])
-        elif opportunity == "stim":
-            rows.append([
-                InlineKeyboardButton(
-                    text=_queued_button_text(
-                        "stim",
-                        f"💉 Стимулятор · {_duration_text(PLAYER_ACTION_SECONDS['stim'])}с",
-                        queued,
-                    ),
-                    callback_data="combat:stim",
-                )
-            ])
-
-    utility_row: list[InlineKeyboardButton] = []
-    if medkits > 0:
-        utility_row.append(
-            InlineKeyboardButton(
-                text=_queued_button_text(
-                    "medkit",
-                    f"🩹 Аптечка · {_duration_text(PLAYER_ACTION_SECONDS['medkit'])}с",
-                    queued,
-                ),
-                callback_data="combat:medkit",
-            )
+    def button(action: str, label: str) -> InlineKeyboardButton:
+        return InlineKeyboardButton(
+            text=_button_text(action, label, queued, availability[action]),
+            callback_data=f"combat:{action}",
         )
-    utility_row.append(
-        InlineKeyboardButton(
-            text=_queued_button_text(
-                "flee",
-                f"🏃 Отступить · {_duration_text(PLAYER_ACTION_SECONDS['flee'])}с",
-                queued,
+
+    rows = [
+        [
+            button("shoot", f"🔫 Выстрел · {_duration_text(PLAYER_ACTION_SECONDS['shoot'])}с"),
+            button(
+                "aimed_shot",
+                f"🎯 Прицельный · {_duration_text(PLAYER_ACTION_SECONDS['aimed_shot'])}с",
             ),
-            callback_data="combat:flee",
-        )
-    )
-    rows.append(utility_row)
+        ],
+        [
+            button("burst", f"💥 Очередь ×3 · {_duration_text(PLAYER_ACTION_SECONDS['burst'])}с"),
+            button("melee", f"🔪 Ближний бой · {_duration_text(PLAYER_ACTION_SECONDS['melee'])}с"),
+        ],
+        [
+            button("cover", f"🧱 Укрытие · {_duration_text(PLAYER_ACTION_SECONDS['cover'])}с"),
+            button("stim", f"💉 Стимулятор · {_duration_text(PLAYER_ACTION_SECONDS['stim'])}с"),
+        ],
+        [
+            button("medkit", f"🩹 Аптечка · {_duration_text(PLAYER_ACTION_SECONDS['medkit'])}с"),
+            button("flee", f"🏃 Отступить · {_duration_text(PLAYER_ACTION_SECONDS['flee'])}с"),
+        ],
+    ]
 
     return InlineKeyboardMarkup(inline_keyboard=rows)
