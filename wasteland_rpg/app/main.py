@@ -7,10 +7,17 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
+from . import keyboards, ui
+from .combat_view import combat_keyboard, combat_screen
 from .config import load_config
 from .db import Database
-from .game import GameService
+from .gameplay import GameService
 from .handlers import router
+
+# Handlers call these module functions dynamically. Keep the existing modules as the
+# single routing surface while the current combat presentation stays isolated.
+ui.combat_screen = combat_screen
+keyboards.combat = combat_keyboard
 
 
 async def main() -> None:
