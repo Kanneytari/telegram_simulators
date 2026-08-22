@@ -45,8 +45,9 @@ def test_reaching_100_threat_during_explore_unlocks_next_sector(tmp_path: Path) 
 
     assert game.sector_mastered(1, "rust_belt")
     assert game.sector_unlocked(game.get_player(1), "plant_12")
-    assert "Открыта новая вылазка" in result["text"]
-    assert "Промзона-12" in result["text"]
+    assert result["progress_notice"] == "Сектор пройден\nОткрыта новая локация: Промзона-12"
+    assert "Угроза достигла 100/100" not in result["text"]
+    assert "Открыта новая вылазка" not in result["text"]
 
 
 def test_each_settlement_has_its_own_mastery_chain(tmp_path: Path) -> None:
