@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 PLAYER_ACTION_SECONDS = {
-    "shoot": 4.5,
-    "aimed_shot": 7.5,
-    "burst": 7.5,
-    "melee": 3.0,
+    "shoot": 5.0,
+    "aimed_shot": 8.0,
+    "burst": 8.0,
+    "melee": 2.0,
     "cover": 3.0,
-    "stim": 1.5,
+    "stim": 2.0,
     "medkit": 6.0,
-    "flee": 7.5,
+    "flee": 5.0,
 }
 
 PLAYER_ACTION_LABELS = {
@@ -23,10 +23,10 @@ PLAYER_ACTION_LABELS = {
 }
 
 ENEMY_ACTION_SECONDS = {
-    "approach": 3.0,
-    "retreat": 3.0,
-    "melee_attack": 4.5,
-    "ranged_attack": 6.0,
+    "approach": 4.0,
+    "retreat": 4.0,
+    "melee_attack": 5.5,
+    "ranged_attack": 7.0,
 }
 
 COMBAT_LOG_SIZE = 7
