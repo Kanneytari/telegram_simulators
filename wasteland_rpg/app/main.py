@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 
 from aiogram import Bot, Dispatcher
@@ -8,6 +9,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
 from . import keyboards, ui
+from .combat_runtime import combat_update_loop
 from .combat_view import combat_keyboard, combat_screen
 from .config import load_config
 from .db import Database
@@ -42,7 +44,13 @@ async def main() -> None:
     dp["game"] = game
 
     await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
+    combat_task = asyncio.create_task(combat_update_loop(bot, game))
+    try:
+        await dp.start_polling(bot)
+    finally:
+        combat_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await combat_task
 
 
 if __name__ == "__main__":
