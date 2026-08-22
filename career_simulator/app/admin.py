@@ -93,22 +93,11 @@ class AdminService:
 
         with self.db.connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
-            conn.execute(
-                """
-                UPDATE daily_events
-                SET day_key = ?
-                WHERE player_id = ? AND day_key = ?
-                """,
-                (archive_key, telegram_id, current_key),
-            )
-            conn.execute(
-                """
-                UPDATE purchases
-                SET day_key = ?
-                WHERE player_id = ? AND day_key = ?
-                """,
-                (archive_key, telegram_id, current_key),
-            )
+            for table in ("daily_events", "purchases", "inbox_items", "focus_runs"):
+                conn.execute(
+                    f"UPDATE {table} SET day_key = ? WHERE player_id = ? AND day_key = ?",
+                    (archive_key, telegram_id, current_key),
+                )
             conn.execute(
                 "UPDATE players SET day_key = ? WHERE telegram_id = ?",
                 (forced_key, telegram_id),
@@ -117,6 +106,6 @@ class AdminService:
         self.game._rollover_if_needed(telegram_id)
         after = self.game.get_player(telegram_id, rollover=False)
         return (
-            f"⏭ Начался карьерный день {after['career_day']}. "
+            f"Начался карьерный день {after['career_day']}. "
             f"Доступно {after['actions_left']} действий."
         )
