@@ -4,6 +4,8 @@ from html import escape
 
 from .content import INVESTMENTS, PROMOTION_REQUIREMENTS
 from .game import ACTIONS_PER_DAY, MAX_RANK, GameService
+from .opportunities import OpportunityService
+from .project_play import ProjectPlayService, TACTICS
 from .session import SessionService
 
 
@@ -13,119 +15,189 @@ def money(value: int) -> str:
 
 def bar(value: int, total: int, width: int = 10) -> str:
     if total <= 0:
-        return "·" * width
+        return "░" * width
     filled = max(0, min(width, round(width * value / total)))
-    return "▰" * filled + "▱" * (width - filled)
+    return "▓" * filled + "░" * (width - filled)
 
 
 def with_notice(screen: str, notice: str | None = None) -> str:
     if not notice:
         return screen
-    cleaned = notice
-    for marker in ("✅ ", "🔥 ", "📌 ", "🚀 ", "🏆 ", "🗂 ", "⚠️ "):
-        cleaned = cleaned.replace(marker, "")
-    return f"<blockquote>{escape(cleaned)}</blockquote>\n\n{screen}"
+    return f"<blockquote>▸ {escape(notice)}</blockquote>\n\n{screen}"
+
+
+def _deadline(project: dict, career_day: int) -> str:
+    days_left = project["deadline_day"] - career_day
+    if days_left > 1:
+        return f"через {days_left} дня"
+    if days_left == 1:
+        return "завтра"
+    if days_left == 0:
+        return "сегодня"
+    return "просрочен"
+
+
+def _review_text(career_day: int) -> str:
+    left = 5 - (career_day % 5)
+    if left == 5:
+        return "после этого дня"
+    return f"через {left} дн."
 
 
 def home_screen(
     game: GameService,
     session: SessionService,
+    opportunities: OpportunityService,
+    project_play: ProjectPlayService,
     telegram_id: int,
     *,
     fast_mode: bool = False,
 ) -> str:
     player = game.get_player(telegram_id)
-    project = game.get_active_project(telegram_id)
+    project = project_play.state(telegram_id)
     inbox = session.inbox_progress(telegram_id)
-    focus_left = session.focus_runs_left(telegram_id)
-    active_focus = session.active_focus(telegram_id)
+    runs_left = opportunities.runs_left(telegram_id)
+    active_opportunity = opportunities.active_run(telegram_id)
     rank = game.rank_name(player["rank"], player["track"])
 
     if project:
-        days_left = project["deadline_day"] - player["career_day"]
-        if days_left > 1:
-            deadline = f"до дедлайна {days_left} дня"
-        elif days_left == 1:
-            deadline = "до дедлайна 1 день"
-        elif days_left == 0:
-            deadline = "дедлайн сегодня"
-        else:
-            deadline = "дедлайн просрочен"
         project_block = (
-            f"<b>Проект</b>\n"
+            f"📌 <b>ПРОЕКТ</b>\n"
             f"{escape(project['title'])}\n"
             f"{bar(project['progress'], project['target'])} "
-            f"{project['progress']}/{project['target']} · {deadline}"
+            f"{round(project['progress'] / project['target'] * 100)}%\n"
+            f"⏳ Дедлайн: {_deadline(project, player['career_day'])} · "
+            f"риск: {project_play.risk_label(project['risk'])}"
         )
     else:
-        project_block = "<b>Проект</b>\nАктивного проекта нет."
+        project_block = "📌 <b>ПРОЕКТ</b>\nАктивного проекта нет."
 
     stress = player["stress"]
-    stress_label = "спокойно" if stress < 45 else "напряжённо" if stress < 75 else "опасно"
-    fast = "\nТестовый режим: включён" if fast_mode else ""
-    focus_state = "в процессе" if active_focus else f"{focus_left}/2"
+    stress_marker = "●" if stress < 45 else "▲" if stress < 75 else "!"
+    opportunity_text = "в процессе" if active_opportunity else f"доступно {runs_left}/2"
+    fast = "\n🧪 Тестовый режим включён" if fast_mode else ""
 
     return (
-        f"<b>Карьерист</b>\n"
-        f"{escape(rank)} · день {player['career_day']}\n\n"
+        f"🏢 <b>КАРЬЕРИСТ</b>\n"
+        f"{escape(rank)} · день {player['career_day']}\n"
+        f"━━━━━━━━━━━━\n\n"
         f"{project_block}\n\n"
-        f"<b>Сегодня</b>\n"
-        f"Действия: {player['actions_left']}/{ACTIONS_PER_DAY} · "
-        f"входящие: {inbox['unread']} · фокус: {focus_state}\n"
-        f"Стресс: {stress}/100 ({stress_label})\n\n"
-        f"<b>Рост</b>\n"
-        f"Навык {player['skill']} · репутация {player['reputation']}\n"
-        f"Заметность {player['visibility']} · связи {player['network']}\n"
-        f"Деньги: {money(player['money'])}{fast}"
+        f"🗓 <b>СЕГОДНЯ</b>\n"
+        f"⚡ Действия: {player['actions_left']}/{ACTIONS_PER_DAY}\n"
+        f"🎯 Возможности: {opportunity_text}\n"
+        f"✉️ Входящие: {inbox['unread']}\n"
+        f"{stress_marker} Стресс: {stress}/100\n\n"
+        f"📈 <b>КАРЬЕРА</b>\n"
+        f"🧠 {player['skill']}  ·  ⭐ {player['reputation']}  ·  "
+        f"👁 {player['visibility']}  ·  🤝 {player['network']}\n"
+        f"💰 {money(player['money'])}\n"
+        f"🔎 Ревью: {_review_text(player['career_day'])}{fast}"
     )
 
 
-def project_screen(game: GameService, session: SessionService, telegram_id: int) -> str:
+def project_screen(
+    game: GameService,
+    project_play: ProjectPlayService,
+    telegram_id: int,
+) -> str:
     player = game.get_player(telegram_id)
-    project = game.get_active_project(telegram_id)
-    active_focus = session.active_focus(telegram_id)
-    focus_left = session.focus_runs_left(telegram_id)
-
+    project = project_play.state(telegram_id)
     if not project:
-        return "<b>Карьерист · Проект</b>\n\nАктивного проекта сейчас нет."
-
-    days_left = project["deadline_day"] - player["career_day"]
-    deadline = "сегодня" if days_left == 0 else f"через {days_left} дн." if days_left > 0 else "просрочен"
-    focus_line = (
-        "Фокус-сессия уже начата - её можно продолжить."
-        if active_focus
-        else f"Фокус-сессий осталось: {focus_left}/2."
-    )
-    action_line = (
-        f"Ключевых действий осталось: {player['actions_left']}/{ACTIONS_PER_DAY}."
-        if player["actions_left"]
-        else "Ключевые действия на сегодня закончились."
-    )
+        return "📌 <b>ПРОЕКТ</b>\n━━━━━━━━━━━━\nАктивного проекта сейчас нет."
 
     return (
-        f"<b>Карьерист · Проект</b>\n\n"
+        f"📌 <b>ПРОЕКТ</b>\n"
+        f"━━━━━━━━━━━━\n"
         f"<b>{escape(project['title'])}</b>\n"
-        f"{bar(project['progress'], project['target'])} {project['progress']}/{project['target']}\n"
-        f"Дедлайн: {deadline}\n"
-        f"Награда: {money(project['reward_money'])} · +{project['reward_rep']} репутации\n\n"
-        f"<b>Как работать</b>\n"
-        f"Фокус - три решения подряд и немного выше эффективность.\n"
-        f"Быстрая работа - мгновенный результат без дополнительных решений.\n\n"
-        f"{focus_line}\n{action_line}"
+        f"{bar(project['progress'], project['target'])} "
+        f"{project['progress']}/{project['target']}\n\n"
+        f"⏳ Дедлайн: {_deadline(project, player['career_day'])}\n"
+        f"◆ Качество: <b>{project_play.quality_label(project['quality'])}</b> ({project['quality']})\n"
+        f"▲ Риск: <b>{project_play.risk_label(project['risk'])}</b> ({project['risk']})\n"
+        f"💰 База: {money(project['reward_money'])}\n\n"
+        f"<b>ТАКТИКА</b>\n"
+        f"{TACTICS['fast']['title']} — быстро двигает проект, но копит риск.\n"
+        f"{TACTICS['careful']['title']} — растит качество и шанс на бонус.\n"
+        f"{TACTICS['team']['title']} — снижает риск и укрепляет связи.\n\n"
+        f"⚡ Осталось действий: {player['actions_left']}/{ACTIONS_PER_DAY}\n"
+        f"<i>Высокий риск может вызвать переделку. Высокое качество при низком риске повышает награду.</i>"
     )
 
 
-def focus_screen(session: SessionService, telegram_id: int) -> str:
-    view = session.focus_view(telegram_id)
+def opportunity_board_screen(
+    game: GameService,
+    opportunities: OpportunityService,
+    telegram_id: int,
+) -> str:
+    player = game.get_player(telegram_id)
+    active = opportunities.current(telegram_id)
+    if active:
+        return opportunity_screen(opportunities, telegram_id)
+
+    items = opportunities.board(telegram_id)
+    lines = [
+        "🎯 <b>ВОЗМОЖНОСТИ</b>",
+        "━━━━━━━━━━━━",
+        "Редкие карьерные ситуации. На одну попытку тратится 1 ключевое действие.",
+        f"Сегодня можно взять ещё: <b>{opportunities.runs_left(telegram_id)}/2</b>",
+        "",
+    ]
+    for item in items:
+        state = "✓ использовано" if item["status"] != "open" else "доступно"
+        lines.extend(
+            [
+                f"<b>{item['slot']}. {escape(item['title'])}</b>",
+                escape(item["summary"]),
+                f"Статус: {state} · база {money(item['reward_money'])}",
+                "",
+            ]
+        )
+    if player["actions_left"] <= 0:
+        lines.append("⚠️ Для новой возможности сегодня не осталось ключевых действий.")
+    return "\n".join(lines).rstrip()
+
+
+def opportunity_screen(opportunities: OpportunityService, telegram_id: int) -> str:
+    view = opportunities.current(telegram_id)
     if not view:
-        return "<b>Карьерист · Фокус</b>\n\nАктивной фокус-сессии нет."
-    step = view["step"]
-    return (
-        f"<b>Карьерист · Фокус</b>\n"
-        f"Шаг {view['step_number']} из {view['step_total']} · {escape(step['title'])}\n\n"
-        f"{escape(step['text'])}\n\n"
-        f"Выбери подход."
+        return "🎯 <b>ВОЗМОЖНОСТЬ</b>\n━━━━━━━━━━━━\nАктивной возможности нет."
+
+    lines = [
+        f"🎯 <b>{escape(view['content']['title'])}</b>",
+        "━━━━━━━━━━━━",
+        f"Этап {view['stage_number']}/{view['stage_total']} · <b>{escape(view['stage']['title'])}</b>",
+        "",
+        escape(view["stage"]["text"]),
+        "",
+        "<b>ВАРИАНТЫ</b>",
+    ]
+    for choice in view["choices"]:
+        lines.append(
+            f"{choice['index'] + 1}. {escape(choice['title'])} — "
+            f"<b>{choice['chance']}%</b> · {choice['stat_label']}"
+        )
+    lines.extend(
+        [
+            "",
+            "<i>Шанс рассчитывается из твоих текущих характеристик. Сильные стороны персонажа здесь дают реальное преимущество.</i>",
+        ]
     )
+    return "\n".join(lines)
+
+
+def portfolio_screen(opportunities: OpportunityService, telegram_id: int) -> str:
+    items = opportunities.portfolio(telegram_id)
+    lines = ["🏅 <b>ПОРТФОЛИО</b>", "━━━━━━━━━━━━"]
+    if not items:
+        lines.append("Пока здесь пусто. Карьерные возможности будут превращаться в конкретные истории и результаты.")
+        return "\n".join(lines)
+    for item in items:
+        lines.append(
+            f"День {item['career_day']} · <b>{escape(item['title'])}</b>\n"
+            f"{item['tier']} · {item['successes']}/3 · {money(item['reward_money'])}"
+        )
+        lines.append("")
+    return "\n".join(lines).rstrip()
 
 
 def inbox_screen(session: SessionService, telegram_id: int) -> str:
@@ -133,14 +205,15 @@ def inbox_screen(session: SessionService, telegram_id: int) -> str:
     item = session.next_inbox_item(telegram_id)
     if not item:
         return (
-            f"<b>Карьерист · Входящие</b>\n\n"
-            f"Всё разобрано: {progress['resolved']}/{progress['total']}.\n"
-            f"Новых решений здесь сегодня не осталось."
+            "✉️ <b>ВХОДЯЩИЕ</b>\n"
+            "━━━━━━━━━━━━\n"
+            f"Всё разобрано: {progress['resolved']}/{progress['total']}."
         )
     current = item["resolved"] + 1
     return (
-        f"<b>Карьерист · Входящие</b>\n"
-        f"{current} из {item['total']} · осталось {item['unread']}\n\n"
+        f"✉️ <b>ВХОДЯЩИЕ</b>\n"
+        f"━━━━━━━━━━━━\n"
+        f"Сообщение {current}/{item['total']}\n\n"
         f"<b>{escape(item['title'])}</b>\n"
         f"{escape(item['text'])}"
     )
@@ -149,54 +222,48 @@ def inbox_screen(session: SessionService, telegram_id: int) -> str:
 def investments_screen(game: GameService, telegram_id: int) -> str:
     player = game.get_player(telegram_id)
     lines = [
-        "<b>Карьерист · Вложения</b>",
-        "",
+        "💸 <b>ВЛОЖЕНИЯ</b>",
+        "━━━━━━━━━━━━",
         f"На руках: {money(player['money'])}",
         "Одно вложение за активный день.",
         "",
     ]
     for item in INVESTMENTS.values():
-        lines.append(f"<b>{escape(item['title'])}</b> · {money(item['price'])}")
+        lines.append(f"• <b>{escape(item['title'])}</b> — {money(item['price'])}")
     return "\n".join(lines)
 
 
 def career_screen(game: GameService, telegram_id: int) -> str:
     player = game.get_player(telegram_id)
     current = game.rank_name(player["rank"], player["track"])
-    track = ""
-    if player["track"] != "general":
-        track_name = "Экспертный" if player["track"] == "expert" else "Управленческий"
-        track = f" · {track_name} трек"
-
     lines = [
-        "<b>Карьерист · Карьера</b>",
-        "",
-        f"{escape(current)}{track}",
-        f"Ставка за день: {money(game.salary(player['rank']))}",
-        f"Проекты: {player['projects_done']} закрыто · {player['projects_failed']} провалено",
+        "📈 <b>КАРЬЕРА</b>",
+        "━━━━━━━━━━━━",
+        f"Должность: <b>{escape(current)}</b>",
+        f"Ставка: {money(game.salary(player['rank']))}/день",
+        f"Проекты: {player['projects_done']} ✓ · {player['projects_failed']} ✕",
+        f"Следующее ревью: {_review_text(player['career_day'])}",
         "",
     ]
 
     if player["rank"] >= MAX_RANK:
-        lines.append("Текущая карьерная лестница пройдена.")
+        lines.append("🏆 Текущая карьерная лестница пройдена.")
         return "\n".join(lines)
 
     labels = {
-        "skill": "Навык",
-        "reputation": "Репутация",
-        "visibility": "Заметность",
-        "network": "Связи",
-        "projects_done": "Проекты",
+        "skill": "🧠 Навык",
+        "reputation": "⭐ Репутация",
+        "visibility": "👁 Заметность",
+        "network": "🤝 Связи",
+        "projects_done": "📌 Проекты",
     }
-    lines.append("<b>Следующее повышение</b>")
+    lines.append("<b>ТРЕБОВАНИЯ К ПОВЫШЕНИЮ</b>")
     for key, need in PROMOTION_REQUIREMENTS[player["rank"]].items():
         value = player[key]
-        mark = "✓" if value >= need else "·"
+        mark = "✓" if value >= need else "○"
         lines.append(f"{mark} {labels[key]}: {value}/{need}")
     if player["promotion_ready"]:
-        lines.extend(["", "Повышение одобрено. Осталось его принять."])
-    else:
-        lines.extend(["", "Ревью проходит каждые 5 активных дней."])
+        lines.extend(["", "🚀 Повышение одобрено."])
     return "\n".join(lines)
 
 
@@ -204,13 +271,12 @@ def history_screen(game: GameService, telegram_id: int) -> str:
     raw = game.recent_history(telegram_id)
     if "\n\n" in raw:
         raw = raw.split("\n\n", 1)[1]
-    return f"<b>Карьерист · История</b>\n\n{raw}"
+    return f"📜 <b>ИСТОРИЯ</b>\n━━━━━━━━━━━━\n{raw}"
 
 
 def start_intro() -> str:
     return (
-        "Ты начинаешь стажёром. Хорошо работать недостаточно: придётся расти, "
-        "строить связи, показывать результат и не выгореть.\n"
-        "5 ключевых действий задают стратегию дня; входящие и фокус-сессии "
-        "дают пространство для более длинной игровой сессии."
+        "Ты начинаешь стажёром. Здесь мало просто нажимать «работать»: "
+        "проекты требуют выбирать между скоростью, качеством и риском, а редкие "
+        "карьерные возможности проверяют реальные сильные стороны персонажа."
     )
