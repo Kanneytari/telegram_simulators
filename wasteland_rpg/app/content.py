@@ -8,8 +8,8 @@ MAX_ATTRIBUTE = float("inf")
 ATTRIBUTES = {
     "strength": {"name": "Сила", "icon": "💪"},
     "agility": {"name": "Ловкость", "icon": "🏃"},
-    "perception": {"name": "Восприятие", "icon": "👁"},
-    "intelligence": {"name": "Интеллект", "icon": "🧠"},
+    "perception": {"name": "Характеристика «Восприятие»", "icon": "👁"},
+    "intelligence": {"name": "Характеристика «Интеллект»", "icon": "🧠"},
 }
 
 ITEMS = {
