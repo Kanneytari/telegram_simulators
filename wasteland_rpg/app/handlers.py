@@ -8,7 +8,8 @@ from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
 from . import keyboards, ui
 from .content import START_INTRO
-from .game import GameError, GameService
+from .game import GameError
+from .service import GameService
 
 router = Router()
 
@@ -22,6 +23,18 @@ async def _edit(callback: CallbackQuery, text: str, markup) -> None:
 
 async def _error(callback: CallbackQuery, exc: GameError) -> None:
     await callback.answer(str(exc), show_alert=True)
+
+
+def _bind_callback_combat(callback: CallbackQuery, game: GameService) -> None:
+    if not callback.message:
+        return
+    player = game.get_player(callback.from_user.id)
+    if player["state"] == "combat":
+        game.bind_combat_message(
+            callback.from_user.id,
+            callback.message.chat.id,
+            callback.message.message_id,
+        )
 
 
 def _shop_view(category: str, game: GameService, telegram_id: int):
@@ -54,14 +67,18 @@ async def start(message: Message, game: GameService) -> None:
     game.ensure_player(message.from_user.id, message.from_user.username)
     await message.answer(f"<blockquote>{START_INTRO}</blockquote>", reply_markup=ReplyKeyboardRemove())
     text, markup = _state_view(game, message.from_user.id)
-    await message.answer(text, reply_markup=markup)
+    sent = await message.answer(text, reply_markup=markup)
+    if game.get_player(message.from_user.id)["state"] == "combat":
+        game.bind_combat_message(message.from_user.id, sent.chat.id, sent.message_id)
 
 
 @router.message(Command("menu"))
 async def menu(message: Message, game: GameService) -> None:
     game.ensure_player(message.from_user.id, message.from_user.username)
     text, markup = _state_view(game, message.from_user.id)
-    await message.answer(text, reply_markup=markup)
+    sent = await message.answer(text, reply_markup=markup)
+    if game.get_player(message.from_user.id)["state"] == "combat":
+        game.bind_combat_message(message.from_user.id, sent.chat.id, sent.message_id)
 
 
 @router.message(Command("reset"))
@@ -125,6 +142,7 @@ async def advance_route(callback: CallbackQuery, game: GameService) -> None:
         return
     player = game.get_player(callback.from_user.id)
     if player["state"] == "combat":
+        _bind_callback_combat(callback, game)
         screen, markup = ui.combat_screen(game, callback.from_user.id), keyboards.combat(game, callback.from_user.id)
     elif result.get("arrived"):
         screen, markup = ui.main_screen(game, callback.from_user.id), keyboards.home()
@@ -192,6 +210,7 @@ async def explore(callback: CallbackQuery, game: GameService) -> None:
         return
     player = game.get_player(callback.from_user.id)
     if player["state"] == "combat":
+        _bind_callback_combat(callback, game)
         screen, markup = ui.combat_screen(game, callback.from_user.id), keyboards.combat(game, callback.from_user.id)
     elif result.get("kind") == "choice":
         screen, markup = ui.choice_screen(game, callback.from_user.id), keyboards.choice(game, callback.from_user.id)
@@ -214,6 +233,7 @@ async def resolve_choice(callback: CallbackQuery, game: GameService) -> None:
     except GameError as exc:
         await _error(callback, exc)
         return
+    _bind_callback_combat(callback, game)
     screen, markup = _state_view(game, callback.from_user.id)
     await _edit(callback, ui.notice(screen, result["text"]), markup)
 
@@ -236,8 +256,12 @@ async def combat_action(callback: CallbackQuery, game: GameService) -> None:
     except GameError as exc:
         await _error(callback, exc)
         return
+    player = game.get_player(callback.from_user.id)
     screen, markup = _state_view(game, callback.from_user.id)
-    await _edit(callback, ui.notice(screen, result["text"]), markup)
+    if player["state"] == "combat":
+        await _edit(callback, screen, markup)
+    else:
+        await _edit(callback, ui.notice(screen, result.get("text")), markup)
 
 
 @router.callback_query(F.data == "menu:inventory")
