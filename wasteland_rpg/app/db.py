@@ -115,3 +115,8 @@ class Database:
                 SELECT telegram_id FROM players;
                 """
             )
+
+    def reset_player(self, telegram_id: int) -> None:
+        """Delete all persisted game state for one player via foreign-key cascades."""
+        with self.connect() as conn:
+            conn.execute("DELETE FROM players WHERE telegram_id = ?", (telegram_id,))
