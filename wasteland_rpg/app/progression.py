@@ -1,23 +1,20 @@
 from __future__ import annotations
 
 
-EARLY_LEVEL_XP = 40
-GROWTH_START_LEVEL = 6
+BASE_LEVEL_XP = 40
+XP_GROWTH_FACTOR = 1.35
+XP_ROUNDING = 5
 
 
 def xp_required_for_next(level: int) -> int:
     """XP needed to advance from `level` to `level + 1`.
 
-    Levels 1-6 keep the original onboarding pace. Starting with the transition
-    from level 6 to 7, the requirement grows progressively so stronger players
-    do not gain a level from nearly every long expedition.
+    The same exponential formula is used at every level. Each next level costs
+    about 35% more XP than the previous one, rounded to a convenient 5 XP.
     """
     level = max(1, int(level))
-    if level < GROWTH_START_LEVEL:
-        return EARLY_LEVEL_XP
-
-    step = level - (GROWTH_START_LEVEL - 1)
-    return EARLY_LEVEL_XP + 15 * step + 5 * step * step
+    raw = BASE_LEVEL_XP * (XP_GROWTH_FACTOR ** (level - 1))
+    return max(XP_ROUNDING, int(round(raw / XP_ROUNDING)) * XP_ROUNDING)
 
 
 def total_xp_for_level(level: int) -> int:
