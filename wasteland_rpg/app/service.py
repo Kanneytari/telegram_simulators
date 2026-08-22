@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
 from uuid import uuid4
 
@@ -12,6 +13,7 @@ from .sector_progression import SECTOR_NEXT, SECTOR_PREVIOUS
 
 
 ANALYTICS_GAME_VERSION = "2026-08-23.1"
+LOGGER = logging.getLogger(__name__)
 
 
 class GameService(GameplayService):
@@ -86,16 +88,24 @@ class GameService(GameplayService):
         value: int | None = None,
         metadata: dict | None = None,
     ) -> None:
-        with self.db.connect() as conn:
-            self._analytics_event_conn(
-                conn,
-                telegram_id,
+        """Best-effort analytics: logging failures must never break gameplay."""
+        try:
+            with self.db.connect() as conn:
+                self._analytics_event_conn(
+                    conn,
+                    telegram_id,
+                    event_name,
+                    context=context,
+                    run_id=run_id,
+                    entity_id=entity_id,
+                    value=value,
+                    metadata=metadata,
+                )
+        except (sqlite3.Error, TypeError, ValueError):
+            LOGGER.exception(
+                "Failed to write analytics event %s for player %s",
                 event_name,
-                context=context,
-                run_id=run_id,
-                entity_id=entity_id,
-                value=value,
-                metadata=metadata,
+                telegram_id,
             )
 
     def analytics_events(self, telegram_id: int | None = None) -> list[dict]:
@@ -126,8 +136,16 @@ class GameService(GameplayService):
         return str(row["run_id"]) if row and row["run_id"] else None
 
     def _active_run_id(self, telegram_id: int, context: str) -> str | None:
-        with self.db.connect() as conn:
-            return self._active_run_id_conn(conn, telegram_id, context)
+        try:
+            with self.db.connect() as conn:
+                return self._active_run_id_conn(conn, telegram_id, context)
+        except sqlite3.Error:
+            LOGGER.exception(
+                "Failed to resolve analytics run for player %s in %s",
+                telegram_id,
+                context,
+            )
+            return None
 
     def _log_combat_started(self, telegram_id: int, parent_context: str, run_id: str | None) -> None:
         player = self.get_player(telegram_id)
@@ -175,12 +193,15 @@ class GameService(GameplayService):
                     "SELECT 1 FROM players WHERE telegram_id = ?", (telegram_id,)
                 ).fetchone()
             )
-            had_history = bool(
-                conn.execute(
-                    "SELECT 1 FROM analytics_events WHERE telegram_id = ? LIMIT 1",
-                    (telegram_id,),
-                ).fetchone()
-            )
+            try:
+                had_history = bool(
+                    conn.execute(
+                        "SELECT 1 FROM analytics_events WHERE telegram_id = ? LIMIT 1",
+                        (telegram_id,),
+                    ).fetchone()
+                )
+            except sqlite3.Error:
+                had_history = False
         super().ensure_player(telegram_id, username)
         if not existed:
             self.track_event(
@@ -646,6 +667,9 @@ class GameService(GameplayService):
                 "ammo_after": int(after["ammo"]),
                 "medkits_before": medkits_before,
                 "medkits_after": int(after["medkits"]),
+                "distance_before": int(combat_before.get("distance", 0)),
+                "cover_before": bool(combat_before.get("cover", 0)),
+                "bleeding_before": int(combat_before.get("bleeding", 0)),
                 "damage_known": damage_known,
                 "won": bool(result.get("won")),
                 "fled": bool(result.get("fled")),
