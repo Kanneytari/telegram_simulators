@@ -215,33 +215,79 @@ def character_screen(game: GameService, telegram_id: int) -> str:
 
 def shop_screen(game: GameService, telegram_id: int) -> str:
     player = game.get_player(telegram_id)
+    return (
+        "🏪 <b>ТОРГОВЕЦ</b>\n"
+        "━━━━━━━━━━━━\n"
+        f"💰 На руках: {player['credits']} жет.\n"
+        f"📦 Добыча на складе: {game.stash_value(telegram_id)} жет.\n\n"
+        "Выбери категорию товаров. Продать всю добычу можно прямо отсюда."
+    )
+
+
+def shop_weapons_screen(game: GameService, telegram_id: int) -> str:
+    player = game.get_player(telegram_id)
     lines = [
-        "🏪 <b>ТОРГОВЕЦ</b>",
+        "🔫 <b>ТОРГОВЕЦ · ОРУЖИЕ</b>",
         "━━━━━━━━━━━━",
         f"💰 На руках: {player['credits']} жет.",
-        f"📦 Добыча на складе: {game.stash_value(telegram_id)} жет.",
+        f"Текущее оружие: {escape(WEAPONS[player['weapon_id']]['name'])}",
         "",
-        "<b>РАСХОДНИКИ</b>",
+        "<b>БОЕПРИПАСЫ</b>",
         "🔫 Патроны ×6 · 24 жет.",
-        "🩹 Аптечка · 32 жет.",
         "",
-        "<b>СНАРЯЖЕНИЕ</b>",
+        "<b>ОРУЖИЕ</b>",
     ]
-    for weapon_id, item in WEAPONS.items():
-        if item["price"]:
-            mark = "✓" if player["weapon_id"] == weapon_id else "•"
-            lines.append(
-                f"{mark} {escape(item['name'])} · {item['price']} жет. · урон {item['damage']} · "
-                f"точность {item['accuracy']}%\n   Нужно: {requirements_text(item)}"
-            )
-    for armor_id, item in ARMORS.items():
-        if item["price"]:
-            mark = "✓" if player["armor_id"] == armor_id else "•"
-            lines.append(
-                f"{mark} {escape(item['name'])} · {item['price']} жет. · защита {item['reduction']}\n"
-                f"   Нужно: {requirements_text(item)}"
-            )
+    current_order = WEAPONS[player["weapon_id"]]["order"]
+    upgrades = 0
+    for item_id, item in WEAPONS.items():
+        if not item["price"] or item["order"] <= current_order:
+            continue
+        upgrades += 1
+        lock = "🔒" if game.missing_requirements(player, item) else "•"
+        lines.append(
+            f"{lock} {escape(item['name'])} · {item['price']} жет. · урон {item['damage']} · "
+            f"точность {item['accuracy']}%\n   Нужно: {requirements_text(item)}"
+        )
+    if not upgrades:
+        lines.append("Лучшее доступное оружие уже куплено.")
     return "\n".join(lines)
+
+
+def shop_equipment_screen(game: GameService, telegram_id: int) -> str:
+    player = game.get_player(telegram_id)
+    lines = [
+        "🦺 <b>ТОРГОВЕЦ · ЭКИПИРОВКА</b>",
+        "━━━━━━━━━━━━",
+        f"💰 На руках: {player['credits']} жет.",
+        f"Текущая броня: {escape(ARMORS[player['armor_id']]['name'])}",
+        "",
+    ]
+    current_order = ARMORS[player["armor_id"]]["order"]
+    upgrades = 0
+    for item_id, item in ARMORS.items():
+        if not item["price"] or item["order"] <= current_order:
+            continue
+        upgrades += 1
+        lock = "🔒" if game.missing_requirements(player, item) else "•"
+        lines.append(
+            f"{lock} {escape(item['name'])} · {item['price']} жет. · защита {item['reduction']}\n"
+            f"   Нужно: {requirements_text(item)}"
+        )
+    if not upgrades:
+        lines.append("Лучшая доступная экипировка уже куплена.")
+    return "\n".join(lines)
+
+
+def shop_medicine_screen(game: GameService, telegram_id: int) -> str:
+    player = game.get_player(telegram_id)
+    return (
+        "🩹 <b>ТОРГОВЕЦ · МЕДИЦИНА</b>\n"
+        "━━━━━━━━━━━━\n"
+        f"💰 На руках: {player['credits']} жет.\n"
+        f"🩹 Аптечек с собой: {player['medkits']}\n\n"
+        "🩹 <b>Аптечка</b> · 32 жет.\n"
+        "Восстанавливает здоровье. Эффективность повышается Интеллектом."
+    )
 
 
 def rules_screen() -> str:
