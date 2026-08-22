@@ -1,19 +1,39 @@
 from __future__ import annotations
 
+import math
+import time
 from html import escape
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
+from .combat_rules import ENEMY_ACTION_SECONDS, PLAYER_ACTION_LABELS, PLAYER_ACTION_SECONDS
 from .content import ENEMIES, WEAPONS
-from .game import GameService
 from .ui import level_up_notice
 
 
-def combat_screen(game: GameService, telegram_id: int) -> str:
+def _seconds_left(due_at: float | None, now: float) -> int:
+    if due_at is None:
+        return 0
+    return max(0, int(math.ceil(float(due_at) - now)))
+
+
+def _enemy_intent(enemy: dict, action: str) -> str:
+    if action == "approach":
+        return f"🏃 {enemy['name']} приближается"
+    if action == "retreat":
+        return f"↩️ {enemy['name']} отходит"
+    if action == "ranged_attack":
+        return f"🔫 {enemy['name']} готовит выстрел"
+    return f"🔪 {enemy['name']} готовит атаку"
+
+
+def combat_screen(game, telegram_id: int) -> str:
+    now = time.time()
     player = game.get_player(telegram_id)
     enemy = ENEMIES[player["enemy_id"]]
     weapon = WEAPONS[player["weapon_id"]]
     combat = game.combat_state(telegram_id)
+    timeline = game.combat_timeline(telegram_id)
 
     lines = [
         f"⚔️ <b>БОЙ · {escape(enemy['name']).upper()}</b>",
@@ -23,53 +43,119 @@ def combat_screen(game: GameService, telegram_id: int) -> str:
     if notice:
         lines.append(notice)
 
-    lines.append(f"❤️ {player['hp']}/{game.max_hp(player)}")
-    if combat["bleeding"]:
-        lines.append(f"🩸 Кровотечение: {combat['bleeding']} HP/ход")
+    lines.append(f"❤️ {player['hp']}/{game.max_hp(player)} · 🔫 {player['ammo']} патр.")
     lines.append(f"☠️ {player['enemy_hp']} HP")
-
-    if int(combat["distance"]) <= 1:
-        lines.append("⚠️ Противник вплотную — доступен ближний бой.")
+    if combat["bleeding"]:
+        lines.append(f"🩸 Кровотечение: {combat['bleeding']} HP/сек")
     if combat["cover"]:
         lines.append("🧱 Ты в укрытии.")
+    if timeline and float(timeline["stim_until"]) > now:
+        lines.append("💉 Стимулятор восстанавливает здоровье.")
+    if int(combat["distance"]) <= 1:
+        lines.append("⚠️ Противник вплотную.")
 
-    lines += [
-        "",
-        f"🔫 {escape(weapon['name'])} · {player['ammo']} патр.",
-        f"🛡 Защита: {game.combat_damage_reduction(player)}",
-        "",
-        "<i>Стреляй, используй расходники или отходи. Если патроны закончились, можно выждать, пока противник не подойдёт для ближнего боя.</i>",
-    ]
+    lines += ["", f"🔫 {escape(weapon['name'])}"]
+
+    if timeline:
+        player_action = timeline["player_action"]
+        if player_action:
+            label = PLAYER_ACTION_LABELS.get(str(player_action), str(player_action))
+            left = _seconds_left(timeline["player_action_due"], now)
+            lines.append(f"Ты: {label} · {left}с")
+        else:
+            lines.append("Ты: готов к действию")
+
+        enemy_action = str(timeline["enemy_action"])
+        enemy_left = _seconds_left(timeline["enemy_action_due"], now)
+        lines.append(f"Противник: {_enemy_intent(enemy, enemy_action)} · {enemy_left}с")
+
+        opportunity = str(timeline["opportunity_kind"] or "")
+        if float(timeline["opportunity_until"]) > now:
+            if opportunity == "cover":
+                lines += ["", "🧱 Есть возможность занять укрытие."]
+            elif opportunity == "stim":
+                lines += ["", "💉 Рядом найден стимулятор."]
+
+    log = game.combat_log(telegram_id)
+    if log:
+        lines += ["", "<b>Последние события:</b>"]
+        lines.extend(f"• {escape(entry)}" for entry in log)
+
     return "\n".join(lines)
 
 
-def combat_keyboard(game: GameService, telegram_id: int) -> InlineKeyboardMarkup:
+def combat_keyboard(game, telegram_id: int) -> InlineKeyboardMarkup:
+    now = time.time()
     player = game.get_player(telegram_id)
-    enemy = ENEMIES[player["enemy_id"]]
     weapon = WEAPONS[player["weapon_id"]]
     combat = game.combat_state(telegram_id)
+    timeline = game.combat_timeline(telegram_id)
 
     rows: list[list[InlineKeyboardButton]] = []
+    if timeline and timeline["player_action"]:
+        return InlineKeyboardMarkup(inline_keyboard=rows)
+
     ammo = int(player["ammo"])
     distance = int(combat["distance"])
 
     if ammo > 0:
-        fire_row = [InlineKeyboardButton(text="🔫 Выстрел", callback_data="combat:shoot")]
+        rows.append([
+            InlineKeyboardButton(
+                text=f"🔫 Выстрел · {int(PLAYER_ACTION_SECONDS['shoot'])}с",
+                callback_data="combat:shoot",
+            ),
+            InlineKeyboardButton(
+                text=f"🎯 Прицельный · {int(PLAYER_ACTION_SECONDS['aimed_shot'])}с",
+                callback_data="combat:aimed_shot",
+            ),
+        ])
         if "burst" in weapon.get("modes", ()) and ammo >= 3:
-            fire_row.append(InlineKeyboardButton(text="💥 Очередь ×3", callback_data="combat:burst"))
-        rows.append(fire_row)
-    elif distance > 1:
-        rows.append([InlineKeyboardButton(text="⏳ Ждать", callback_data="combat:wait")])
+            rows.append([
+                InlineKeyboardButton(
+                    text=f"💥 Очередь ×3 · {int(PLAYER_ACTION_SECONDS['burst'])}с",
+                    callback_data="combat:burst",
+                )
+            ])
 
     if distance <= 1:
-        rows.append([InlineKeyboardButton(text="🔪 Ближний бой", callback_data="combat:melee")])
+        rows.append([
+            InlineKeyboardButton(
+                text=f"🔪 Ближний бой · {int(PLAYER_ACTION_SECONDS['melee'])}с",
+                callback_data="combat:melee",
+            )
+        ])
+
+    if timeline and float(timeline["opportunity_until"]) > now:
+        opportunity = str(timeline["opportunity_kind"] or "")
+        if opportunity == "cover":
+            rows.append([
+                InlineKeyboardButton(
+                    text=f"🧱 В укрытие · {int(PLAYER_ACTION_SECONDS['cover'])}с",
+                    callback_data="combat:cover",
+                )
+            ])
+        elif opportunity == "stim":
+            rows.append([
+                InlineKeyboardButton(
+                    text=f"💉 Стимулятор · {int(PLAYER_ACTION_SECONDS['stim'])}с",
+                    callback_data="combat:stim",
+                )
+            ])
 
     utility_row: list[InlineKeyboardButton] = []
-    if str(enemy["style"]) == "ranged" and not combat["cover"]:
-        utility_row.append(InlineKeyboardButton(text="🧱 В укрытие", callback_data="combat:cover"))
-    utility_row.append(InlineKeyboardButton(text="🩹 Аптечка", callback_data="combat:medkit"))
-    if utility_row:
-        rows.append(utility_row)
+    if int(player["medkits"]) > 0:
+        utility_row.append(
+            InlineKeyboardButton(
+                text=f"🩹 Аптечка · {int(PLAYER_ACTION_SECONDS['medkit'])}с",
+                callback_data="combat:medkit",
+            )
+        )
+    utility_row.append(
+        InlineKeyboardButton(
+            text=f"🏃 Отступить · {int(PLAYER_ACTION_SECONDS['flee'])}с",
+            callback_data="combat:flee",
+        )
+    )
+    rows.append(utility_row)
 
-    rows.append([InlineKeyboardButton(text="🏃 Отступить", callback_data="combat:flee")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
