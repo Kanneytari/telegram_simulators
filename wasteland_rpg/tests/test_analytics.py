@@ -63,13 +63,17 @@ def test_combat_action_is_logged_with_action_and_snapshot(tmp_path: Path) -> Non
     assert metadata["ammo_after"] == metadata["ammo_before"] - 1
 
 
-def test_analytics_survive_character_reset(tmp_path: Path) -> None:
+def test_admin_reset_deletes_all_analytics_history(tmp_path: Path) -> None:
     game = make_game(tmp_path)
-    before = len(events(game))
+    game.start_expedition(1, "rust_belt")
+    game.return_base(1)
+    assert events(game)
 
     game.db.reset_player(1)
-    assert len(game.analytics_events(1)) == before
+
+    assert game.analytics_events(1) == []
 
     game.ensure_player(1, "tester")
-    recreated = events(game, "character_recreated")
-    assert len(recreated) == 1
+    recreated_events = game.analytics_events(1)
+    assert len(recreated_events) == 1
+    assert recreated_events[0]["event_name"] == "player_created"
