@@ -52,13 +52,13 @@ def main_screen(game: GameService, telegram_id: int) -> str:
     return (
         f"☢️ <b>{GAME_TITLE}</b>\n"
         f"{BASE_NAME} · уровень {game.level(player)}{point_text}\n"
-        f"━━━━━━━━━━━━\n"
+        "━━━━━━━━━━━━\n"
         f"❤️ {player['hp']}/{game.max_hp(player)} · 🔫 {player['ammo']} · 🩹 {player['medkits']}\n"
         f"💰 {player['credits']} жет. · 📦 склад: {stash_units} ед.\n\n"
         f"🔫 {escape(weapon['name'])}\n"
         f"🦺 {escape(armor['name'])}\n\n"
-        f"💪 {player['strength']} · ⚡ {player['agility']} · 👁 {player['perception']} · 🛡 {player['endurance']}\n"
-        f"🧠 Опыт {player['xp']}\n\n"
+        f"💪 {player['strength']} · ⚡ {player['agility']} · 👁 {player['perception']} · 🧠 {player['intelligence']}\n"
+        f"✨ Опыт {player['xp']}\n\n"
         f"🧭 Успешных вылазок: {player['successful_runs']} · ☠️ смертей: {player['deaths']}"
     )
 
@@ -95,7 +95,7 @@ def expedition_screen(game: GameService, telegram_id: int) -> str:
     value = sum(row["qty"] * ITEMS[row["item_id"]]["value"] for row in field)
     return (
         f"{sector['icon']} <b>{escape(sector['name']).upper()}</b>\n"
-        f"━━━━━━━━━━━━\n"
+        "━━━━━━━━━━━━\n"
         f"❤️ {player['hp']}/{game.max_hp(player)} · 🔫 {player['ammo']} · 🩹 {player['medkits']}\n"
         f"🎒 {weight}/{capacity} · добыча примерно на {value} жет.\n\n"
         f"☣️ Угроза: <b>{threat_label(player['threat'])}</b> ({player['threat']}/100)\n"
@@ -109,8 +109,11 @@ def event_screen(game: GameService, telegram_id: int) -> str:
     sector = SECTORS[player["sector_id"]]
     if player["pending_event"] == "anomaly":
         chance = min(
-            88,
-            43 + player["perception"] * 7 + player["endurance"] * 4 - sector["danger"] * 4,
+            90,
+            36
+            + player["perception"] * 6
+            + player["intelligence"] * 5
+            - sector["danger"] * 4,
         )
         return (
             "💠 <b>НЕСТАБИЛЬНЫЙ КОНТУР</b>\n"
@@ -120,7 +123,13 @@ def event_screen(game: GameService, telegram_id: int) -> str:
             "Успех: редкий осколок и много опыта.\n"
             "Провал: серьёзный урон."
         )
-    chance = min(92, 54 + player["perception"] * 7 - sector["danger"] * 4)
+    chance = min(
+        94,
+        48
+        + player["perception"] * 6
+        + player["intelligence"] * 3
+        - sector["danger"] * 4,
+    )
     return (
         "🧰 <b>ТЕХНИЧЕСКИЙ ЯЩИК</b>\n"
         "━━━━━━━━━━━━\n"
@@ -136,14 +145,15 @@ def combat_screen(game: GameService, telegram_id: int) -> str:
     enemy = ENEMIES[player["enemy_id"]]
     weapon = WEAPONS[player["weapon_id"]]
     aim = " · 🎯 прицел готов" if player["aimed"] else ""
+    resistance = game.combat_damage_reduction(player)
     return (
         f"⚔️ <b>БОЙ · {escape(enemy['name']).upper()}</b>\n"
         "━━━━━━━━━━━━\n"
         f"❤️ Ты: {player['hp']}/{game.max_hp(player)}\n"
         f"☠️ Противник: {player['enemy_hp']} HP\n\n"
         f"🔫 {escape(weapon['name'])} · патроны {player['ammo']}{aim}\n"
-        f"🦺 Снижение урона: {ARMORS[player['armor_id']]['reduction']}\n\n"
-        "<i>Прицеливание тратит ход, но даёт +20% точности следующему выстрелу. Ближний бой экономит патроны.</i>"
+        f"🛡 Сопротивление урону: {resistance}\n\n"
+        "<i>Ловкость повышает сопротивление урону и шанс отступить. Прицеливание тратит ход, но даёт +20% точности следующему выстрелу.</i>"
     )
 
 
@@ -178,28 +188,29 @@ def character_screen(game: GameService, telegram_id: int) -> str:
     level = game.level(player)
     points = game.attribute_points(player)
     progress = player["xp"] % XP_PER_LEVEL
-    lines = [
-        "🧬 <b>ПЕРСОНАЖ</b>",
-        "━━━━━━━━━━━━",
-        f"Уровень: <b>{level}</b> · ❤️ {game.max_hp(player)} HP",
-        f"Опыт до следующего уровня: {progress}/{XP_PER_LEVEL}",
-        f"Свободных очков характеристик: <b>{points}</b>",
-        "",
-        f"💪 <b>Сила {player['strength']}/{MAX_ATTRIBUTE}</b>",
-        f"Рюкзак и требования тяжёлого снаряжения. Сейчас: {game.carry_capacity(player)} веса.",
-        "",
-        f"⚡ <b>Ловкость {player['agility']}/{MAX_ATTRIBUTE}</b>",
-        "Точность стрельбы, урон и эффективность ближнего боя.",
-        "",
-        f"👁 <b>Восприятие {player['perception']}/{MAX_ATTRIBUTE}</b>",
-        "Качество добычи и проверки опасных находок.",
-        "",
-        f"🛡 <b>Выносливость {player['endurance']}/{MAX_ATTRIBUTE}</b>",
-        "Аптечки, опасные находки и шанс отступить.",
-        "",
-        "<i>Каждый новый уровень даёт 1 очко характеристики и +20 к максимальному здоровью.</i>",
-    ]
-    return "\n".join(lines)
+    return "\n".join(
+        [
+            "🧬 <b>ПЕРСОНАЖ</b>",
+            "━━━━━━━━━━━━",
+            f"Уровень: <b>{level}</b> · ❤️ {game.max_hp(player)} HP",
+            f"Опыт до следующего уровня: {progress}/{XP_PER_LEVEL}",
+            f"Свободных очков характеристик: <b>{points}</b>",
+            "",
+            f"💪 <b>Сила {player['strength']}/{MAX_ATTRIBUTE}</b>",
+            f"Рюкзак и урон в ближнем бою. Сейчас: {game.carry_capacity(player)} веса.",
+            "",
+            f"⚡ <b>Ловкость {player['agility']}/{MAX_ATTRIBUTE}</b>",
+            f"Стрельба, отход и сопротивление урону. Бонус сопротивления: {game.agility_resistance(player)}.",
+            "",
+            f"👁 <b>Восприятие {player['perception']}/{MAX_ATTRIBUTE}</b>",
+            "Качество добычи и обнаружение опасных возможностей.",
+            "",
+            f"🧠 <b>Интеллект {player['intelligence']}/{MAX_ATTRIBUTE}</b>",
+            "Работа со сложными находками и эффективность аптечек.",
+            "",
+            "<i>Каждый новый уровень даёт 1 очко характеристики и +20 к максимальному здоровью.</i>",
+        ]
+    )
 
 
 def shop_screen(game: GameService, telegram_id: int) -> str:
@@ -241,7 +252,8 @@ def rules_screen() -> str:
         "2. Ищи добычу. Каждый шаг повышает угрозу и шанс неприятной встречи.\n"
         "3. Решай, когда остановиться. До возвращения ресурсы считаются незакреплёнными.\n"
         "4. Опыт повышает уровень. Каждый уровень даёт 1 очко характеристики и +20 HP.\n"
-        "5. Характеристики влияют на действия и открывают доступ к более требовательному снаряжению.\n"
-        "6. Более сложные сектора открываются через успешные вылазки и уровень.\n\n"
+        "5. Сила, Ловкость, Восприятие и Интеллект меняют реальные игровые проверки.\n"
+        "6. Ловкость также снижает входящий урон; экипировка может требовать характеристики.\n"
+        "7. Более сложные сектора открываются через успешные вылазки и уровень.\n\n"
         "<b>Главное решение игры:</b> вернуться с тем, что уже нашёл, или рискнуть ради следующей находки."
     )
