@@ -102,10 +102,10 @@ def test_settlements_expand_sectors_without_moving_refuge_content(game: GameServ
         "station": {"freight_yard", "depot_6"},
         "promgorod": {"foundry", "dead_substation", "reactor_yard"},
     }
-    with game.db.connect() as conn:
-        for location_id, sector_ids in expected.items():
+    for location_id, sector_ids in expected.items():
+        with game.db.connect() as conn:
             conn.execute("UPDATE player_world SET location_id=? WHERE telegram_id=1", (location_id,))
-            assert {sid for sid, _ in game.local_sectors(1)} == sector_ids
+        assert {sid for sid, _ in game.local_sectors(1)} == sector_ids
 
 
 def test_branching_scene_can_resolve_by_attribute(game: GameService) -> None:
