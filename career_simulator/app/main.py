@@ -12,6 +12,7 @@ from .config import load_config
 from .db import Database
 from .game import GameService
 from .handlers import router
+from .session import SessionService
 
 
 async def main() -> None:
@@ -21,6 +22,7 @@ async def main() -> None:
     db = Database(config.db_path)
     db.init()
     game = GameService(db)
+    session = SessionService(game)
     admin = AdminService(db, game, config.admin_ids)
 
     bot = Bot(
@@ -30,6 +32,7 @@ async def main() -> None:
     dp = Dispatcher()
     dp.include_router(router)
     dp["game"] = game
+    dp["session"] = session
     dp["admin"] = admin
 
     await bot.delete_webhook(drop_pending_updates=True)
