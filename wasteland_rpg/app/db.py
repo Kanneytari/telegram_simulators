@@ -59,3 +59,9 @@ class Database:
                 );
                 """
             )
+            columns = {row["name"] for row in conn.execute("PRAGMA table_info(players)")}
+            for name in ("strength", "agility", "perception", "endurance"):
+                if name not in columns:
+                    conn.execute(
+                        f"ALTER TABLE players ADD COLUMN {name} INTEGER NOT NULL DEFAULT 1"
+                    )
