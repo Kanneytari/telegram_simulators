@@ -213,7 +213,7 @@ class OpportunityService:
         stage = content["stages"][run["stage"]]
         choices = []
         for index, choice in enumerate(stage["choices"]):
-            title, stat, difficulty, *_ = choice
+            title, stat, difficulty, success_effects, fail_effects, *_ = choice
             chance = self.success_chance(player[stat], difficulty)
             choices.append(
                 {
@@ -222,6 +222,8 @@ class OpportunityService:
                     "stat": stat,
                     "stat_label": STAT_LABELS[stat],
                     "chance": chance,
+                    "success_effects": success_effects,
+                    "fail_effects": fail_effects,
                 }
             )
         return {
@@ -321,7 +323,7 @@ class OpportunityService:
         elif successes == 1:
             tier = "Смешанный результат"
             multiplier = 0.8
-            final_effects = {"reputation": 0}
+            final_effects = {}
         else:
             tier = "Не вышло"
             multiplier = 0.4
