@@ -62,6 +62,38 @@ async def menu(message: Message, game: GameService) -> None:
     await message.answer(text, reply_markup=markup)
 
 
+@router.message(Command("reset"))
+async def reset_progress(message: Message, game: GameService) -> None:
+    game.ensure_player(message.from_user.id, message.from_user.username)
+    await message.answer(
+        "⚠️ <b>ПОЛНЫЙ СБРОС ПРОГРЕССА</b>\n"
+        "━━━━━━━━━━━━\n"
+        "Будут удалены уровень, характеристики, деньги, предметы, склад, груз, "
+        "экипировка, открытые поселения и текущая вылазка/дорога.\n\n"
+        "Персонаж будет создан заново с начальными параметрами. "
+        "Это действие нельзя отменить.",
+        reply_markup=keyboards.reset_confirm(),
+    )
+
+
+@router.callback_query(F.data == "reset:cancel")
+async def cancel_reset(callback: CallbackQuery, game: GameService) -> None:
+    screen, markup = _state_view(game, callback.from_user.id)
+    await _edit(callback, ui.notice(screen, "Сброс отменён."), markup)
+
+
+@router.callback_query(F.data == "reset:confirm")
+async def confirm_reset(callback: CallbackQuery, game: GameService) -> None:
+    game.db.reset_player(callback.from_user.id)
+    game.ensure_player(callback.from_user.id, callback.from_user.username)
+    text = (
+        "<blockquote>🗑 Прогресс полностью сброшен.</blockquote>\n\n"
+        f"<blockquote>{START_INTRO}</blockquote>\n\n"
+        f"{ui.main_screen(game, callback.from_user.id)}"
+    )
+    await _edit(callback, text, keyboards.home())
+
+
 @router.callback_query(F.data == "menu:home")
 async def open_home(callback: CallbackQuery, game: GameService) -> None:
     await _edit(callback, ui.main_screen(game, callback.from_user.id), keyboards.home())
