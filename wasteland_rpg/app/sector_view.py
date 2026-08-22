@@ -20,19 +20,15 @@ def sector_screen(game, telegram_id: int) -> str:
         unlocked = game.sector_unlocked(player, sector_id)
         mastered = game.sector_mastered(telegram_id, sector_id)
         status = "✅" if mastered else "🟢" if unlocked else "🔒"
+
+        progress = ""
+        if unlocked and not mastered:
+            progress = f" · {game.sector_max_threat(telegram_id, sector_id)}%"
+
         lines += [
-            f"{status} <b>{sector['icon']} {escape(sector['name'])}</b> · опасность {sector['danger']}/3",
+            f"{status} <b>{sector['icon']} {escape(sector['name'])}</b>{progress}",
             escape(sector["description"]),
+            "",
         ]
-        if mastered:
-            lines.append("Освоено: достигнута угроза 100/100.")
-        elif not unlocked:
-            previous_name = game.sector_unlock_requirement(sector_id)
-            lines.append(f"Нужно: достичь угрозы 100/100 в «{escape(previous_name)}».")
-        else:
-            max_threat = game.sector_max_threat(telegram_id, sector_id)
-            if max_threat > 0:
-                lines.append(f"Максимальная достигнутая угроза: {max_threat}/100.")
-        lines.append("")
 
     return "\n".join(lines).rstrip()
