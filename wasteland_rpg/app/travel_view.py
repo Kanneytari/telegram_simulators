@@ -31,7 +31,7 @@ def travel_screen(game, telegram_id: int) -> str:
         lines.append(notice)
 
     if remaining:
-        lines.append(f"👣 До {escape(target['name'])}: {remaining} участков")
+        lines.append(f"👣 Осталось участков: {remaining}")
     else:
         lines.append(f"📍 Ты у входа в {escape(target['name'])}.")
 
@@ -60,14 +60,14 @@ def travel_keyboard(game, telegram_id: int) -> InlineKeyboardMarkup:
     step = int(travel["step"])
 
     if step >= int(route["stages"]):
-        advance_text = f"🏁 Войти в {target['name']}"
+        advance_text = f"🏁 Войти: {target['icon']} {target['name']}"
     else:
-        advance_text = f"👣 Дальше к {target['name']}"
+        advance_text = f"👣 Дальше: {target['icon']} {target['name']}"
 
     turn_text = (
-        f"↩️ Вернуться в {origin['name']}"
+        f"↩️ Вернуться: {origin['icon']} {origin['name']}"
         if step <= 0
-        else f"↩️ Повернуть к {origin['name']}"
+        else f"↩️ Развернуться: {origin['icon']} {origin['name']}"
     )
 
     return InlineKeyboardMarkup(
