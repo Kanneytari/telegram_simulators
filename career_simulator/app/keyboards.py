@@ -1,149 +1,130 @@
 from __future__ import annotations
 
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 
 from .content import INVESTMENTS
+from .project_play import TACTICS
+
+HOME = "📊 Статус"
+PROJECT = "📌 Проект"
+OPPORTUNITIES = "🎯 Возможности"
+INBOX = "✉️ Входящие"
+CAREER = "📈 Карьера"
+MORE = "🧰 Ещё"
+BACK = "⬅️ Главное"
+PORTFOLIO = "🏅 Портфолио"
+HISTORY = "📜 История"
+INVESTMENTS_BUTTON = "💸 Вложения"
+LEARN = "📚 Учиться"
+NETWORK = "🤝 Нетворк"
+SHOW = "📣 Показать результат"
+REST = "☕ Отдохнуть"
+ADMIN = "🧪 Админ"
+NEXT_DAY = "⏭ Следующий день"
+FAST = "⚡ Быстрый режим"
+RESET = "🗑 Сбросить прогресс"
+CONFIRM_RESET = "✅ Да, сбросить"
+CANCEL = "↩️ Отмена"
 
 
-def main_menu(
-    *,
-    unread: int = 0,
-    is_admin: bool = False,
-    fast_mode: bool = False,
-    actions_left: int | None = None,
-    active_focus: bool = False,
-) -> InlineKeyboardMarkup:
-    if active_focus:
-        rows = [
-            [
-                InlineKeyboardButton(text="🎯 Продолжить фокус", callback_data="focus:open"),
-                InlineKeyboardButton(text=f"✉️ Входящие · {unread}", callback_data="menu:inbox"),
-            ],
-            [
-                InlineKeyboardButton(text="Вложения", callback_data="menu:invest"),
-                InlineKeyboardButton(text="📈 Карьера", callback_data="menu:career"),
-            ],
-            [InlineKeyboardButton(text="История", callback_data="menu:history")],
-        ]
-    else:
-        rows = [
-            [
-                InlineKeyboardButton(text="🗂 Проект", callback_data="menu:project"),
-                InlineKeyboardButton(text=f"✉️ Входящие · {unread}", callback_data="menu:inbox"),
-            ],
-            [
-                InlineKeyboardButton(text="📚 Учиться", callback_data="action:learn"),
-                InlineKeyboardButton(text="🤝 Нетворк", callback_data="action:network"),
-            ],
-            [
-                InlineKeyboardButton(text="📣 Показать результат", callback_data="action:show"),
-                InlineKeyboardButton(text="☕ Отдохнуть", callback_data="action:rest"),
-            ],
-            [
-                InlineKeyboardButton(text="Вложения", callback_data="menu:invest"),
-                InlineKeyboardButton(text="📈 Карьера", callback_data="menu:career"),
-            ],
-            [InlineKeyboardButton(text="История", callback_data="menu:history")],
-        ]
-
-    if is_admin:
-        admin_row = [
-            InlineKeyboardButton(
-                text=f"🧪 Быстрый: {'ВКЛ' if fast_mode else 'ВЫКЛ'}",
-                callback_data="admin:fast",
-            )
-        ]
-        if fast_mode and actions_left == 0:
-            admin_row.insert(
-                0,
-                InlineKeyboardButton(text="⏭ Следующий день", callback_data="admin:next_day"),
-            )
-        rows.append(admin_row)
-
-    return InlineKeyboardMarkup(inline_keyboard=rows)
-
-
-def back_menu() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[[InlineKeyboardButton(text="← На главный", callback_data="menu:main")]]
+def _markup(rows: list[list[str]], placeholder: str | None = None) -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=text) for text in row] for row in rows],
+        resize_keyboard=True,
+        is_persistent=True,
+        input_field_placeholder=placeholder,
     )
 
 
-def project_menu(*, actions_left: int, active_focus: bool, focus_left: int) -> InlineKeyboardMarkup:
-    rows = []
-    if active_focus:
-        rows.append([InlineKeyboardButton(text="🎯 Продолжить фокус", callback_data="focus:open")])
-    elif actions_left > 0 and focus_left > 0:
-        rows.append([InlineKeyboardButton(text="🎯 Фокус-сессия", callback_data="focus:start")])
-    if actions_left > 0 and not active_focus:
-        rows.append([InlineKeyboardButton(text="⚡ Быстрая работа", callback_data="project:quick")])
-    rows.append([InlineKeyboardButton(text="← На главный", callback_data="menu:main")])
-    return InlineKeyboardMarkup(inline_keyboard=rows)
-
-
-def focus_menu(step: dict) -> InlineKeyboardMarkup:
+def main_menu(*, is_admin: bool = False) -> ReplyKeyboardMarkup:
     rows = [
-        [InlineKeyboardButton(text=choice[0], callback_data=f"focus:choice:{index}")]
-        for index, choice in enumerate(step["choices"])
+        [HOME, PROJECT],
+        [OPPORTUNITIES, INBOX],
+        [CAREER, MORE],
     ]
-    rows.append([InlineKeyboardButton(text="← К проекту", callback_data="menu:project")])
-    return InlineKeyboardMarkup(inline_keyboard=rows)
+    if is_admin:
+        rows.append([ADMIN])
+    return _markup(rows, "Выбери раздел")
 
 
-def inbox_menu(item: dict | None) -> InlineKeyboardMarkup:
-    rows = []
-    if item:
+def more_menu() -> ReplyKeyboardMarkup:
+    return _markup(
+        [
+            [LEARN, NETWORK],
+            [SHOW, REST],
+            [INVESTMENTS_BUTTON, PORTFOLIO],
+            [HISTORY, BACK],
+        ],
+        "Дополнительные действия",
+    )
+
+
+def project_menu(*, actions_left: int) -> ReplyKeyboardMarkup:
+    rows: list[list[str]] = []
+    if actions_left > 0:
         rows.extend(
             [
-                [
-                    InlineKeyboardButton(
-                        text=choice[0],
-                        callback_data=f"inbox:{item['slot']}:{index}",
-                    )
-                ]
-                for index, choice in enumerate(item["choices"])
+                [TACTICS["fast"]["title"], TACTICS["careful"]["title"]],
+                [TACTICS["team"]["title"]],
             ]
         )
-    rows.append([InlineKeyboardButton(text="← На главный", callback_data="menu:main")])
-    return InlineKeyboardMarkup(inline_keyboard=rows)
+    rows.append([BACK])
+    return _markup(rows, "Выбери тактику работы")
 
 
-def reset_confirm_menu() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text="Да, сбросить", callback_data="admin:reset:confirm"),
-                InlineKeyboardButton(text="Отмена", callback_data="admin:reset:cancel"),
-            ]
-        ]
-    )
+def opportunity_board_menu(items: list[dict], *, can_start: bool) -> ReplyKeyboardMarkup:
+    rows: list[list[str]] = []
+    if can_start:
+        for item in items:
+            if item["status"] == "open":
+                rows.append([f"{item['slot']} · {item['title']}"])
+    rows.append([BACK])
+    return _markup(rows, "Выбери возможность")
 
 
-def investments_menu() -> InlineKeyboardMarkup:
+def opportunity_choice_menu(view: dict) -> ReplyKeyboardMarkup:
     rows = [
-        [
-            InlineKeyboardButton(
-                text=f"{item['title']} · {item['price']:,} ₽".replace(",", " "),
-                callback_data=f"buy:{item_id}",
-            )
-        ]
-        for item_id, item in INVESTMENTS.items()
+        [f"{choice['index'] + 1} · {choice['title']} · {choice['chance']}%"]
+        for choice in view["choices"]
     ]
-    rows.append([InlineKeyboardButton(text="← На главный", callback_data="menu:main")])
-    return InlineKeyboardMarkup(inline_keyboard=rows)
+    return _markup(rows, "Выбери подход")
 
 
-def career_menu(player: dict) -> InlineKeyboardMarkup:
-    rows = []
+def inbox_menu(item: dict | None) -> ReplyKeyboardMarkup:
+    rows: list[list[str]] = []
+    if item:
+        rows.extend(
+            [[f"{index + 1} · {choice[0]}"] for index, choice in enumerate(item["choices"])]
+        )
+    rows.append([BACK])
+    return _markup(rows, "Разобрать сообщение")
+
+
+def investments_menu() -> ReplyKeyboardMarkup:
+    rows = [[item["title"]] for item in INVESTMENTS.values()]
+    rows.append([BACK])
+    return _markup(rows, "Выбери вложение")
+
+
+def career_menu(player: dict) -> ReplyKeyboardMarkup:
+    rows: list[list[str]] = []
     if player["promotion_ready"]:
         if player["rank"] == 2 and player["track"] == "general":
-            rows.extend(
-                [
-                    [InlineKeyboardButton(text="Экспертный трек", callback_data="promotion:expert")],
-                    [InlineKeyboardButton(text="Управленческий трек", callback_data="promotion:manager")],
-                ]
-            )
+            rows.extend([["🧠 Экспертный трек"], ["👥 Управленческий трек"]])
         else:
-            rows.append([InlineKeyboardButton(text="Принять повышение", callback_data="promotion:claim")])
-    rows.append([InlineKeyboardButton(text="← На главный", callback_data="menu:main")])
-    return InlineKeyboardMarkup(inline_keyboard=rows)
+            rows.append(["🚀 Принять повышение"])
+    rows.append([BACK])
+    return _markup(rows, "Карьера")
+
+
+def admin_menu(*, fast_mode: bool, can_advance: bool) -> ReplyKeyboardMarkup:
+    status = "ВКЛ" if fast_mode else "ВЫКЛ"
+    rows = [[f"{FAST}: {status}"]]
+    if fast_mode and can_advance:
+        rows.append([NEXT_DAY])
+    rows.extend([[RESET], [BACK]])
+    return _markup(rows, "Админские инструменты")
+
+
+def reset_confirm_menu() -> ReplyKeyboardMarkup:
+    return _markup([[CONFIRM_RESET, CANCEL]], "Подтверди сброс")
