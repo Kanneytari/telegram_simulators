@@ -186,7 +186,7 @@ def character_screen(game: GameService, telegram_id: int) -> str:
         f"Свободных очков характеристик: <b>{points}</b>",
         "",
         f"💪 <b>Сила {player['strength']}/{MAX_ATTRIBUTE}</b>",
-        f"Рюкзак и ближний бой. Сейчас: {game.carry_capacity(player)} веса.",
+        f"Рюкзак и требования тяжёлого снаряжения. Сейчас: {game.carry_capacity(player)} веса.",
         "",
         f"⚡ <b>Ловкость {player['agility']}/{MAX_ATTRIBUTE}</b>",
         "Точность стрельбы, урон и эффективность ближнего боя.",
