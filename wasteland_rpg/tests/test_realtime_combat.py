@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from app.combat_rules import PLAYER_ACTION_SECONDS
+from app.combat_rules import ENEMY_ACTION_SECONDS, PLAYER_ACTION_SECONDS
 from app.db import Database
 from app.service import GameService
 
@@ -26,15 +26,30 @@ def test_action_cost_uses_time_already_elapsed_since_previous_action(tmp_path: P
     timeline = game.combat_timeline(1)
     started_at = float(timeline["player_last_action_at"])
 
-    game.combat_action(1, "aimed_shot", now=started_at + 4.0)
+    game.combat_action(1, "aimed_shot", now=started_at + 6.5)
     updated = game.combat_timeline(1)
 
     assert updated["player_action"] == "aimed_shot"
-    assert float(updated["player_action_due"]) == pytest.approx(started_at + 5.0)
+    assert float(updated["player_action_due"]) == pytest.approx(started_at + 7.5)
 
 
-def test_burst_takes_five_seconds(tmp_path: Path) -> None:
-    assert PLAYER_ACTION_SECONDS["burst"] == 5.0
+def test_combat_action_times_are_slowed_by_fifty_percent() -> None:
+    assert PLAYER_ACTION_SECONDS == {
+        "shoot": 4.5,
+        "aimed_shot": 7.5,
+        "burst": 7.5,
+        "melee": 3.0,
+        "cover": 3.0,
+        "stim": 1.5,
+        "medkit": 6.0,
+        "flee": 7.5,
+    }
+    assert ENEMY_ACTION_SECONDS == {
+        "approach": 3.0,
+        "retreat": 3.0,
+        "melee_attack": 4.5,
+        "ranged_attack": 6.0,
+    }
 
 
 def test_enemy_progresses_without_player_action(tmp_path: Path) -> None:
@@ -70,8 +85,8 @@ def test_stim_heals_each_second_after_use(tmp_path: Path) -> None:
             (start + 20.0,),
         )
 
-    game.combat_action(1, "stim", now=start + 1.0)
+    game.combat_action(1, "stim", now=start + 1.5)
     after_use = game.get_player(1)["hp"]
-    game.tick_all_combats(start + 2.01)
+    game.tick_all_combats(start + 2.51)
 
     assert game.get_player(1)["hp"] >= after_use + 3
