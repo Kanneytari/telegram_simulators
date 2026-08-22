@@ -16,6 +16,7 @@ from .db import Database
 from .handlers import router
 from .main_view import main_screen
 from .progression_view import character_screen
+from .rules_view import rules_screen
 from .sector_view import sector_screen
 from .service import GameService
 
@@ -24,6 +25,7 @@ from .service import GameService
 ui.main_screen = main_screen
 ui.combat_screen = combat_screen
 ui.character_screen = character_screen
+ui.rules_screen = rules_screen
 ui.sector_screen = sector_screen
 keyboards.combat = combat_keyboard
 
