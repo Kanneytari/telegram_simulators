@@ -80,29 +80,59 @@ def character(game: GameService, telegram_id: int) -> InlineKeyboardMarkup:
     return _kb(rows)
 
 
-def shop(game: GameService, telegram_id: int) -> InlineKeyboardMarkup:
+def shop() -> InlineKeyboardMarkup:
+    return _kb(
+        [
+            [("🔫 Оружие", "shopcat:weapons"), ("🦺 Экипировка", "shopcat:equipment")],
+            [("🩹 Медицина", "shopcat:medicine")],
+            [("💰 Продать весь склад", "shop:sell")],
+            [("◀️ Меню", "menu:home")],
+        ]
+    )
+
+
+def _shop_navigation() -> list[list[tuple[str, str]]]:
+    return [
+        [("🔫 Оружие", "shopcat:weapons"), ("🦺 Экипировка", "shopcat:equipment")],
+        [("🩹 Медицина", "shopcat:medicine"), ("◀️ Торговец", "menu:shop")],
+    ]
+
+
+def shop_weapons(game: GameService, telegram_id: int) -> InlineKeyboardMarkup:
     player = game.get_player(telegram_id)
     rows: list[list[tuple[str, str]]] = [
-        [("💰 Продать весь склад", "shop:sell")],
-        [("🔫 Патроны ×6 · 24", "shop:ammo"), ("🩹 Аптечка · 32", "shop:medkit")],
+        [("🔫 Патроны ×6 · 24", "shopbuy:weapons:ammo")],
     ]
-    current_weapon_order = WEAPONS[player["weapon_id"]]["order"]
+    current_order = WEAPONS[player["weapon_id"]]["order"]
     for item_id, item in WEAPONS.items():
-        if item["price"] and item["order"] > current_weapon_order:
+        if item["price"] and item["order"] > current_order:
             lock = "🔒 " if game.missing_requirements(player, item) else ""
             rows.append(
-                [(f"{lock}🔫 {item['name']} · {item['price']}", f"shop:{item_id}")]
+                [(f"{lock}🔫 {item['name']} · {item['price']}", f"shopbuy:weapons:{item_id}")]
             )
-            break
-    current_armor_order = ARMORS[player["armor_id"]]["order"]
+    rows.extend(_shop_navigation())
+    return _kb(rows)
+
+
+def shop_equipment(game: GameService, telegram_id: int) -> InlineKeyboardMarkup:
+    player = game.get_player(telegram_id)
+    rows: list[list[tuple[str, str]]] = []
+    current_order = ARMORS[player["armor_id"]]["order"]
     for item_id, item in ARMORS.items():
-        if item["price"] and item["order"] > current_armor_order:
+        if item["price"] and item["order"] > current_order:
             lock = "🔒 " if game.missing_requirements(player, item) else ""
             rows.append(
-                [(f"{lock}🦺 {item['name']} · {item['price']}", f"shop:{item_id}")]
+                [(f"{lock}🦺 {item['name']} · {item['price']}", f"shopbuy:equipment:{item_id}")]
             )
-            break
-    rows.append([("◀️ Меню", "menu:home")])
+    rows.extend(_shop_navigation())
+    return _kb(rows)
+
+
+def shop_medicine() -> InlineKeyboardMarkup:
+    rows = [
+        [("🩹 Аптечка · 32", "shopbuy:medicine:medkit")],
+        *_shop_navigation(),
+    ]
     return _kb(rows)
 
 
