@@ -74,7 +74,7 @@ def character(game: GameService, telegram_id: int) -> InlineKeyboardMarkup:
         for key, meta in ATTRIBUTES.items():
             if player[key] < MAX_ATTRIBUTE:
                 rows.append(
-                    [(f"⬆️ {meta['icon']} {meta['name']}", f"skill:{key}")]
+                    [(f"⬆️ {meta['icon']} {meta['name']}", f"attribute:{key}")]
                 )
     rows.append([("◀️ Меню", "menu:home")])
     return _kb(rows)
