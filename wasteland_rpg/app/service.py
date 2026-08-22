@@ -154,14 +154,18 @@ class GameService(GameplayService):
         parent_context: str,
         run_id: str | None,
         cause: str,
+        metadata: dict | None = None,
     ) -> None:
+        payload = {"cause": cause}
+        if metadata:
+            payload.update(metadata)
         self.track_event(
             telegram_id,
             "player_died",
             context=parent_context,
             run_id=run_id,
             entity_id=cause,
-            metadata={"cause": cause},
+            metadata=payload,
         )
 
     def ensure_player(self, telegram_id: int, username: str | None = None) -> None:
@@ -319,6 +323,7 @@ class GameService(GameplayService):
                 "combat_started": bool(result.get("combat")),
                 "success": result.get("success"),
                 "dead": bool(result.get("dead")),
+                "hp_before": int(before["hp"]),
             },
         )
         if before["state"] != "combat" and after["state"] == "combat":
@@ -329,6 +334,7 @@ class GameService(GameplayService):
                 parent_context="expedition",
                 run_id=run_id,
                 cause=f"scene:{scene or 'unknown'}",
+                metadata={"hp_before": int(before["hp"]), "threat": int(before["threat"])},
             )
         return result
 
@@ -347,6 +353,7 @@ class GameService(GameplayService):
                 "action": action,
                 "success": result.get("success"),
                 "dead": bool(result.get("dead")),
+                "hp_before": int(before["hp"]),
             },
         )
         if result.get("dead"):
@@ -355,6 +362,7 @@ class GameService(GameplayService):
                 parent_context="expedition",
                 run_id=run_id,
                 cause=f"event:{event_id}",
+                metadata={"hp_before": int(before["hp"]), "threat": int(before["threat"])},
             )
         return result
 
@@ -614,8 +622,14 @@ class GameService(GameplayService):
             result = super().combat_action(telegram_id, action)
 
         after = self.get_player(telegram_id)
-        enemy_hp_after = int(after.get("enemy_hp") or 0)
-        damage_dealt = max(0, enemy_hp_before - enemy_hp_after)
+        terminal_without_enemy_hp = bool(result.get("fled") or result.get("dead"))
+        enemy_hp_after = (
+            enemy_hp_before
+            if terminal_without_enemy_hp
+            else int(after.get("enemy_hp") or 0)
+        )
+        damage_known = not terminal_without_enemy_hp
+        damage_dealt = max(0, enemy_hp_before - enemy_hp_after) if damage_known else 0
         self.track_event(
             telegram_id,
             "combat_action",
@@ -632,6 +646,7 @@ class GameService(GameplayService):
                 "ammo_after": int(after["ammo"]),
                 "medkits_before": medkits_before,
                 "medkits_after": int(after["medkits"]),
+                "damage_known": damage_known,
                 "won": bool(result.get("won")),
                 "fled": bool(result.get("fled")),
                 "dead": bool(result.get("dead")),
@@ -654,6 +669,11 @@ class GameService(GameplayService):
                 parent_context=parent_context,
                 run_id=run_id,
                 cause=f"combat:{enemy_id}",
+                metadata={
+                    "hp_before_action": hp_before,
+                    "ammo_before_action": ammo_before,
+                    "medkits_before_action": medkits_before,
+                },
             )
         return result
 
