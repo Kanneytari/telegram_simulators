@@ -107,6 +107,15 @@ class Database:
                     FOREIGN KEY (telegram_id) REFERENCES players(telegram_id) ON DELETE CASCADE
                 );
 
+                CREATE TABLE IF NOT EXISTS event_weights (
+                    telegram_id INTEGER NOT NULL,
+                    context TEXT NOT NULL,
+                    event_key TEXT NOT NULL,
+                    current_weight INTEGER NOT NULL CHECK (current_weight >= 0),
+                    PRIMARY KEY (telegram_id, context, event_key),
+                    FOREIGN KEY (telegram_id) REFERENCES players(telegram_id) ON DELETE CASCADE
+                );
+
                 INSERT OR IGNORE INTO player_world (telegram_id, location_id)
                 SELECT telegram_id, 'refuge7' FROM players;
                 INSERT OR IGNORE INTO visited_locations (telegram_id, location_id)
