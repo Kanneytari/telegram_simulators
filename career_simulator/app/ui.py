@@ -44,6 +44,22 @@ def _review_text(career_day: int) -> str:
     return f"через {left} дн."
 
 
+def _quality_marker(value: int) -> str:
+    if value >= 20:
+        return "🟢"
+    if value >= 8:
+        return "🟡"
+    return "🔴"
+
+
+def _risk_marker(value: int) -> str:
+    if value >= 45:
+        return "🔴"
+    if value >= 20:
+        return "🟡"
+    return "🟢"
+
+
 def _effect_text(effects: dict[str, int]) -> str:
     labels = {
         "skill": "навык",
@@ -98,17 +114,15 @@ def home_screen(
 
     return (
         f"🏢 <b>КАРЬЕРИСТ</b>\n"
-        f"{escape(rank)} · день {player['career_day']}\n"
+        f"{escape(rank)} · день {player['career_day']} · ревью {_review_text(player['career_day'])}\n"
         f"━━━━━━━━━━━━\n"
         f"{project_block}\n\n"
-        f"🗓 <b>СЕГОДНЯ</b>\n"
         f"⚡ {player['actions_left']}/{ACTIONS_PER_DAY} · "
         f"🎯 {opportunity_text} · ✉️ {inbox['unread']}\n"
         f"{stress_marker} Стресс: {stress}/100\n\n"
-        f"<b>КАРЬЕРА</b>\n"
-        f"Навык {player['skill']} · Репутация {player['reputation']}\n"
-        f"Заметность {player['visibility']} · Связи {player['network']}\n\n"
-        f"💰 {money(player['money'])} · Ревью {_review_text(player['career_day'])}{fast}"
+        f"🧠 Навык {player['skill']} · ⭐ Репутация {player['reputation']}\n"
+        f"👁 Заметность {player['visibility']} · 🤝 Связи {player['network']}\n\n"
+        f"💰 {money(player['money'])}{fast}"
     )
 
 
@@ -129,8 +143,8 @@ def project_screen(
         f"{bar(project['progress'], project['target'])} "
         f"{project['progress']}/{project['target']}\n\n"
         f"⏳ Дедлайн: {_deadline(project, player['career_day'])}\n"
-        f"◆ Качество: <b>{project_play.quality_label(project['quality'])}</b> ({project['quality']})\n"
-        f"▲ Риск: <b>{project_play.risk_label(project['risk'])}</b> ({project['risk']})\n"
+        f"{_quality_marker(project['quality'])} Качество: <b>{project_play.quality_label(project['quality'])}</b> ({project['quality']})\n"
+        f"{_risk_marker(project['risk'])} Риск: <b>{project_play.risk_label(project['risk'])}</b> ({project['risk']})\n"
         f"💰 База: {money(project['reward_money'])}\n\n"
         f"<b>ТАКТИКА</b>\n"
         f"{TACTICS['fast']['title']} · +24-30 прогресса · риск +18 · стресс +9\n"
