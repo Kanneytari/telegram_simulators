@@ -156,6 +156,7 @@ class Database:
             )
 
     def reset_player(self, telegram_id: int) -> None:
-        """Delete game state while intentionally preserving append-only analytics."""
+        """Admin-only hard reset: delete both game state and analytics history."""
         with self.connect() as conn:
+            conn.execute("DELETE FROM analytics_events WHERE telegram_id = ?", (telegram_id,))
             conn.execute("DELETE FROM players WHERE telegram_id = ?", (telegram_id,))
