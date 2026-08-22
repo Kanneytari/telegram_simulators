@@ -93,7 +93,15 @@ class AdminService:
 
         with self.db.connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
+            existing_tables = {
+                row["name"]
+                for row in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table'"
+                ).fetchall()
+            }
             for table in ("daily_events", "purchases", "inbox_items", "focus_runs"):
+                if table not in existing_tables:
+                    continue
                 conn.execute(
                     f"UPDATE {table} SET day_key = ? WHERE player_id = ? AND day_key = ?",
                     (archive_key, telegram_id, current_key),
