@@ -9,7 +9,6 @@ from .content import (
     ENEMIES,
     GAME_TITLE,
     ITEMS,
-    MAX_ATTRIBUTE,
     SECTORS,
     WEAPONS,
     XP_PER_LEVEL,
@@ -57,7 +56,7 @@ def main_screen(game: GameService, telegram_id: int) -> str:
         f"💰 {player['credits']} жет. · 📦 склад: {stash_units} ед.\n\n"
         f"🔫 {escape(weapon['name'])}\n"
         f"🦺 {escape(armor['name'])}\n\n"
-        f"💪 {player['strength']} · ⚡ {player['agility']} · 👁 {player['perception']} · 🧠 {player['intelligence']}\n"
+        f"💪 {player['strength']} · 🏃 {player['agility']} · 👁 {player['perception']} · 🧠 {player['intelligence']}\n"
         f"✨ Опыт {player['xp']}\n\n"
         f"🧭 Успешных вылазок: {player['successful_runs']} · ☠️ смертей: {player['deaths']}"
     )
@@ -194,19 +193,9 @@ def character_screen(game: GameService, telegram_id: int) -> str:
             "━━━━━━━━━━━━",
             f"Уровень: <b>{level}</b> · ❤️ {game.max_hp(player)} HP",
             f"Опыт до следующего уровня: {progress}/{XP_PER_LEVEL}",
-            f"Свободных очков характеристик: <b>{points}</b>",
+            f"Свободных очков: <b>{points}</b>",
             "",
-            f"💪 <b>Сила {player['strength']}/{MAX_ATTRIBUTE}</b>",
-            f"Рюкзак и урон в ближнем бою. Сейчас: {game.carry_capacity(player)} веса.",
-            "",
-            f"⚡ <b>Ловкость {player['agility']}/{MAX_ATTRIBUTE}</b>",
-            f"Стрельба, отход и сопротивление урону. Бонус сопротивления: {game.agility_resistance(player)}.",
-            "",
-            f"👁 <b>Восприятие {player['perception']}/{MAX_ATTRIBUTE}</b>",
-            "Качество добычи и обнаружение опасных возможностей.",
-            "",
-            f"🧠 <b>Интеллект {player['intelligence']}/{MAX_ATTRIBUTE}</b>",
-            "Работа со сложными находками и эффективность аптечек.",
+            f"💪: <b>{player['strength']}</b> · 🏃: <b>{player['agility']}</b> · 👁: <b>{player['perception']}</b> · 🧠: <b>{player['intelligence']}</b>",
             "",
             "<i>Каждый новый уровень даёт 1 очко характеристики и +20 к максимальному здоровью.</i>",
         ]
