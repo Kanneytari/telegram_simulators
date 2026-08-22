@@ -22,6 +22,16 @@ async def _error(callback: CallbackQuery, exc: GameError) -> None:
     await callback.answer(str(exc), show_alert=True)
 
 
+def _shop_view(category: str, game: GameService, telegram_id: int):
+    if category == "weapons":
+        return ui.shop_weapons_screen(game, telegram_id), keyboards.shop_weapons(game, telegram_id)
+    if category == "equipment":
+        return ui.shop_equipment_screen(game, telegram_id), keyboards.shop_equipment(game, telegram_id)
+    if category == "medicine":
+        return ui.shop_medicine_screen(game, telegram_id), keyboards.shop_medicine()
+    raise GameError("Неизвестная категория товаров.")
+
+
 @router.message(CommandStart())
 async def start(message: Message, game: GameService) -> None:
     game.ensure_player(message.from_user.id, message.from_user.username)
@@ -96,8 +106,45 @@ async def open_shop(callback: CallbackQuery, game: GameService) -> None:
     await _edit(
         callback,
         ui.shop_screen(game, callback.from_user.id),
-        keyboards.shop(game, callback.from_user.id),
+        keyboards.shop(),
     )
+
+
+@router.callback_query(F.data.startswith("shopcat:"))
+async def open_shop_category(callback: CallbackQuery, game: GameService) -> None:
+    category = callback.data.split(":", 1)[1]
+    try:
+        screen, markup = _shop_view(category, game, callback.from_user.id)
+    except GameError as exc:
+        await _error(callback, exc)
+        return
+    await _edit(callback, screen, markup)
+
+
+@router.callback_query(F.data == "shop:sell")
+async def sell_stash(callback: CallbackQuery, game: GameService) -> None:
+    try:
+        message = game.sell_all(callback.from_user.id)
+    except GameError as exc:
+        await _error(callback, exc)
+        return
+    await _edit(
+        callback,
+        ui.notice(ui.shop_screen(game, callback.from_user.id), message),
+        keyboards.shop(),
+    )
+
+
+@router.callback_query(F.data.startswith("shopbuy:"))
+async def buy_from_shop(callback: CallbackQuery, game: GameService) -> None:
+    _, category, product = callback.data.split(":", 2)
+    try:
+        message = game.buy(callback.from_user.id, product)
+        screen, markup = _shop_view(category, game, callback.from_user.id)
+    except GameError as exc:
+        await _error(callback, exc)
+        return
+    await _edit(callback, ui.notice(screen, message), markup)
 
 
 @router.callback_query(F.data == "menu:rules")
@@ -258,23 +305,4 @@ async def upgrade_attribute(callback: CallbackQuery, game: GameService) -> None:
         callback,
         ui.notice(ui.character_screen(game, callback.from_user.id), message),
         keyboards.character(game, callback.from_user.id),
-    )
-
-
-@router.callback_query(F.data.startswith("shop:"))
-async def shop_action(callback: CallbackQuery, game: GameService) -> None:
-    product = callback.data.split(":", 1)[1]
-    try:
-        message = (
-            game.sell_all(callback.from_user.id)
-            if product == "sell"
-            else game.buy(callback.from_user.id, product)
-        )
-    except GameError as exc:
-        await _error(callback, exc)
-        return
-    await _edit(
-        callback,
-        ui.notice(ui.shop_screen(game, callback.from_user.id), message),
-        keyboards.shop(game, callback.from_user.id),
     )
