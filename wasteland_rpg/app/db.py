@@ -116,6 +116,14 @@ class Database:
                     FOREIGN KEY (telegram_id) REFERENCES players(telegram_id) ON DELETE CASCADE
                 );
 
+                CREATE TABLE IF NOT EXISTS sector_progress (
+                    telegram_id INTEGER NOT NULL,
+                    sector_id TEXT NOT NULL,
+                    max_threat INTEGER NOT NULL DEFAULT 0 CHECK (max_threat BETWEEN 0 AND 100),
+                    PRIMARY KEY (telegram_id, sector_id),
+                    FOREIGN KEY (telegram_id) REFERENCES players(telegram_id) ON DELETE CASCADE
+                );
+
                 INSERT OR IGNORE INTO player_world (telegram_id, location_id)
                 SELECT telegram_id, 'refuge7' FROM players;
                 INSERT OR IGNORE INTO visited_locations (telegram_id, location_id)
