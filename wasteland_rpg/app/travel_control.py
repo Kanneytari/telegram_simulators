@@ -78,7 +78,7 @@ def turn_travel(game, telegram_id: int) -> dict:
                 "text": (
                     f"Ты развернулся. Теперь путь ведёт к "
                     f"{LOCATIONS[old_origin_id]['icon']} {LOCATIONS[old_origin_id]['name']}. "
-                    f"До города: {stages - new_step} участков."
+                    f"Осталось участков: {stages - new_step}."
                 ),
             }
 
