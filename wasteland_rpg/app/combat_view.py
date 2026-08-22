@@ -21,14 +21,14 @@ def _duration_text(seconds: float) -> str:
     return str(int(math.ceil(float(seconds))))
 
 
-def _enemy_intent(action: str) -> str:
+def _enemy_intent(enemy: dict, action: str) -> str:
     if action == "approach":
-        return "🏃 Сближение"
+        return f"🏃 {enemy['name']} приближается"
     if action == "retreat":
-        return "↩️ Отход"
+        return f"↩️ {enemy['name']} отходит"
     if action == "ranged_attack":
-        return "🔫 Выстрел"
-    return "🔪 Атака"
+        return f"🔫 {enemy['name']} готовит выстрел"
+    return f"🔪 {enemy['name']} готовит атаку"
 
 
 def _queued_button_text(action: str, text: str, queued: str | None) -> str:
@@ -85,7 +85,7 @@ def combat_screen(game, telegram_id: int) -> str:
 
         enemy_action = str(timeline["enemy_action"])
         enemy_left = _seconds_left(timeline["enemy_action_due"], now)
-        lines.append(f"Противник: {_enemy_intent(enemy_action)} · {enemy_left}с")
+        lines.append(f"Противник: {_enemy_intent(enemy, enemy_action)} · {enemy_left}с")
 
         opportunity = str(timeline["opportunity_kind"] or "")
         if float(timeline["opportunity_until"]) > now:
