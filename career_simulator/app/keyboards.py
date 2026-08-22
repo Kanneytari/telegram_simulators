@@ -77,14 +77,14 @@ def opportunity_board_menu(items: list[dict], *, can_start: bool) -> ReplyKeyboa
     if can_start:
         for item in items:
             if item["status"] == "open":
-                rows.append([f"{item['slot']} · {item['title']}"])
+                rows.append([f"🎯 {item['slot']} · {item['title']}"])
     rows.append([BACK])
     return _markup(rows, "Выбери возможность")
 
 
 def opportunity_choice_menu(view: dict) -> ReplyKeyboardMarkup:
     rows = [
-        [f"{choice['index'] + 1} · {choice['title']} · {choice['chance']}%"]
+        [f"🎲 {choice['index'] + 1} · {choice['title']} · {choice['chance']}%"]
         for choice in view["choices"]
     ]
     return _markup(rows, "Выбери подход")
@@ -94,14 +94,14 @@ def inbox_menu(item: dict | None) -> ReplyKeyboardMarkup:
     rows: list[list[str]] = []
     if item:
         rows.extend(
-            [[f"{index + 1} · {choice[0]}"] for index, choice in enumerate(item["choices"])]
+            [[f"✉️ {index + 1} · {choice[0]}"] for index, choice in enumerate(item["choices"])]
         )
     rows.append([BACK])
     return _markup(rows, "Разобрать сообщение")
 
 
 def investments_menu() -> ReplyKeyboardMarkup:
-    rows = [[item["title"]] for item in INVESTMENTS.values()]
+    rows = [[f"💳 {item['title']}"] for item in INVESTMENTS.values()]
     rows.append([BACK])
     return _markup(rows, "Выбери вложение")
 
