@@ -27,14 +27,15 @@ class Database:
                 CREATE TABLE IF NOT EXISTS players (
                     telegram_id INTEGER PRIMARY KEY,
                     username TEXT,
-                    hp INTEGER NOT NULL DEFAULT 100,
+                    hp INTEGER NOT NULL DEFAULT 40,
                     credits INTEGER NOT NULL DEFAULT 70,
                     ammo INTEGER NOT NULL DEFAULT 12,
                     medkits INTEGER NOT NULL DEFAULT 1,
                     xp INTEGER NOT NULL DEFAULT 0,
-                    combat INTEGER NOT NULL DEFAULT 1,
-                    scavenging INTEGER NOT NULL DEFAULT 1,
-                    survival INTEGER NOT NULL DEFAULT 1,
+                    strength INTEGER NOT NULL DEFAULT 1,
+                    agility INTEGER NOT NULL DEFAULT 1,
+                    perception INTEGER NOT NULL DEFAULT 1,
+                    intelligence INTEGER NOT NULL DEFAULT 1,
                     successful_runs INTEGER NOT NULL DEFAULT 0,
                     deaths INTEGER NOT NULL DEFAULT 0,
                     weapon_id TEXT NOT NULL DEFAULT 'pipe_pistol',
@@ -59,9 +60,3 @@ class Database:
                 );
                 """
             )
-            columns = {row["name"] for row in conn.execute("PRAGMA table_info(players)")}
-            for name in ("strength", "agility", "perception", "endurance"):
-                if name not in columns:
-                    conn.execute(
-                        f"ALTER TABLE players ADD COLUMN {name} INTEGER NOT NULL DEFAULT 1"
-                    )
