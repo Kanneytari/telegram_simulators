@@ -107,40 +107,6 @@ class Database:
                     FOREIGN KEY (telegram_id) REFERENCES players(telegram_id) ON DELETE CASCADE
                 );
 
-                CREATE TABLE IF NOT EXISTS combat_timeline (
-                    telegram_id INTEGER PRIMARY KEY,
-                    player_last_action_at REAL NOT NULL,
-                    player_action TEXT,
-                    player_action_due REAL,
-                    enemy_action TEXT NOT NULL,
-                    enemy_action_due REAL NOT NULL,
-                    periodic_last_at REAL NOT NULL,
-                    stim_until REAL NOT NULL DEFAULT 0,
-                    opportunity_kind TEXT,
-                    opportunity_until REAL NOT NULL DEFAULT 0,
-                    opportunity_cooldown_until REAL NOT NULL DEFAULT 0,
-                    chat_id INTEGER,
-                    message_id INTEGER,
-                    FOREIGN KEY (telegram_id) REFERENCES players(telegram_id) ON DELETE CASCADE
-                );
-
-                CREATE TABLE IF NOT EXISTS combat_queue (
-                    telegram_id INTEGER PRIMARY KEY,
-                    action TEXT NOT NULL,
-                    queued_at REAL NOT NULL,
-                    FOREIGN KEY (telegram_id) REFERENCES players(telegram_id) ON DELETE CASCADE
-                );
-
-                CREATE TABLE IF NOT EXISTS combat_log (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    telegram_id INTEGER NOT NULL,
-                    text TEXT NOT NULL,
-                    FOREIGN KEY (telegram_id) REFERENCES players(telegram_id) ON DELETE CASCADE
-                );
-
-                CREATE INDEX IF NOT EXISTS idx_combat_log_player
-                ON combat_log (telegram_id, id);
-
                 CREATE TABLE IF NOT EXISTS event_weights (
                     telegram_id INTEGER NOT NULL,
                     context TEXT NOT NULL,
