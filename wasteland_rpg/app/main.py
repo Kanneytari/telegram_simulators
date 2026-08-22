@@ -9,17 +9,16 @@ from aiogram.enums import ParseMode
 
 from .config import load_config
 from .db import Database
-from .game import GameService
 from .handlers import router
+from .progression import ProgressionGameService
 
 
 async def main() -> None:
     logging.basicConfig(level=logging.INFO)
     config = load_config()
-
     db = Database(config.db_path)
     db.init()
-    game = GameService(db)
+    game = ProgressionGameService(db)
 
     bot = Bot(
         token=config.bot_token,
