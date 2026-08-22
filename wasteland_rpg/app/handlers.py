@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
 from . import keyboards, ui
 from .content import START_INTRO
@@ -26,7 +26,11 @@ async def _error(callback: CallbackQuery, exc: GameError) -> None:
 async def start(message: Message, game: GameService) -> None:
     game.ensure_player(message.from_user.id, message.from_user.username)
     await message.answer(
-        f"<blockquote>{START_INTRO}</blockquote>\n\n{ui.main_screen(game, message.from_user.id)}",
+        f"<blockquote>{START_INTRO}</blockquote>",
+        reply_markup=ReplyKeyboardRemove(),
+    )
+    await message.answer(
+        ui.main_screen(game, message.from_user.id),
         reply_markup=keyboards.home(),
     )
 
