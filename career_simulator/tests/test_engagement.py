@@ -56,6 +56,8 @@ class EngagementMechanicsTest(unittest.TestCase):
         self.assertIsNotNone(self.opportunities.current(self.player_id))
 
     def test_completed_opportunity_is_saved_to_portfolio(self) -> None:
+        board = self.opportunities.board(self.player_id)
+        chosen_title = board[0]["title"]
         self.opportunities.start(self.player_id, 1)
         for _ in range(3):
             view = self.opportunities.current(self.player_id)
@@ -65,7 +67,9 @@ class EngagementMechanicsTest(unittest.TestCase):
         self.assertIsNone(self.opportunities.current(self.player_id))
         portfolio = self.opportunities.portfolio(self.player_id)
         self.assertEqual(len(portfolio), 1)
-        self.assertEqual(portfolio[0]["successes"], portfolio[0]["successes"])
+        self.assertEqual(portfolio[0]["title"], chosen_title)
+        self.assertGreaterEqual(portfolio[0]["successes"], 0)
+        self.assertLessEqual(portfolio[0]["successes"], 3)
 
     def test_higher_stat_means_higher_success_chance(self) -> None:
         low = self.opportunities.success_chance(2, 6)
