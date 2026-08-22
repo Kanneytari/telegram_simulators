@@ -22,6 +22,17 @@ def notice(text: str, message: str | None = None) -> str:
     return f"<blockquote>▸ {escape(message)}</blockquote>\n\n{text}"
 
 
+def level_up_notice(game: GameService, player: dict) -> str:
+    points = game.attribute_points(player)
+    if points <= 0:
+        return ""
+    if points == 1:
+        message = "⬆️ Новый уровень! Выбери характеристику для улучшения."
+    else:
+        message = f"⬆️ Новые уровни! Доступно очков характеристик: {points}."
+    return f"<blockquote>{message}</blockquote>"
+
+
 def threat_label(value: int) -> str:
     if value < 30:
         return "🟢 низкая"
@@ -44,14 +55,15 @@ def main_screen(game: GameService, telegram_id: int) -> str:
     player = game.get_player(telegram_id)
     weapon = WEAPONS[player["weapon_id"]]
     armor = ARMORS[player["armor_id"]]
-    points = game.attribute_points(player)
     stash = game.inventory(telegram_id, secured=1)
     stash_units = sum(row["qty"] for row in stash)
-    point_text = f" · ⬆️ очков: {points}" if points else ""
+    level_notice = level_up_notice(game, player)
+    level_notice_line = f"{level_notice}\n" if level_notice else ""
     return (
         f"☢️ <b>{GAME_TITLE}</b>\n"
-        f"{BASE_NAME} · уровень {game.level(player)}{point_text}\n"
+        f"{BASE_NAME} · уровень {game.level(player)}\n"
         "━━━━━━━━━━━━\n"
+        f"{level_notice_line}"
         f"❤️ {player['hp']}/{game.max_hp(player)} · 🔫 {player['ammo']} · 🩹 {player['medkits']}\n"
         f"💰 {player['credits']} жет. · 📦 склад: {stash_units} ед.\n\n"
         f"🔫 {escape(weapon['name'])}\n"
@@ -67,9 +79,16 @@ def sector_screen(game: GameService, telegram_id: int) -> str:
     lines = [
         "🧭 <b>ВЫБОР СЕКТОРА</b>",
         "━━━━━━━━━━━━",
-        "Чем опаснее сектор, тем дороже средняя добыча.",
-        "",
     ]
+    level_notice = level_up_notice(game, player)
+    if level_notice:
+        lines.append(level_notice)
+    lines.extend(
+        [
+            "Чем опаснее сектор, тем дороже средняя добыча.",
+            "",
+        ]
+    )
     for sector_id, sector in SECTORS.items():
         unlocked = game.sector_unlocked(player, sector_id)
         mark = "🟢" if unlocked else "🔒"
@@ -92,9 +111,12 @@ def expedition_screen(game: GameService, telegram_id: int) -> str:
     capacity = game.carry_capacity(player)
     field = game.inventory(telegram_id, secured=0)
     value = sum(row["qty"] * ITEMS[row["item_id"]]["value"] for row in field)
+    level_notice = level_up_notice(game, player)
+    level_notice_line = f"{level_notice}\n" if level_notice else ""
     return (
         f"{sector['icon']} <b>{escape(sector['name']).upper()}</b>\n"
         "━━━━━━━━━━━━\n"
+        f"{level_notice_line}"
         f"❤️ {player['hp']}/{game.max_hp(player)} · 🔫 {player['ammo']} · 🩹 {player['medkits']}\n"
         f"🎒 {weight}/{capacity} · добыча примерно на {value} жет.\n\n"
         f"☣️ Угроза: <b>{threat_label(player['threat'])}</b> ({player['threat']}/100)\n"
@@ -106,6 +128,8 @@ def expedition_screen(game: GameService, telegram_id: int) -> str:
 def event_screen(game: GameService, telegram_id: int) -> str:
     player = game.get_player(telegram_id)
     sector = SECTORS[player["sector_id"]]
+    level_notice = level_up_notice(game, player)
+    level_notice_line = f"{level_notice}\n" if level_notice else ""
     if player["pending_event"] == "anomaly":
         chance = min(
             90,
@@ -117,6 +141,7 @@ def event_screen(game: GameService, telegram_id: int) -> str:
         return (
             "💠 <b>НЕСТАБИЛЬНЫЙ КОНТУР</b>\n"
             "━━━━━━━━━━━━\n"
+            f"{level_notice_line}"
             "Датчик показывает редкую плотность поля. Можно попытаться снять образец или не лезть.\n\n"
             f"Шанс аккуратного извлечения: <b>{chance}%</b>\n"
             "Успех: редкий осколок и много опыта.\n"
@@ -132,6 +157,7 @@ def event_screen(game: GameService, telegram_id: int) -> str:
     return (
         "🧰 <b>ТЕХНИЧЕСКИЙ ЯЩИК</b>\n"
         "━━━━━━━━━━━━\n"
+        f"{level_notice_line}"
         "Герметичный контейнер пережил хозяев. Замок можно вскрыть, но рядом видна старая растяжка.\n\n"
         f"Шанс вскрыть чисто: <b>{chance}%</b>\n"
         "Успех: ресурсы и патроны.\n"
@@ -145,9 +171,12 @@ def combat_screen(game: GameService, telegram_id: int) -> str:
     weapon = WEAPONS[player["weapon_id"]]
     aim = " · 🎯 прицел готов" if player["aimed"] else ""
     resistance = game.combat_damage_reduction(player)
+    level_notice = level_up_notice(game, player)
+    level_notice_line = f"{level_notice}\n" if level_notice else ""
     return (
         f"⚔️ <b>БОЙ · {escape(enemy['name']).upper()}</b>\n"
         "━━━━━━━━━━━━\n"
+        f"{level_notice_line}"
         f"❤️ Ты: {player['hp']}/{game.max_hp(player)}\n"
         f"☠️ Противник: {player['enemy_hp']} HP\n\n"
         f"🔫 {escape(weapon['name'])} · патроны {player['ammo']}{aim}\n"
@@ -161,6 +190,9 @@ def inventory_screen(game: GameService, telegram_id: int) -> str:
     secured = game.inventory(telegram_id, secured=1)
     field = game.inventory(telegram_id, secured=0)
     lines = ["🎒 <b>ДОБЫЧА</b>", "━━━━━━━━━━━━"]
+    level_notice = level_up_notice(game, player)
+    if level_notice:
+        lines.append(level_notice)
     if player["state"] == "base":
         lines.append(f"📦 Склад · стоимость {game.stash_value(telegram_id)} жет.")
         rows = secured
@@ -187,10 +219,15 @@ def character_screen(game: GameService, telegram_id: int) -> str:
     level = game.level(player)
     points = game.attribute_points(player)
     progress = player["xp"] % XP_PER_LEVEL
-    return "\n".join(
+    lines = [
+        "🧬 <b>ПЕРСОНАЖ</b>",
+        "━━━━━━━━━━━━",
+    ]
+    level_notice = level_up_notice(game, player)
+    if level_notice:
+        lines.append(level_notice)
+    lines.extend(
         [
-            "🧬 <b>ПЕРСОНАЖ</b>",
-            "━━━━━━━━━━━━",
             f"Уровень: <b>{level}</b> · ❤️ {game.max_hp(player)} HP",
             f"Опыт до следующего уровня: {progress}/{XP_PER_LEVEL}",
             f"Свободных очков: <b>{points}</b>",
@@ -200,13 +237,17 @@ def character_screen(game: GameService, telegram_id: int) -> str:
             "<i>Каждый новый уровень даёт 1 очко характеристики и +20 к максимальному здоровью.</i>",
         ]
     )
+    return "\n".join(lines)
 
 
 def shop_screen(game: GameService, telegram_id: int) -> str:
     player = game.get_player(telegram_id)
+    level_notice = level_up_notice(game, player)
+    level_notice_line = f"{level_notice}\n" if level_notice else ""
     return (
         "🏪 <b>ТОРГОВЕЦ</b>\n"
         "━━━━━━━━━━━━\n"
+        f"{level_notice_line}"
         f"💰 На руках: {player['credits']} жет.\n"
         f"📦 Добыча на складе: {game.stash_value(telegram_id)} жет.\n\n"
         "Выбери категорию товаров. Продать всю добычу можно прямо отсюда."
@@ -218,14 +259,21 @@ def shop_weapons_screen(game: GameService, telegram_id: int) -> str:
     lines = [
         "🔫 <b>ТОРГОВЕЦ · ОРУЖИЕ</b>",
         "━━━━━━━━━━━━",
-        f"💰 На руках: {player['credits']} жет.",
-        f"Текущее оружие: {escape(WEAPONS[player['weapon_id']]['name'])}",
-        "",
-        "<b>БОЕПРИПАСЫ</b>",
-        "🔫 Патроны ×6 · 24 жет.",
-        "",
-        "<b>ОРУЖИЕ</b>",
     ]
+    level_notice = level_up_notice(game, player)
+    if level_notice:
+        lines.append(level_notice)
+    lines.extend(
+        [
+            f"💰 На руках: {player['credits']} жет.",
+            f"Текущее оружие: {escape(WEAPONS[player['weapon_id']]['name'])}",
+            "",
+            "<b>БОЕПРИПАСЫ</b>",
+            "🔫 Патроны ×6 · 24 жет.",
+            "",
+            "<b>ОРУЖИЕ</b>",
+        ]
+    )
     current_order = WEAPONS[player["weapon_id"]]["order"]
     upgrades = 0
     for item_id, item in WEAPONS.items():
@@ -247,10 +295,17 @@ def shop_equipment_screen(game: GameService, telegram_id: int) -> str:
     lines = [
         "🦺 <b>ТОРГОВЕЦ · ЭКИПИРОВКА</b>",
         "━━━━━━━━━━━━",
-        f"💰 На руках: {player['credits']} жет.",
-        f"Текущая броня: {escape(ARMORS[player['armor_id']]['name'])}",
-        "",
     ]
+    level_notice = level_up_notice(game, player)
+    if level_notice:
+        lines.append(level_notice)
+    lines.extend(
+        [
+            f"💰 На руках: {player['credits']} жет.",
+            f"Текущая броня: {escape(ARMORS[player['armor_id']]['name'])}",
+            "",
+        ]
+    )
     current_order = ARMORS[player["armor_id"]]["order"]
     upgrades = 0
     for item_id, item in ARMORS.items():
@@ -269,9 +324,12 @@ def shop_equipment_screen(game: GameService, telegram_id: int) -> str:
 
 def shop_medicine_screen(game: GameService, telegram_id: int) -> str:
     player = game.get_player(telegram_id)
+    level_notice = level_up_notice(game, player)
+    level_notice_line = f"{level_notice}\n" if level_notice else ""
     return (
         "🩹 <b>ТОРГОВЕЦ · МЕДИЦИНА</b>\n"
         "━━━━━━━━━━━━\n"
+        f"{level_notice_line}"
         f"💰 На руках: {player['credits']} жет.\n"
         f"🩹 Аптечек с собой: {player['medkits']}\n\n"
         "🩹 <b>Аптечка</b> · 32 жет.\n"
