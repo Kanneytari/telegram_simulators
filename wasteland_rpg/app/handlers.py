@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from html import escape
+
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
@@ -197,7 +199,12 @@ async def explore(callback: CallbackQuery, game: GameService) -> None:
         screen, markup = ui.event_screen(game, callback.from_user.id), keyboards.event()
     else:
         screen, markup = ui.expedition_screen(game, callback.from_user.id), keyboards.expedition()
-    await _edit(callback, ui.notice(screen, result["text"]), markup)
+
+    parts = [f"<blockquote>▸ {escape(result['text'])}</blockquote>"]
+    if result.get("progress_notice"):
+        parts.append(f"<blockquote>{escape(result['progress_notice'])}</blockquote>")
+    parts.append(screen)
+    await _edit(callback, "\n\n".join(parts), markup)
 
 
 @router.callback_query(F.data.startswith("choice:"))
