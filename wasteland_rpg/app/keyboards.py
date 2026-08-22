@@ -47,7 +47,10 @@ def travel_inventory() -> InlineKeyboardMarkup:
 
 def sectors(game: GameService, telegram_id: int) -> InlineKeyboardMarkup:
     player = game.get_player(telegram_id)
-    rows = [[(f"{sector['icon']} {sector['name']}", f"sector:{sector_id}")] for sector_id, sector in game.local_sectors(telegram_id) if game.sector_unlocked(player, sector_id)]
+    rows = []
+    for sector_id, sector in game.local_sectors(telegram_id):
+        lock = '' if game.sector_unlocked(player, sector_id) else '🔒 '
+        rows.append([(f"{lock}{sector['icon']} {sector['name']}", f"sector:{sector_id}")])
     rows.append([('◀️ Меню', 'menu:home')])
     return _kb(rows)
 
