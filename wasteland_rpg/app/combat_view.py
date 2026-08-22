@@ -34,11 +34,17 @@ def combat_screen(game, telegram_id: int) -> str:
     weapon = WEAPONS[player["weapon_id"]]
     combat = game.combat_state(telegram_id)
     timeline = game.combat_timeline(telegram_id)
+    log = game.combat_log(telegram_id)
 
     lines = [
         f"⚔️ <b>БОЙ · {escape(enemy['name']).upper()}</b>",
         "━━━━━━━━━━━━",
     ]
+
+    if log:
+        log_text = "\n".join(f"• {escape(entry)}" for entry in log)
+        lines += [f"<blockquote>{log_text}</blockquote>", ""]
+
     notice = level_up_notice(game, player)
     if notice:
         lines.append(notice)
@@ -75,11 +81,6 @@ def combat_screen(game, telegram_id: int) -> str:
                 lines += ["", "🧱 Есть возможность занять укрытие."]
             elif opportunity == "stim":
                 lines += ["", "💉 Рядом найден стимулятор."]
-
-    log = game.combat_log(telegram_id)
-    if log:
-        lines += ["", "<b>Последние события:</b>"]
-        lines.extend(f"• {escape(entry)}" for entry in log)
 
     return "\n".join(lines)
 
