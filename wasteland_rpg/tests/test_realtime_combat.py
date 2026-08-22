@@ -26,29 +26,29 @@ def test_action_cost_uses_time_already_elapsed_since_previous_action(tmp_path: P
     timeline = game.combat_timeline(1)
     started_at = float(timeline["player_last_action_at"])
 
-    game.combat_action(1, "aimed_shot", now=started_at + 6.5)
+    game.combat_action(1, "aimed_shot", now=started_at + 7.0)
     updated = game.combat_timeline(1)
 
     assert updated["player_action"] == "aimed_shot"
-    assert float(updated["player_action_due"]) == pytest.approx(started_at + 7.5)
+    assert float(updated["player_action_due"]) == pytest.approx(started_at + 8.0)
 
 
-def test_combat_action_times_are_slowed_by_fifty_percent() -> None:
+def test_current_combat_action_times() -> None:
     assert PLAYER_ACTION_SECONDS == {
-        "shoot": 4.5,
-        "aimed_shot": 7.5,
-        "burst": 7.5,
-        "melee": 3.0,
+        "shoot": 5.0,
+        "aimed_shot": 8.0,
+        "burst": 8.0,
+        "melee": 2.0,
         "cover": 3.0,
-        "stim": 1.5,
+        "stim": 2.0,
         "medkit": 6.0,
-        "flee": 7.5,
+        "flee": 5.0,
     }
     assert ENEMY_ACTION_SECONDS == {
-        "approach": 3.0,
-        "retreat": 3.0,
-        "melee_attack": 4.5,
-        "ranged_attack": 6.0,
+        "approach": 4.0,
+        "retreat": 4.0,
+        "melee_attack": 5.5,
+        "ranged_attack": 7.0,
     }
 
 
@@ -85,8 +85,8 @@ def test_stim_heals_each_second_after_use(tmp_path: Path) -> None:
             (start + 20.0,),
         )
 
-    game.combat_action(1, "stim", now=start + 1.5)
+    game.combat_action(1, "stim", now=start + 2.0)
     after_use = game.get_player(1)["hp"]
-    game.tick_all_combats(start + 2.51)
+    game.tick_all_combats(start + 3.01)
 
     assert game.get_player(1)["hp"] >= after_use + 3
