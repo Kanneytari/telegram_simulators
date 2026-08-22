@@ -81,37 +81,34 @@ def home_screen(
     rank = game.rank_name(player["rank"], player["track"])
 
     if project:
+        progress = round(project["progress"] / project["target"] * 100)
         project_block = (
-            f"📌 <b>ПРОЕКТ</b>\n"
+            f"📌 <b>ПРОЕКТ · {progress}%</b>\n"
             f"{escape(project['title'])}\n"
-            f"{bar(project['progress'], project['target'])} "
-            f"{round(project['progress'] / project['target'] * 100)}%\n"
-            f"⏳ Дедлайн: {_deadline(project, player['career_day'])} · "
+            f"⏳ {_deadline(project, player['career_day'])} · "
             f"риск: {project_play.risk_label(project['risk'])}"
         )
     else:
-        project_block = "📌 <b>ПРОЕКТ</b>\nАктивного проекта нет."
+        project_block = "📌 <b>ПРОЕКТ</b> · нет активного"
 
     stress = player["stress"]
     stress_marker = "🟢" if stress < 45 else "🟡" if stress < 75 else "🔴"
-    opportunity_text = "в процессе" if active_opportunity else f"доступно {runs_left}/2"
+    opportunity_text = "…" if active_opportunity else f"{runs_left}/2"
     fast = "\n🧪 Тестовый режим включён" if fast_mode else ""
 
     return (
         f"🏢 <b>КАРЬЕРИСТ</b>\n"
         f"{escape(rank)} · день {player['career_day']}\n"
-        f"━━━━━━━━━━━━\n\n"
+        f"━━━━━━━━━━━━\n"
         f"{project_block}\n\n"
         f"🗓 <b>СЕГОДНЯ</b>\n"
-        f"⚡ Действия: {player['actions_left']}/{ACTIONS_PER_DAY}\n"
-        f"🎯 Возможности: {opportunity_text}\n"
-        f"✉️ Входящие: {inbox['unread']}\n"
+        f"⚡ {player['actions_left']}/{ACTIONS_PER_DAY} · "
+        f"🎯 {opportunity_text} · ✉️ {inbox['unread']}\n"
         f"{stress_marker} Стресс: {stress}/100\n\n"
-        f"📈 <b>КАРЬЕРА</b>\n"
-        f"🧠 Навык: {player['skill']} · ⭐ Репутация: {player['reputation']}\n"
-        f"👁 Заметность: {player['visibility']} · 🤝 Связи: {player['network']}\n"
-        f"💰 {money(player['money'])}\n"
-        f"🔎 Ревью: {_review_text(player['career_day'])}{fast}"
+        f"<b>КАРЬЕРА</b>\n"
+        f"Навык {player['skill']} · Репутация {player['reputation']}\n"
+        f"Заметность {player['visibility']} · Связи {player['network']}\n\n"
+        f"💰 {money(player['money'])} · Ревью {_review_text(player['career_day'])}{fast}"
     )
 
 
