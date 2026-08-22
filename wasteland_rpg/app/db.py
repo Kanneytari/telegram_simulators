@@ -107,6 +107,28 @@ class Database:
                     FOREIGN KEY (telegram_id) REFERENCES players(telegram_id) ON DELETE CASCADE
                 );
 
+                CREATE TABLE IF NOT EXISTS analytics_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    telegram_id INTEGER NOT NULL,
+                    event_time TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+                    event_name TEXT NOT NULL,
+                    context TEXT,
+                    run_id TEXT,
+                    entity_id TEXT,
+                    value INTEGER,
+                    metadata TEXT NOT NULL DEFAULT '{}',
+                    game_version TEXT NOT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_analytics_events_player_time
+                ON analytics_events (telegram_id, id);
+
+                CREATE INDEX IF NOT EXISTS idx_analytics_events_name
+                ON analytics_events (event_name, id);
+
+                CREATE INDEX IF NOT EXISTS idx_analytics_events_run
+                ON analytics_events (run_id, id);
+
                 CREATE TABLE IF NOT EXISTS event_weights (
                     telegram_id INTEGER NOT NULL,
                     context TEXT NOT NULL,
@@ -134,6 +156,6 @@ class Database:
             )
 
     def reset_player(self, telegram_id: int) -> None:
-        """Delete all persisted game state for one player via foreign-key cascades."""
+        """Delete game state while intentionally preserving append-only analytics."""
         with self.connect() as conn:
             conn.execute("DELETE FROM players WHERE telegram_id = ?", (telegram_id,))
