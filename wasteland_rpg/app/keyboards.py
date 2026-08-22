@@ -56,7 +56,7 @@ def sectors(game: GameService, telegram_id: int) -> InlineKeyboardMarkup:
 
 
 def expedition() -> InlineKeyboardMarkup:
-    return _kb([[('🔎 Искать путь и добычу', 'expedition:explore')], [('🎒 Рюкзак', 'expedition:inventory'), ('↩️ Вернуться', 'expedition:return')]])
+    return _kb([[('🔎 Исследовать сектор', 'expedition:explore')], [('↩️ Вернуться', 'expedition:return')]])
 
 
 def event() -> InlineKeyboardMarkup:
