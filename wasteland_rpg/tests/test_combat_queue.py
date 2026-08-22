@@ -37,6 +37,9 @@ def test_buttons_stay_visible_while_action_is_running(tmp_path: Path) -> None:
     assert any("Выстрел" in text for text in texts)
     assert any("Прицельный" in text for text in texts)
     assert any("Отступить" in text for text in texts)
+    assert all(".5с" not in text for text in texts)
+    assert any("Выстрел · 5с" in text for text in texts)
+    assert any("Прицельный · 8с" in text for text in texts)
 
 
 def test_only_one_next_action_is_kept_and_can_be_replaced(tmp_path: Path) -> None:
@@ -70,7 +73,7 @@ def test_queued_action_starts_after_current_and_pays_full_duration(tmp_path: Pat
     updated = game.combat_timeline(1)
 
     assert updated["player_action"] == "aimed_shot"
-    assert float(updated["player_action_due"]) == pytest.approx(current_due + 5.0)
+    assert float(updated["player_action_due"]) == pytest.approx(current_due + 7.5)
     assert game.combat_queued_action(1) is None
 
 
