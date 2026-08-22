@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-from .content import ARMORS, MAX_SKILL, SECTORS, WEAPONS
+from .content import ARMORS, ATTRIBUTES, MAX_ATTRIBUTE, SECTORS, WEAPONS
 from .game import GameService
 
 
@@ -70,13 +70,12 @@ def combat() -> InlineKeyboardMarkup:
 def character(game: GameService, telegram_id: int) -> InlineKeyboardMarkup:
     player = game.get_player(telegram_id)
     rows: list[list[tuple[str, str]]] = []
-    if game.skill_points(player) > 0:
-        if player["combat"] < MAX_SKILL:
-            rows.append([("⬆️ Бой", "skill:combat")])
-        if player["scavenging"] < MAX_SKILL:
-            rows.append([("⬆️ Поиск", "skill:scavenging")])
-        if player["survival"] < MAX_SKILL:
-            rows.append([("⬆️ Выживание", "skill:survival")])
+    if game.attribute_points(player) > 0:
+        for key, meta in ATTRIBUTES.items():
+            if player[key] < MAX_ATTRIBUTE:
+                rows.append(
+                    [(f"⬆️ {meta['icon']} {meta['name']}", f"skill:{key}")]
+                )
     rows.append([("◀️ Меню", "menu:home")])
     return _kb(rows)
 
@@ -90,12 +89,18 @@ def shop(game: GameService, telegram_id: int) -> InlineKeyboardMarkup:
     current_weapon_order = WEAPONS[player["weapon_id"]]["order"]
     for item_id, item in WEAPONS.items():
         if item["price"] and item["order"] > current_weapon_order:
-            rows.append([(f"🔫 {item['name']} · {item['price']}", f"shop:{item_id}")])
+            lock = "🔒 " if game.missing_requirements(player, item) else ""
+            rows.append(
+                [(f"{lock}🔫 {item['name']} · {item['price']}", f"shop:{item_id}")]
+            )
             break
     current_armor_order = ARMORS[player["armor_id"]]["order"]
     for item_id, item in ARMORS.items():
         if item["price"] and item["order"] > current_armor_order:
-            rows.append([(f"🦺 {item['name']} · {item['price']}", f"shop:{item_id}")])
+            lock = "🔒 " if game.missing_requirements(player, item) else ""
+            rows.append(
+                [(f"{lock}🦺 {item['name']} · {item['price']}", f"shop:{item_id}")]
+            )
             break
     rows.append([("◀️ Меню", "menu:home")])
     return _kb(rows)
