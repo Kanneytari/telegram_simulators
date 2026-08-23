@@ -3,16 +3,16 @@ from __future__ import annotations
 import random
 
 from app.db import Database
-from app.operations_final import FinalOperationsGameService, FinalOperationsSimulationEngine
 from app.recruitment_runtime import NightshiftRecruitmentService
+from app.workflow_final import FinalWorkflowGameService, FinalWorkflowSimulationEngine
 
 
 def make_system(tmp_path):
     db = Database(str(tmp_path / "game.db"))
     db.init()
-    simulation = FinalOperationsSimulationEngine(db, rng=random.Random(12))
+    simulation = FinalWorkflowSimulationEngine(db, rng=random.Random(12))
     simulation.ensure_player(1001, "tester")
-    game = FinalOperationsGameService(db, simulation, rng=random.Random(13))
+    game = FinalWorkflowGameService(db, simulation, rng=random.Random(13))
     recruitment = NightshiftRecruitmentService(db, rng=random.Random(14))
     return db, simulation, game, recruitment
 
@@ -26,14 +26,12 @@ def test_starter_batches_are_assigned_to_wholesale_employee(tmp_path):
         batches = conn.execute(
             "SELECT * FROM batches WHERE player_id=1001 AND remaining>0"
         ).fetchall()
-        exposure = sum(int(row["remaining"] * row["unit_cost"]) for row in batches)
     assert employee is not None
     assert batches
     assert all(row["responsible_employee_id"] == employee["id"] for row in batches)
-    assert int(employee["deposit"]) >= exposure
 
 
-def test_offer_requires_free_deposit_coverage(tmp_path):
+def test_offer_can_exceed_deposit_and_reports_unsecured_exposure(tmp_path):
     db, _, game, _ = make_system(tmp_path)
     with db.connect() as conn:
         employee = conn.execute(
@@ -48,9 +46,10 @@ def test_offer_requires_free_deposit_coverage(tmp_path):
         )
         offer_id = cur.lastrowid
     staff = game.warehouse_staff_for_offer(1001, offer_id)
-    assert staff
-    assert staff[0]["required"] == 400000
-    assert not staff[0]["eligible"]
+    selected = next(row for row in staff if row["id"] == employee["id"])
+    assert selected["required"] == 400000
+    assert selected["eligible"] is True
+    assert selected["unsecured_after"] > 0
 
 
 def test_purchase_is_assigned_and_wholesale_wage_accrues(tmp_path):
@@ -77,8 +76,14 @@ def test_purchase_is_assigned_and_wholesale_wage_accrues(tmp_path):
             "SELECT * FROM batches WHERE player_id=1001 ORDER BY id DESC LIMIT 1"
         ).fetchone()
         updated = conn.execute("SELECT * FROM employees WHERE id=?", (employee["id"],)).fetchone()
+        task = conn.execute(
+            "SELECT * FROM employee_tasks WHERE batch_id=? AND kind='receive_batch'",
+            (batch["id"],),
+        ).fetchone()
     assert "Ответственный" in result
     assert batch["responsible_employee_id"] == employee["id"]
+    assert batch["status"] == "receiving"
+    assert task is not None
     assert updated["wages_accrued"] == employee["pay_per_job"]
 
 
