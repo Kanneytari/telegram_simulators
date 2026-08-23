@@ -58,7 +58,7 @@ def test_new_catalog_and_listing_prices_fit_wage_scale(tmp_path):
         listings = conn.execute(
             "SELECT price FROM listings WHERE player_id=1001 AND pack_size=1 ORDER BY product_id"
         ).fetchall()
-    assert [row["title"] for row in products] == ["Стимулятор", "Эмпатоген", "Каннабиноид"]
+    assert [row["title"] for row in products] == ["Амфетамин", "MDMA", "Кокаин"]
     assert all(int(row["price"]) > 1500 for row in listings)
 
 
