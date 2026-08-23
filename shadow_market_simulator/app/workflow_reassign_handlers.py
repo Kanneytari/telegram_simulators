@@ -15,7 +15,39 @@ def build_workflow_reassign_router(game) -> Router:
             if "message is not modified" not in str(exc).lower():
                 raise
 
-    @router.callback_query(F.data.startswith("workflow:reassign:"))
+    @router.callback_query(F.data.startswith("workflow:batch:"))
+    async def batch_screen(callback: CallbackQuery) -> None:
+        await callback.answer()
+        batch_id = int(callback.data.split(":")[2])
+        batch, retail_staff = game.retail_staff_for_batch(callback.from_user.id, batch_id)
+        if not batch:
+            await present(callback.message, "Партия не найдена.", InlineKeyboardMarkup(inline_keyboard=[[
+                InlineKeyboardButton(text="← Команда", callback_data="menu:team")
+            ]]))
+            return
+        with game.db.connect() as conn:
+            product = conn.execute("SELECT title FROM products WHERE id=?", (batch["product_id"],)).fetchone()
+        text = (
+            f"<b>📦 Партия #{batch_id} · {product['title']}</b>\n\n"
+            f"Статус: {'принимается' if batch['status']=='receiving' else 'готова к распределению'}\n"
+            f"Осталось у оптового сотрудника: <b>{batch['remaining']} ед.</b>\n"
+            f"Себестоимость остатка: {int(batch['remaining']*batch['unit_cost']):,} ₽"
+        )
+        rows = []
+        if batch["status"] == "warehouse":
+            text += "\n\n<b>Передать рознице</b>\nВыбери сотрудника и затем количество."
+            for employee in retail_staff:
+                unsecured = max(0, int(employee["exposure"]) - int(employee["deposit"]))
+                extra = f" · 🔴 {unsecured:,} ₽" if unsecured else ""
+                rows.append([InlineKeyboardButton(
+                    text=f"{employee['alias']} · депозит {employee['deposit']:,} ₽{extra}",
+                    callback_data=f"workflow:alloc:{batch_id}:{employee['id']}:10",
+                )])
+            rows.append([InlineKeyboardButton(text="🔁 Сменить оптового ответственного", callback_data=f"workflow:reassign:{batch_id}")])
+        rows.append([InlineKeyboardButton(text="← Партии", callback_data=f"workflow:batches:{batch['responsible_employee_id']}")])
+        await present(callback.message, text, InlineKeyboardMarkup(inline_keyboard=rows))
+
+    @router.callback_query(F.data.startswith("workflow:reassign:") & ~F.data.startswith("workflow:reassignconfirm:"))
     async def reassign(callback: CallbackQuery) -> None:
         await callback.answer()
         batch_id = int(callback.data.split(":")[2])
@@ -39,10 +71,7 @@ def build_workflow_reassign_router(game) -> Router:
             exposure = game._employee_exposure(callback.from_user.id, int(employee["id"]))
             after = exposure + value
             unsecured = max(0, after - int(employee["deposit"]))
-            label = (
-                f"🔴 {employee['alias']} · сверх депозита {unsecured:,} ₽"
-                if unsecured else f"✅ {employee['alias']} · покрыто"
-            )
+            label = f"🔴 {employee['alias']} · сверх депозита {unsecured:,} ₽" if unsecured else f"✅ {employee['alias']} · покрыто"
             rows.append([InlineKeyboardButton(
                 text=label,
                 callback_data=f"workflow:reassignconfirm:{batch_id}:{employee['id']}",
