@@ -1,45 +1,206 @@
 from __future__ import annotations
 
-from datetime import timedelta
-
 from aiogram import F, Router
 from aiogram.exceptions import TelegramBadRequest
-from aiogram.filters import Command
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
+from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from .db import Database
 from .game import GameService, ROLE_NAMES
-from .keyboards import (
-    candidate_actions,
-    candidate_list,
-    main_menu,
-    recruitment_confirm,
-    recruitment_menu,
-    result_actions,
-)
-from .recruitment import RecruitmentService
-from .simulation import SimulationEngine, iso, utcnow
+from .keyboards import candidate_actions, candidate_list, result_actions
+from .recruitment import CHANNELS, DURATION_OPTIONS, VOLUME_OPTIONS, RecruitmentService
 
 
 def build_recruitment_router(
     db: Database,
     game: GameService,
-    simulation: SimulationEngine,
+    simulation,
     recruitment: RecruitmentService,
     admin_ids: frozenset[int],
 ) -> Router:
     router = Router(name="recruitment")
 
-    async def present(
-        target: Message,
-        text: str,
-        markup: InlineKeyboardMarkup | None = None,
-    ) -> None:
+    async def present(target: Message, text: str, markup: InlineKeyboardMarkup | None = None) -> None:
         try:
             await target.edit_text(text, reply_markup=markup)
         except TelegramBadRequest as exc:
             if "message is not modified" not in str(exc).lower():
                 raise
+
+    def channels_keyboard() -> InlineKeyboardMarkup:
+        rows = [
+            [InlineKeyboardButton(text=f"{channel.icon} {channel.title}", callback_data=f"recruit:channel:{code}")]
+            for code, channel in CHANNELS.items()
+        ]
+        rows.append(
+            [
+                InlineKeyboardButton(text="← Команда", callback_data="menu:team"),
+                InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home"),
+            ]
+        )
+        return InlineKeyboardMarkup(inline_keyboard=rows)
+
+    def draft_keyboard(draft, quote) -> InlineKeyboardMarkup:
+        volume = int(draft["traffic_multiplier"])
+        duration = int(draft["duration_hours"])
+        return InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="Охват", callback_data="recruit:noop")]
+                + [
+                    InlineKeyboardButton(
+                        text=("✓ " if value == volume else "") + f"x{value}",
+                        callback_data=f"recruit:set:traffic_multiplier:{value}",
+                    )
+                    for value in VOLUME_OPTIONS
+                ],
+                [InlineKeyboardButton(text="Срок", callback_data="recruit:noop")]
+                + [
+                    InlineKeyboardButton(
+                        text=("✓ " if value == duration else "") + f"{value} ч",
+                        callback_data=f"recruit:set:duration_hours:{value}",
+                    )
+                    for value in DURATION_OPTIONS
+                ],
+                [
+                    InlineKeyboardButton(text="−100", callback_data="recruit:adj:pay_per_job:-100"),
+                    InlineKeyboardButton(text=f"Ставка {draft['pay_per_job']:,}", callback_data="recruit:noop"),
+                    InlineKeyboardButton(text="+100", callback_data="recruit:adj:pay_per_job:100"),
+                ],
+                [
+                    InlineKeyboardButton(text="−10k", callback_data="recruit:adj:min_deposit:-10000"),
+                    InlineKeyboardButton(text=f"Депозит {int(draft['min_deposit'])//1000}k", callback_data="recruit:noop"),
+                    InlineKeyboardButton(text="+10k", callback_data="recruit:adj:min_deposit:10000"),
+                ],
+                [
+                    InlineKeyboardButton(text="−5%", callback_data="recruit:adj:deposit_contribution_pct:-5"),
+                    InlineKeyboardButton(text=f"В депозит {draft['deposit_contribution_pct']}%", callback_data="recruit:noop"),
+                    InlineKeyboardButton(text="+5%", callback_data="recruit:adj:deposit_contribution_pct:5"),
+                ],
+                [
+                    InlineKeyboardButton(
+                        text=("✅" if draft["car_required"] else "▫️") + " Нужен автомобиль",
+                        callback_data="recruit:toggle:car_required",
+                    ),
+                    InlineKeyboardButton(
+                        text=("✅" if draft["experience_required"] else "▫️") + " Нужен опыт",
+                        callback_data="recruit:toggle:experience_required",
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(
+                        text=f"✅ Запустить · {int(quote['cost']):,} ₽",
+                        callback_data="recruit:run",
+                    )
+                ],
+                [
+                    InlineKeyboardButton(text="← Каналы", callback_data="recruit:menu"),
+                    InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home"),
+                ],
+            ]
+        )
+
+    def draft_screen(player_id: int) -> tuple[str, InlineKeyboardMarkup]:
+        draft = recruitment.ensure_draft(player_id)
+        channel = recruitment.get_channel(draft["channel"])
+        quote = recruitment.quote(player_id, draft)
+        car = "обязательно" if draft["car_required"] else "не требуется"
+        experience = "обязателен" if draft["experience_required"] else "не обязателен"
+        text = (
+            f"<b>{channel.icon} {channel.title}</b>\n\n"
+            f"{channel.description}\n\n"
+            f"<b>Размещение</b>\n"
+            f"Охват: x{draft['traffic_multiplier']}\n"
+            f"Срок: {draft['duration_hours']} игровых ч\n"
+            f"Стоимость: <b>{int(quote['cost']):,} ₽</b>\n"
+            f"Скидка за объём/срок: {float(quote['discount_pct']):.0f}%\n\n"
+            f"<b>Условия работы</b>\n"
+            f"Ставка: <b>{draft['pay_per_job']:,} ₽</b> / заказ\n"
+            f"На руки: ~{int(quote['net_pay']):,} ₽ / заказ\n"
+            f"Минимальный депозит: {draft['min_deposit']:,} ₽\n"
+            f"В депозит из заработка: {draft['deposit_contribution_pct']}%\n"
+            f"Автомобиль: {car}\n"
+            f"Опыт: {experience}\n\n"
+            f"📨 Ожидаемые отклики: <b>{quote['expected_min']}-{quote['expected_max']}</b>"
+        )
+        return text, draft_keyboard(draft, quote)
+
+    @router.callback_query(F.data == "recruit:noop")
+    async def noop(callback: CallbackQuery) -> None:
+        await callback.answer()
+
+    @router.callback_query(F.data == "recruit:menu")
+    async def recruit_menu(callback: CallbackQuery) -> None:
+        await callback.answer()
+        status = recruitment.campaign_status_text(callback.from_user.id)
+        text = (
+            "<b>🔎 Набор сотрудников</b>\n\n"
+            "Выбери канал. После этого настроишь объём рекламы и условия вакансии.\n\n"
+            f"{status}"
+        )
+        await present(callback.message, text, channels_keyboard())
+
+    @router.callback_query(F.data.startswith("recruit:channel:"))
+    async def recruit_channel(callback: CallbackQuery) -> None:
+        await callback.answer()
+        code = callback.data.split(":")[2]
+        if code not in CHANNELS:
+            return
+        recruitment.ensure_draft(callback.from_user.id, code)
+        text, keyboard = draft_screen(callback.from_user.id)
+        await present(callback.message, text, keyboard)
+
+    @router.callback_query(F.data.startswith("recruit:set:"))
+    async def recruit_set(callback: CallbackQuery) -> None:
+        await callback.answer()
+        _, _, field, value = callback.data.split(":")
+        recruitment.update_draft(callback.from_user.id, field, int(value))
+        text, keyboard = draft_screen(callback.from_user.id)
+        await present(callback.message, text, keyboard)
+
+    @router.callback_query(F.data.startswith("recruit:adj:"))
+    async def recruit_adjust(callback: CallbackQuery) -> None:
+        await callback.answer()
+        _, _, field, delta = callback.data.split(":")
+        recruitment.adjust_draft(callback.from_user.id, field, int(delta))
+        text, keyboard = draft_screen(callback.from_user.id)
+        await present(callback.message, text, keyboard)
+
+    @router.callback_query(F.data.startswith("recruit:toggle:"))
+    async def recruit_toggle(callback: CallbackQuery) -> None:
+        await callback.answer()
+        field = callback.data.split(":")[2]
+        draft = recruitment.ensure_draft(callback.from_user.id)
+        recruitment.update_draft(callback.from_user.id, field, 0 if draft[field] else 1)
+        text, keyboard = draft_screen(callback.from_user.id)
+        await present(callback.message, text, keyboard)
+
+    @router.callback_query(F.data == "recruit:run")
+    async def recruit_run(callback: CallbackQuery) -> None:
+        await callback.answer()
+        result = recruitment.start_campaign(callback.from_user.id)
+        await present(
+            callback.message,
+            f"<b>🔎 Набор</b>\n\n{result}",
+            result_actions("recruit:menu", "← Набор"),
+        )
+
+    # Compatibility with buttons from the previous build.
+    @router.callback_query(F.data.startswith("recruit:confirm:"))
+    async def legacy_channel(callback: CallbackQuery) -> None:
+        await callback.answer()
+        code = callback.data.split(":")[2]
+        if code in CHANNELS:
+            recruitment.ensure_draft(callback.from_user.id, code)
+        text, keyboard = draft_screen(callback.from_user.id)
+        await present(callback.message, text, keyboard)
+
+    @router.callback_query(F.data.startswith("recruit:run:") )
+    async def legacy_run(callback: CallbackQuery) -> None:
+        await callback.answer()
+        code = callback.data.split(":")[2]
+        if code in CHANNELS:
+            recruitment.ensure_draft(callback.from_user.id, code)
+        text, keyboard = draft_screen(callback.from_user.id)
+        await present(callback.message, text, keyboard)
 
     @router.callback_query(F.data == "candidates:list")
     async def candidates(callback: CallbackQuery) -> None:
@@ -47,11 +208,12 @@ def build_recruitment_router(
         rows = recruitment.candidates(callback.from_user.id)
         if rows:
             text = (
-                f"<b>👤 Кандидаты</b>\n\nАнкет: <b>{len(rows)}</b>\n"
-                "Источник отклика виден в анкете. Скрытые качества проявятся только в работе."
+                f"<b>👤 Кандидаты</b>\n\n"
+                f"Свежих анкет: <b>{len(rows)}</b>\n\n"
+                "Условия объявления уже учтены в отклике. Скрытые качества проявятся только в работе."
             )
         else:
-            text = "<b>👤 Кандидаты</b>\n\nСвежих откликов нет. Запусти набор или дождись активной кампании."
+            text = "<b>👤 Кандидаты</b>\n\nСвежих откликов нет. Запусти набор или дождись активного размещения."
         await present(callback.message, text, candidate_list(rows))
 
     @router.callback_query(
@@ -67,19 +229,25 @@ def build_recruitment_router(
                 "SELECT * FROM candidates WHERE id=? AND player_id=? AND status='open'",
                 (candidate_id, callback.from_user.id),
             ).fetchone()
-        if not row or not str(row["summary"]).startswith("Источник:"):
+        if not row or row["campaign_id"] is None:
             await present(
                 callback.message,
                 "Кандидат больше недоступен.",
                 result_actions("candidates:list", "← Кандидаты"),
             )
             return
+        offered = int(row["offered_pay"] or row["desired_pay"])
         text = (
             f"<b>👤 {row['alias']}</b>\n\n"
+            f"<b>Анкета</b>\n"
             f"Роль: {ROLE_NAMES.get(row['role'], row['role'])}\n"
-            f"Ставка: <b>{row['desired_pay']:,} ₽</b> / заказ\n"
-            f"Обеспечение: {row['deposit']:,} ₽\n"
-            f"Автомобиль: {'есть' if row['has_car'] else 'нет'}\n\n"
+            f"Ожидания кандидата: ~{row['desired_pay']:,} ₽ / заказ\n"
+            f"Автомобиль: {'есть' if row['has_car'] else 'нет'}\n"
+            f"Готовый депозит: {row['deposit']:,} ₽\n\n"
+            f"<b>Предложенные условия</b>\n"
+            f"Ставка: <b>{offered:,} ₽</b> / заказ\n"
+            f"В депозит: {row['deposit_contribution_pct']}% заработка\n"
+            f"Минимальный депозит: {row['min_deposit']:,} ₽\n\n"
             f"{row['summary']}"
         )
         await present(callback.message, text, candidate_actions(candidate_id))
@@ -104,81 +272,6 @@ def build_recruitment_router(
             callback.message,
             "<b>Кандидату отказано.</b>",
             result_actions("candidates:list", "← Кандидаты"),
-        )
-
-    @router.callback_query(F.data == "recruit:menu")
-    async def recruit_menu(callback: CallbackQuery) -> None:
-        await callback.answer()
-        status = recruitment.campaign_status_text(callback.from_user.id)
-        text = (
-            "<b>🔎 Набор сотрудников</b>\n\n"
-            "Выбери канал привлечения. Они отличаются ценой, скоростью, числом откликов и средним качеством потока.\n\n"
-            f"{status}"
-        )
-        await present(callback.message, text, recruitment_menu())
-
-    @router.callback_query(F.data.startswith("recruit:confirm:"))
-    async def recruit_confirm(callback: CallbackQuery) -> None:
-        await callback.answer()
-        code = callback.data.split(":")[2]
-        channel = recruitment.get_channel(code)
-        if not channel:
-            await present(
-                callback.message,
-                "Канал недоступен.",
-                result_actions("recruit:menu", "← Набор"),
-            )
-            return
-        text = (
-            f"<b>{channel.icon} {channel.title}</b>\n\n"
-            f"Стоимость: <b>{channel.cost:,} ₽</b>\n"
-            f"Отклики: обычно {channel.min_candidates}-{channel.max_candidates}\n"
-            f"Срок: {channel.min_hours:g}-{channel.max_hours:g} игровых часов\n\n"
-            f"{channel.description}\n\n"
-            "Запустить кампанию?"
-        )
-        await present(callback.message, text, recruitment_confirm(code, channel.cost))
-
-    @router.callback_query(F.data.startswith("recruit:run:"))
-    async def recruit_run(callback: CallbackQuery) -> None:
-        await callback.answer()
-        code = callback.data.split(":")[2]
-        result = recruitment.start_campaign(callback.from_user.id, code)
-        await present(
-            callback.message,
-            f"<b>🔎 Набор</b>\n\n{result}",
-            result_actions("recruit:menu", "← Набор"),
-        )
-
-    @router.message(Command("tick"))
-    async def debug_tick(message: Message) -> None:
-        if message.from_user.id not in admin_ids:
-            return
-        simulation.ensure_player(message.from_user.id, message.from_user.username)
-        with db.connect() as conn:
-            conn.execute(
-                "UPDATE shops SET last_simulated_at=? WHERE player_id=?",
-                (
-                    iso(utcnow() - timedelta(hours=6 / max(simulation.speed, 0.1))),
-                    message.from_user.id,
-                ),
-            )
-        result = simulation.advance(message.from_user.id)
-        candidates_created = recruitment.fast_forward(message.from_user.id, 6)
-        with db.connect() as conn:
-            inbox = conn.execute(
-                """SELECT COUNT(*) AS opened,
-                          SUM(CASE WHEN priority IN ('important','urgent') THEN 1 ELSE 0 END) AS urgent
-                   FROM inbox WHERE player_id=? AND status='open'""",
-                (message.from_user.id,),
-            ).fetchone()
-        await message.answer(
-            "<b>⏩ Тестовый тик</b>\n\n"
-            f"Заказов: {result.orders_created}\n"
-            f"Диспутов: {result.disputes_created}\n"
-            f"Сообщений: {result.messages_created}\n"
-            f"Новых кандидатов: {candidates_created}",
-            reply_markup=main_menu(int(inbox["opened"] or 0), int(inbox["urgent"] or 0)),
         )
 
     return router
