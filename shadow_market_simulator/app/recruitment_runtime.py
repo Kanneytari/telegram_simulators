@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import math
+from datetime import timedelta
 
-from .recruitment import MARKET_PAY_PER_JOB, RecruitmentService
+from .recruitment import RecruitmentService
 from .runtime import ROLE_MARKET_PAY
 from .simulation import clamp, iso
-from datetime import timedelta
 
 
 class NightshiftRecruitmentService(RecruitmentService):
@@ -29,6 +29,22 @@ class NightshiftRecruitmentService(RecruitmentService):
             self.update_draft(player_id, "pay_per_job", ROLE_MARKET_PAY["courier"])
             draft = super().ensure_draft(player_id, channel)
         return draft
+
+    def adjust_draft(self, player_id: int, field: str, delta: int) -> None:
+        draft = self.ensure_draft(player_id)
+        current = int(draft[field])
+        if field == "pay_per_job":
+            value = max(800, min(8000, current + delta))
+            value = int(round(value / 50) * 50)
+        elif field == "min_deposit":
+            value = max(0, min(200000, current + delta))
+            value = int(round(value / 5000) * 5000)
+        elif field == "deposit_contribution_pct":
+            value = max(0, min(40, current + delta))
+            value = int(round(value / 5) * 5)
+        else:
+            raise ValueError("Unsupported adjustable field")
+        self.update_draft(player_id, field, value)
 
     def quote(self, player_id: int, draft=None) -> dict[str, float | int]:
         draft = draft or self.ensure_draft(player_id)
