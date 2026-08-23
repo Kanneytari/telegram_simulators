@@ -21,12 +21,17 @@ def build_storefront_router(db: Database, game, simulation) -> Router:
         with db.connect() as conn:
             return conn.execute(
                 """SELECT p.id, p.title,
-                          COALESCE(SUM(CASE WHEN b.status='warehouse' THEN b.remaining ELSE 0 END),0) stock
+                          COALESCE((
+                              SELECT SUM(b.remaining)
+                              FROM batches b
+                              WHERE b.player_id=? AND b.product_id=p.id AND b.status='warehouse'
+                          ), 0) stock
                    FROM products p
-                   JOIN listings l ON l.product_id=p.id AND l.player_id=? AND l.active=1
-                   LEFT JOIN batches b ON b.product_id=p.id AND b.player_id=?
                    WHERE p.active=1
-                   GROUP BY p.id, p.title
+                     AND EXISTS (
+                         SELECT 1 FROM listings l
+                         WHERE l.player_id=? AND l.product_id=p.id AND l.active=1
+                     )
                    ORDER BY p.id""",
                 (player_id, player_id),
             ).fetchall()
