@@ -9,6 +9,7 @@ from aiogram.enums import ParseMode
 
 from .action_handlers import build_action_router
 from .analytics_handlers import build_analytics_router
+from .analytics_log import AnalyticsLogger, AnalyticsLoggingMiddleware
 from .config import load_settings
 from .db import Database
 from .dispute_handlers import build_dispute_router
@@ -34,6 +35,7 @@ async def notification_loop(
     simulation: FinalWorkflowSimulationEngine,
     game: FinalWorkflowGameService,
     recruitment: NightshiftRecruitmentService,
+    analytics: AnalyticsLogger,
     interval: int,
 ) -> None:
     while True:
@@ -57,6 +59,15 @@ async def notification_loop(
                             reply_markup=notification_actions(item["id"]),
                         )
                         conn.execute("UPDATE inbox SET notified_at=? WHERE id=?", (iso(utcnow()), item["id"]))
+                        try:
+                            analytics.log_notification(
+                                int(item["player_id"]),
+                                int(item["id"]),
+                                str(item["kind"]),
+                                str(item["priority"]),
+                            )
+                        except Exception:
+                            logging.exception("Failed to log notification %s", item["id"])
                     except Exception:
                         logging.exception("Failed to deliver inbox item %s", item["id"])
         except Exception:
@@ -75,8 +86,17 @@ async def main() -> None:
     game = FinalWorkflowGameService(db, simulation)
     recruitment = NightshiftRecruitmentService(db, speed=settings.simulation_speed)
 
+    # Install after all feature schemas so triggers can reference workflow/recruitment tables.
+    analytics = AnalyticsLogger(db)
+    analytics.install()
+
     bot = Bot(settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dispatcher = Dispatcher()
+
+    # Log every Telegram command/callback independently from handler implementation.
+    # Analytics failures are swallowed by the middleware and never interrupt gameplay.
+    dispatcher.message.outer_middleware(AnalyticsLoggingMiddleware(analytics))
+    dispatcher.callback_query.outer_middleware(AnalyticsLoggingMiddleware(analytics))
 
     # Specific flows go first; compatibility routers remain as fallbacks.
     dispatcher.include_router(build_workflow_dashboard_router(db, game, simulation))
@@ -94,7 +114,17 @@ async def main() -> None:
     dispatcher.include_router(build_router(db, game, simulation, settings.admin_ids))
 
     await bot.delete_webhook(drop_pending_updates=True)
-    notifier = asyncio.create_task(notification_loop(bot, db, simulation, game, recruitment, settings.simulation_interval_seconds))
+    notifier = asyncio.create_task(
+        notification_loop(
+            bot,
+            db,
+            simulation,
+            game,
+            recruitment,
+            analytics,
+            settings.simulation_interval_seconds,
+        )
+    )
     try:
         await dispatcher.start_polling(bot)
     finally:
