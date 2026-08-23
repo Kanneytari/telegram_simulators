@@ -136,6 +136,72 @@ def build_procurement_router(game) -> Router:
         )
         await present(target, text, offer_keyboard(int(offer["product_id"]), offer_id))
 
+    def staff_keyboard(offer_id: int, product_id: int, staff) -> InlineKeyboardMarkup:
+        rows = []
+        for employee in staff:
+            unsecured = int(employee.get("unsecured_after", 0))
+            marker = "🔴" if unsecured else "✅"
+            risk = f" · не покрыто {unsecured:,} ₽" if unsecured else " · покрыто"
+            rows.append([InlineKeyboardButton(
+                text=f"{marker} {employee['alias']}{risk}",
+                callback_data=f"proc:staff:{offer_id}:{employee['id']}",
+            )])
+        rows.extend([
+            [InlineKeyboardButton(text="← Предложение", callback_data=f"proc:offer:{offer_id}")],
+            [InlineKeyboardButton(text="← Предложения", callback_data=f"proc:product:{product_id}")],
+            [InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home")],
+        ])
+        return InlineKeyboardMarkup(inline_keyboard=rows)
+
+    async def show_staff(target: Message, player_id: int, offer_id: int) -> None:
+        offer = game.procurement_offer(player_id, offer_id)
+        if not offer:
+            await show_products(target, player_id)
+            return
+        staff = game.warehouse_staff_for_offer(player_id, offer_id)
+        total = int(offer["quantity"] * offer["unit_cost"])
+        text = (
+            f"<b>🚚 Ответственный за партию</b>\n\n"
+            f"{offer['product_title']} · ×{offer['quantity']}\n"
+            f"Стоимость: <b>{total:,} ₽</b>\n\n"
+            "Депозит не ограничивает размер партии. Если стоимость товара превысит депозит сотрудника, "
+            "непокрытая часть повысит риск потери."
+        )
+        if not staff:
+            text += "\n\n🔴 В команде нет активных оптовых сотрудников."
+        await present(target, text, staff_keyboard(offer_id, int(offer["product_id"]), staff))
+
+    async def show_purchase_confirmation(target: Message, player_id: int, offer_id: int, employee_id: int) -> None:
+        offer = game.procurement_offer(player_id, offer_id)
+        staff = game.warehouse_staff_for_offer(player_id, offer_id)
+        employee = next((row for row in staff if int(row["id"]) == employee_id), None)
+        if not offer or not employee:
+            await show_staff(target, player_id, offer_id)
+            return
+        total = int(offer["quantity"] * offer["unit_cost"])
+        unsecured = int(employee.get("unsecured_after", 0))
+        risk_line = (
+            f"\n🔴 После закупки не покрыто депозитом: <b>{unsecured:,} ₽</b>"
+            if unsecured
+            else "\n✅ Стоимость партии полностью покрыта депозитом."
+        )
+        text = (
+            "<b>Подтвердить закупку?</b>\n\n"
+            f"Товар: {offer['product_title']}\n"
+            f"Объём: ×{offer['quantity']}\n"
+            f"Стоимость: <b>{total:,} ₽</b>\n\n"
+            f"Ответственный: <b>{employee['alias']}</b>\n"
+            f"Текущая ответственность: {employee['exposure']:,} ₽\n"
+            f"Депозит: {employee['deposit']:,} ₽"
+            f"{risk_line}"
+        )
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="✅ Купить", callback_data=f"proc:purchase:{offer_id}:{employee_id}")],
+            [InlineKeyboardButton(text="← Выбрать сотрудника", callback_data=f"offer:{offer_id}")],
+            [InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home")],
+        ])
+        await present(target, text, keyboard)
+
     @router.callback_query(F.data == "menu:offers")
     @router.callback_query(F.data == "offers:list")
     async def procurement_root(callback: CallbackQuery) -> None:
@@ -153,5 +219,49 @@ def build_procurement_router(game) -> Router:
         await callback.answer()
         offer_id = int(callback.data.split(":")[2])
         await show_offer(callback.message, callback.from_user.id, offer_id)
+
+    @router.callback_query(
+        F.data.startswith("offer:")
+        & ~F.data.startswith("offer:staff:")
+        & ~F.data.startswith("offer:purchase:")
+        & ~F.data.startswith("offer:confirm:")
+        & ~F.data.startswith("offer:buy:")
+        & ~F.data.startswith("offer:no_coverage")
+    )
+    async def choose_staff(callback: CallbackQuery) -> None:
+        parts = callback.data.split(":")
+        if len(parts) != 2 or not parts[1].isdigit():
+            return
+        await callback.answer()
+        await show_staff(callback.message, callback.from_user.id, int(parts[1]))
+
+    @router.callback_query(F.data.startswith("proc:staff:"))
+    async def staff_selected(callback: CallbackQuery) -> None:
+        await callback.answer()
+        _, _, offer_id, employee_id = callback.data.split(":")
+        await show_purchase_confirmation(
+            callback.message,
+            callback.from_user.id,
+            int(offer_id),
+            int(employee_id),
+        )
+
+    @router.callback_query(F.data.startswith("proc:purchase:"))
+    async def purchase(callback: CallbackQuery) -> None:
+        await callback.answer()
+        _, _, offer_id, employee_id = callback.data.split(":")
+        offer = game.procurement_offer(callback.from_user.id, int(offer_id))
+        product_id = int(offer["product_id"]) if offer else None
+        result = game.buy_offer_for_employee(callback.from_user.id, int(offer_id), int(employee_id))
+        rows = []
+        if product_id is not None:
+            rows.append([InlineKeyboardButton(text="← Предложения", callback_data=f"proc:product:{product_id}")])
+        rows.append([InlineKeyboardButton(text="← Закупки", callback_data="menu:offers")])
+        rows.append([InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home")])
+        await present(
+            callback.message,
+            f"<b>📦 Закупка</b>\n\n{result}",
+            InlineKeyboardMarkup(inline_keyboard=rows),
+        )
 
     return router
