@@ -109,7 +109,7 @@ async def main() -> None:
     dispatcher.include_router(build_dispute_router(game))
     dispatcher.include_router(build_storefront_router(db, game, simulation))
     dispatcher.include_router(build_analytics_router(db, game, simulation))
-    dispatcher.include_router(build_time_router(db, simulation, recruitment, settings.admin_ids))
+    dispatcher.include_router(build_time_router(db, simulation, recruitment, game, settings.admin_ids))
     dispatcher.include_router(build_action_router(game))
     dispatcher.include_router(build_extended_router(db, game, simulation, recruitment, settings.admin_ids))
     dispatcher.include_router(build_recruitment_router(db, game, simulation, recruitment, settings.admin_ids))
