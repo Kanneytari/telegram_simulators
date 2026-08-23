@@ -71,21 +71,27 @@ def build_time_router(db: Database, simulation, recruitment, game, admin_ids: fr
         simulation.advance(player_id)
         game.process_payroll(player_id)
         now = utcnow()
-        old, new = recruitment.set_player_multiplier(player_id, value)
-        rescale_payroll_clock(player_id, old, new, now=now)
-        simulation.rescale_existing_timers(player_id, old, new, now=now)
-        real_day_minutes = 24.0 * 60.0 / max(0.1, float(simulation.effective_speed(player_id)))
+
+        # /speed is absolute relative to normal x1 game time, regardless of SIMULATION_SPEED.
+        base_speed = max(0.1, float(simulation.speed))
+        target_multiplier = value / base_speed
+        old_multiplier, new_multiplier = recruitment.set_player_multiplier(player_id, target_multiplier)
+        rescale_payroll_clock(player_id, old_multiplier, new_multiplier, now=now)
+        simulation.rescale_existing_timers(player_id, old_multiplier, new_multiplier, now=now)
+
+        effective = max(0.1, float(simulation.effective_speed(player_id)))
+        real_day_minutes = 24.0 * 60.0 / effective
         text = (
             "<b>⚙️ Скорость игры</b>\n\n"
-            f"Множитель: <b>x{new:g}</b>\n"
-            f"1 игровой час: ~{60/new:.1f} реальной мин.\n"
+            f"Множитель: <b>x{effective:g}</b>\n"
+            f"1 игровой час: ~{60/effective:.1f} реальной мин.\n"
             f"Игровые сутки: ~{real_day_minutes:.0f} реальной мин.\n\n"
             "Игровые дедлайны и срок выплаты зарплаты пересчитаны."
         )
         if edit:
-            await target.edit_text(text, reply_markup=keyboard(new))
+            await target.edit_text(text, reply_markup=keyboard(effective))
         else:
-            await target.answer(text, reply_markup=keyboard(new))
+            await target.answer(text, reply_markup=keyboard(effective))
 
     @router.message(Command("speed"))
     async def speed(message: Message) -> None:
@@ -139,6 +145,7 @@ def build_time_router(db: Database, simulation, recruitment, game, admin_ids: fr
         if message.from_user.id not in admin_ids:
             return
         simulation.ensure_player(message.from_user.id, message.from_user.username)
+        game.process_payroll(message.from_user.id)
         speed_value = simulation.effective_speed(message.from_user.id)
 
         simulation.fast_forward_timers(message.from_user.id, 6)
