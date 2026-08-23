@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .simulation import iso
 from .wholesale_compensation import (
     WholesaleCompensationGameService,
     WholesaleCompensationSimulationEngine,
@@ -126,7 +127,7 @@ class StaffRelationshipSimulationEngine(WholesaleCompensationSimulationEngine):
                  AND t.kind='handoff'
                  AND t.status='active'
                  AND t.completes_at<=?""",
-            (player_id, now.astimezone().isoformat(timespec="seconds")),
+            (player_id, iso(now)),
         ).fetchall()
         before = {
             int(row["allocation_id"]): self.employee_exposure(
@@ -230,10 +231,10 @@ class StaffRelationshipGameService(WholesaleCompensationGameService):
 
             if after["refund_source"] == "shop":
                 loyalty_delta = 0.028 if full else 0.018
-                stress_delta = -2.5 if full else -1.5
+                stress_delta = -4.0 if full else -3.0
                 if employee_fault:
                     loyalty_delta += 0.010
-                    stress_delta -= 0.5
+                    stress_delta -= 1.0
                 _apply_relationship_delta(
                     conn,
                     player_id,
