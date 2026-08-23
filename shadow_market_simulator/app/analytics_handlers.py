@@ -5,6 +5,17 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from .db import Database
+from .detailed_analytics import normalize_period, section_text
+
+
+DETAIL_SECTIONS = {
+    "overview": "📈 Сводка",
+    "daily": "📅 По дням",
+    "products": "📦 По товарам",
+    "finance": "💰 Финансы",
+    "staff": "👥 Сотрудники",
+    "quality": "⭐ Качество",
+}
 
 
 def build_analytics_router(db: Database, game, simulation) -> Router:
@@ -19,6 +30,7 @@ def build_analytics_router(db: Database, game, simulation) -> Router:
 
     def keyboard() -> InlineKeyboardMarkup:
         return InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="📈 Детальная статистика", callback_data="analytics:detail:overview:30")],
             [InlineKeyboardButton(text="💸 Выплаты", callback_data="analytics:payroll")],
             [
                 InlineKeyboardButton(text="🔄 Обновить", callback_data="menu:analytics"),
@@ -31,6 +43,62 @@ def build_analytics_router(db: Database, game, simulation) -> Router:
             [InlineKeyboardButton(text="← Аналитика", callback_data="menu:analytics")],
             [InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home")],
         ])
+
+    def detail_keyboard(section: str, period: str) -> InlineKeyboardMarkup:
+        period = normalize_period(period)
+        rows = [
+            [
+                InlineKeyboardButton(
+                    text=("• " if section == "overview" else "") + DETAIL_SECTIONS["overview"],
+                    callback_data=f"analytics:detail:overview:{period}",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text=("• " if section == "daily" else "") + DETAIL_SECTIONS["daily"],
+                    callback_data=f"analytics:detail:daily:{period}",
+                ),
+                InlineKeyboardButton(
+                    text=("• " if section == "products" else "") + DETAIL_SECTIONS["products"],
+                    callback_data=f"analytics:detail:products:{period}",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text=("• " if section == "finance" else "") + DETAIL_SECTIONS["finance"],
+                    callback_data=f"analytics:detail:finance:{period}",
+                ),
+                InlineKeyboardButton(
+                    text=("• " if section == "staff" else "") + DETAIL_SECTIONS["staff"],
+                    callback_data=f"analytics:detail:staff:{period}",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text=("• " if section == "quality" else "") + DETAIL_SECTIONS["quality"],
+                    callback_data=f"analytics:detail:quality:{period}",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text=("✓ " if period == "7" else "") + "7 дней",
+                    callback_data=f"analytics:detail:{section}:7",
+                ),
+                InlineKeyboardButton(
+                    text=("✓ " if period == "30" else "") + "30 дней",
+                    callback_data=f"analytics:detail:{section}:30",
+                ),
+                InlineKeyboardButton(
+                    text=("✓ " if period == "all" else "") + "Всё время",
+                    callback_data=f"analytics:detail:{section}:all",
+                ),
+            ],
+            [
+                InlineKeyboardButton(text="← Аналитика", callback_data="menu:analytics"),
+                InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home"),
+            ],
+        ]
+        return InlineKeyboardMarkup(inline_keyboard=rows)
 
     def text(player_id: int) -> str:
         simulation.advance(player_id)
@@ -129,5 +197,19 @@ def build_analytics_router(db: Database, game, simulation) -> Router:
         await callback.answer()
         game.process_payroll(callback.from_user.id)
         await present(callback.message, game.payroll_summary(callback.from_user.id), payroll_keyboard())
+
+    @router.callback_query(F.data.startswith("analytics:detail:"))
+    async def detailed(callback: CallbackQuery) -> None:
+        await callback.answer()
+        parts = (callback.data or "").split(":")
+        section = parts[2] if len(parts) > 2 and parts[2] in DETAIL_SECTIONS else "overview"
+        period = normalize_period(parts[3] if len(parts) > 3 else "30")
+        simulation.advance(callback.from_user.id)
+        game.process_payroll(callback.from_user.id)
+        await present(
+            callback.message,
+            section_text(db, callback.from_user.id, section, period),
+            detail_keyboard(section, period),
+        )
 
     return router
