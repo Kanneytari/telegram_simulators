@@ -11,15 +11,14 @@ from .action_handlers import build_action_router
 from .analytics_handlers import build_analytics_router
 from .analytics_log import AnalyticsLogger, AnalyticsLoggingMiddleware
 from .config import load_settings
-from .customer_expectations import PriceExpectationSimulationEngine
 from .db import Database
+from .delayed_disputes import DelayedDisputeGameService, DelayedDisputeSimulationEngine
 from .dispute_handlers import build_dispute_router
 from .extended_handlers import build_extended_router
 from .handlers import build_router
 from .keyboards import notification_actions
 from .operations_handlers import build_operations_router
 from .procurement_handlers import build_procurement_router
-from .procurement_market import ProcurementMarketGameService
 from .recruitment_handlers import build_recruitment_router
 from .recruitment_runtime import NightshiftRecruitmentService
 from .simulation import iso, utcnow
@@ -34,8 +33,8 @@ from .workflow_reassign_handlers import build_workflow_reassign_router
 async def notification_loop(
     bot: Bot,
     db: Database,
-    simulation: PriceExpectationSimulationEngine,
-    game: ProcurementMarketGameService,
+    simulation: DelayedDisputeSimulationEngine,
+    game: DelayedDisputeGameService,
     recruitment: NightshiftRecruitmentService,
     analytics: AnalyticsLogger,
     interval: int,
@@ -83,9 +82,9 @@ async def main() -> None:
 
     db = Database(settings.db_path)
     db.init()
-    simulation = PriceExpectationSimulationEngine(db, speed=settings.simulation_speed)
+    simulation = DelayedDisputeSimulationEngine(db, speed=settings.simulation_speed)
     simulation.seed_catalog()
-    game = ProcurementMarketGameService(db, simulation)
+    game = DelayedDisputeGameService(db, simulation)
     recruitment = NightshiftRecruitmentService(db, speed=settings.simulation_speed)
 
     # Install after all feature schemas so triggers can reference workflow/recruitment tables.
