@@ -15,7 +15,7 @@ from .keyboards import notification_actions
 from .nightshift import NightshiftSimulationEngine
 from .recruitment_handlers import build_recruitment_router
 from .recruitment_runtime import NightshiftRecruitmentService
-from .runtime import NightshiftGameService
+from .services import FinalGameService
 from .simulation import iso, utcnow
 from .time_handlers import build_time_router
 
@@ -24,7 +24,7 @@ async def notification_loop(
     bot: Bot,
     db: Database,
     simulation: NightshiftSimulationEngine,
-    game: NightshiftGameService,
+    game: FinalGameService,
     recruitment: NightshiftRecruitmentService,
     interval: int,
 ) -> None:
@@ -72,7 +72,7 @@ async def main() -> None:
     db.init()
     simulation = NightshiftSimulationEngine(db, speed=settings.simulation_speed)
     simulation.seed_catalog()
-    game = NightshiftGameService(db, simulation)
+    game = FinalGameService(db, simulation)
     recruitment = NightshiftRecruitmentService(db, speed=settings.simulation_speed)
 
     bot = Bot(
