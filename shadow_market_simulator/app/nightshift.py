@@ -158,4 +158,27 @@ class NightshiftSimulationEngine(PlayerSimulationEngine):
                 "UPDATE inbox SET body=?, payload_json=? WHERE id=?",
                 (body, json.dumps(payload, ensure_ascii=False), item["id"]),
             )
+
+        # Exit messages are staff messages too; attach the employee id so the UI can open their profile.
+        exits = conn.execute(
+            """SELECT * FROM inbox
+               WHERE player_id=? AND status='open' AND kind='employee_exit'""",
+            (player_id,),
+        ).fetchall()
+        employees = conn.execute(
+            "SELECT id, alias FROM employees WHERE player_id=? ORDER BY id DESC",
+            (player_id,),
+        ).fetchall()
+        for item in exits:
+            payload = json.loads(item["payload_json"] or "{}")
+            if payload.get("employee_id"):
+                continue
+            for employee in employees:
+                if employee["alias"] and employee["alias"] in item["body"]:
+                    payload["employee_id"] = employee["id"]
+                    conn.execute(
+                        "UPDATE inbox SET payload_json=? WHERE id=?",
+                        (json.dumps(payload, ensure_ascii=False), item["id"]),
+                    )
+                    break
         return created
