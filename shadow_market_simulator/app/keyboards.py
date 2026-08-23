@@ -69,6 +69,9 @@ def inbox_actions(item) -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text="❌ Отказать", callback_data=f"inbox:action:{item['id']}:deny"),
             ]
         )
+    elif kind == "recruitment_result":
+        rows.append([InlineKeyboardButton(text="👤 Смотреть кандидатов", callback_data="candidates:list")])
+        rows.append([InlineKeyboardButton(text="✓ Закрыть", callback_data=f"inbox:action:{item['id']}:close")])
     else:
         rows.append(
             [InlineKeyboardButton(text="✓ Закрыть", callback_data=f"inbox:action:{item['id']}:close")]
@@ -115,7 +118,7 @@ def employee_list(employees) -> InlineKeyboardMarkup:
         [
             [
                 InlineKeyboardButton(text="👤 Кандидаты", callback_data="candidates:list"),
-                InlineKeyboardButton(text="🔎 Поиск", callback_data="recruit:menu"),
+                InlineKeyboardButton(text="🔎 Набор", callback_data="recruit:menu"),
             ],
             [
                 InlineKeyboardButton(text="🔄 Обновить", callback_data="menu:team"),
@@ -133,9 +136,9 @@ def employee_actions() -> InlineKeyboardMarkup:
 def recruitment_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="Доска площадки · 2 500 ₽", callback_data="recruit:confirm:board")],
-            [InlineKeyboardButton(text="Рефералы команды · 6 000 ₽", callback_data="recruit:confirm:referral")],
-            [InlineKeyboardButton(text="Нишевая реклама · 11 000 ₽", callback_data="recruit:confirm:niche")],
+            [InlineKeyboardButton(text="🟨 Расклейщики стикеров · 3 500 ₽", callback_data="recruit:confirm:stickers")],
+            [InlineKeyboardButton(text="🧱 Граффити-команда · 7 500 ₽", callback_data="recruit:confirm:graffiti")],
+            [InlineKeyboardButton(text="🕸 Реклама на форумах · 12 000 ₽", callback_data="recruit:confirm:forums")],
             [
                 InlineKeyboardButton(text="← Команда", callback_data="menu:team"),
                 InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home"),
@@ -149,7 +152,7 @@ def recruitment_confirm(channel: str, cost: int) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [InlineKeyboardButton(text=f"✅ Запустить · {cost:,} ₽", callback_data=f"recruit:run:{channel}")],
             [
-                InlineKeyboardButton(text="← Назад", callback_data="recruit:menu"),
+                InlineKeyboardButton(text="← Набор", callback_data="recruit:menu"),
                 InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home"),
             ],
         ]
@@ -168,7 +171,7 @@ def candidate_list(candidates) -> InlineKeyboardMarkup:
     ]
     rows.extend(
         [
-            [InlineKeyboardButton(text="🔎 Запустить поиск", callback_data="recruit:menu")],
+            [InlineKeyboardButton(text="🔎 Запустить набор", callback_data="recruit:menu")],
             [
                 InlineKeyboardButton(text="← Команда", callback_data="menu:team"),
                 InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home"),
