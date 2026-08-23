@@ -79,6 +79,9 @@ CREATE TABLE IF NOT EXISTS employees (
     pay_per_job INTEGER NOT NULL,
     deposit INTEGER NOT NULL DEFAULT 0,
     deposit_contribution_pct INTEGER NOT NULL DEFAULT 10,
+    wages_accrued INTEGER NOT NULL DEFAULT 0,
+    total_wages_paid INTEGER NOT NULL DEFAULT 0,
+    deposit_from_wages INTEGER NOT NULL DEFAULT 0,
     has_car INTEGER NOT NULL DEFAULT 0,
     reliability REAL NOT NULL,
     attention REAL NOT NULL,
@@ -208,7 +211,19 @@ CREATE TABLE IF NOT EXISTS settings (
     auto_partial_limit INTEGER NOT NULL DEFAULT 0,
     notifications_enabled INTEGER NOT NULL DEFAULT 1,
     hardcore INTEGER NOT NULL DEFAULT 0,
-    time_multiplier REAL NOT NULL DEFAULT 1.0
+    time_multiplier REAL NOT NULL DEFAULT 1.0,
+    last_payroll_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS payroll_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
+    gross_wages INTEGER NOT NULL,
+    cash_paid INTEGER NOT NULL,
+    deposit_added INTEGER NOT NULL,
+    employee_count INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'paid',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_inbox_player_status ON inbox(player_id, status, priority);
@@ -216,6 +231,7 @@ CREATE INDEX IF NOT EXISTS idx_disputes_player_status ON disputes(player_id, sta
 CREATE INDEX IF NOT EXISTS idx_orders_player_created ON orders(player_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_batches_player_status ON batches(player_id, status);
 CREATE INDEX IF NOT EXISTS idx_employees_player_active ON employees(player_id, active);
+CREATE INDEX IF NOT EXISTS idx_payroll_player_created ON payroll_runs(player_id, created_at);
 """
 
 
@@ -249,6 +265,9 @@ class Database:
             conn.executescript(SCHEMA)
             # Lightweight migrations keep existing local SQLite saves compatible.
             self._ensure_column(conn, "employees", "deposit_contribution_pct", "INTEGER NOT NULL DEFAULT 10")
+            self._ensure_column(conn, "employees", "wages_accrued", "INTEGER NOT NULL DEFAULT 0")
+            self._ensure_column(conn, "employees", "total_wages_paid", "INTEGER NOT NULL DEFAULT 0")
+            self._ensure_column(conn, "employees", "deposit_from_wages", "INTEGER NOT NULL DEFAULT 0")
             self._ensure_column(conn, "candidates", "campaign_id", "INTEGER")
             self._ensure_column(conn, "candidates", "source_channel", "TEXT")
             self._ensure_column(conn, "candidates", "offered_pay", "INTEGER")
@@ -257,4 +276,10 @@ class Database:
             self._ensure_column(conn, "candidates", "experience_level", "INTEGER NOT NULL DEFAULT 0")
             self._ensure_column(conn, "orders", "employee_deposit_contribution", "INTEGER NOT NULL DEFAULT 0")
             self._ensure_column(conn, "settings", "time_multiplier", "REAL NOT NULL DEFAULT 1.0")
+            self._ensure_column(conn, "settings", "last_payroll_at", "TEXT")
+
             conn.execute("UPDATE employees SET deposit_contribution_pct=10 WHERE deposit_contribution_pct IS NULL")
+            # Legacy MVP rates were intentionally tiny. Bring old retail saves onto the new market scale.
+            conn.execute("UPDATE employees SET pay_per_job=1500 WHERE role='courier' AND pay_per_job<500")
+            conn.execute("UPDATE employees SET pay_per_job=5000 WHERE role='warehouse' AND pay_per_job<1000")
+            conn.execute("UPDATE settings SET last_payroll_at=CURRENT_TIMESTAMP WHERE last_payroll_at IS NULL")
