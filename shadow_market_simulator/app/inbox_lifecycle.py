@@ -4,6 +4,22 @@ from .db import Database
 
 
 INBOX_LIFECYCLE_SCHEMA = """
+CREATE TRIGGER IF NOT EXISTS trg_close_empty_recruitment_result_on_insert
+AFTER INSERT ON inbox
+WHEN NEW.kind='recruitment_result'
+BEGIN
+    UPDATE inbox
+       SET status='closed'
+     WHERE id=NEW.id
+       AND NOT EXISTS (
+           SELECT 1
+             FROM candidates c
+            WHERE c.player_id=NEW.player_id
+              AND c.status='open'
+              AND c.campaign_id IS NOT NULL
+       );
+END;
+
 CREATE TRIGGER IF NOT EXISTS trg_close_recruitment_result_after_candidate_update
 AFTER UPDATE OF status ON candidates
 WHEN OLD.status='open' AND NEW.status<>'open'
