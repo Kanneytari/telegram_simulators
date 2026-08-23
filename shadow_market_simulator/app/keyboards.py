@@ -3,11 +3,11 @@ from __future__ import annotations
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 
-def main_menu(open_count: int = 0, urgent_count: int = 0) -> InlineKeyboardMarkup:
+def main_menu(open_count: int = 0, urgent_count: int = 0, *, is_admin: bool = False) -> InlineKeyboardMarkup:
     inbox = f"📨 Входящие · {open_count}"
     if urgent_count:
         inbox += f"  🔴 {urgent_count}"
-    return InlineKeyboardMarkup(inline_keyboard=[
+    rows = [
         [InlineKeyboardButton(text=inbox, callback_data="menu:inbox")],
         [
             InlineKeyboardButton(text="👥 Команда", callback_data="menu:team"),
@@ -17,8 +17,11 @@ def main_menu(open_count: int = 0, urgent_count: int = 0) -> InlineKeyboardMarku
             InlineKeyboardButton(text="🏷 Витрина", callback_data="menu:listings"),
             InlineKeyboardButton(text="📊 Аналитика", callback_data="menu:analytics"),
         ],
-        [InlineKeyboardButton(text="🔄 Обновить", callback_data="menu:home")],
-    ])
+    ]
+    if is_admin:
+        rows.append([InlineKeyboardButton(text="🛠 Админ", callback_data="admin:panel")])
+    rows.append([InlineKeyboardButton(text="🔄 Обновить", callback_data="menu:home")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def navigation(back_callback: str, back_text: str = "← Назад") -> InlineKeyboardMarkup:
