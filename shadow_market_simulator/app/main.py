@@ -7,6 +7,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
+from .action_handlers import build_action_router
 from .config import load_settings
 from .db import Database
 from .extended_handlers import build_extended_router
@@ -85,6 +86,7 @@ async def main() -> None:
     dispatcher.include_router(
         build_time_router(db, simulation, recruitment, settings.admin_ids)
     )
+    dispatcher.include_router(build_action_router(game))
     dispatcher.include_router(
         build_extended_router(
             db,
