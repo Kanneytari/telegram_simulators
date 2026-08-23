@@ -15,20 +15,21 @@ from .dispute_handlers import build_dispute_router
 from .extended_handlers import build_extended_router
 from .handlers import build_router
 from .keyboards import notification_actions
-from .operations_final import FinalOperationsGameService, FinalOperationsSimulationEngine
 from .operations_handlers import build_operations_router
 from .recruitment_handlers import build_recruitment_router
 from .recruitment_runtime import NightshiftRecruitmentService
 from .simulation import iso, utcnow
 from .storefront_handlers import build_storefront_router
 from .time_handlers import build_time_router
+from .workflow import WorkflowGameService, WorkflowSimulationEngine
+from .workflow_handlers import build_workflow_router
 
 
 async def notification_loop(
     bot: Bot,
     db: Database,
-    simulation: FinalOperationsSimulationEngine,
-    game: FinalOperationsGameService,
+    simulation: WorkflowSimulationEngine,
+    game: WorkflowGameService,
     recruitment: NightshiftRecruitmentService,
     interval: int,
 ) -> None:
@@ -40,11 +41,9 @@ async def notification_loop(
             with db.connect() as conn:
                 items = conn.execute(
                     """SELECT * FROM inbox
-                       WHERE status='open'
-                         AND notified_at IS NULL
+                       WHERE status='open' AND notified_at IS NULL
                          AND priority IN ('important','urgent')
-                       ORDER BY created_at
-                       LIMIT 50"""
+                       ORDER BY created_at LIMIT 50"""
                 ).fetchall()
                 for item in items:
                     marker = "🔴" if item["priority"] == "urgent" else "🟠"
@@ -54,10 +53,7 @@ async def notification_loop(
                             f"<b>{marker} {item['title']}</b>\n\n{item['body']}",
                             reply_markup=notification_actions(item["id"]),
                         )
-                        conn.execute(
-                            "UPDATE inbox SET notified_at=? WHERE id=?",
-                            (iso(utcnow()), item["id"]),
-                        )
+                        conn.execute("UPDATE inbox SET notified_at=? WHERE id=?", (iso(utcnow()), item["id"]))
                     except Exception:
                         logging.exception("Failed to deliver inbox item %s", item["id"])
         except Exception:
@@ -71,14 +67,16 @@ async def main() -> None:
 
     db = Database(settings.db_path)
     db.init()
-    simulation = FinalOperationsSimulationEngine(db, speed=settings.simulation_speed)
+    simulation = WorkflowSimulationEngine(db, speed=settings.simulation_speed)
     simulation.seed_catalog()
-    game = FinalOperationsGameService(db, simulation)
+    game = WorkflowGameService(db, simulation)
     recruitment = NightshiftRecruitmentService(db, speed=settings.simulation_speed)
 
     bot = Bot(settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dispatcher = Dispatcher()
 
+    # Specific flows go first; compatibility routers remain as fallbacks.
+    dispatcher.include_router(build_workflow_router(game))
     dispatcher.include_router(build_operations_router(game))
     dispatcher.include_router(build_dispute_router(game))
     dispatcher.include_router(build_storefront_router(db, game, simulation))
