@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+import math
+
 from .runtime import ROLE_MARKET_PAY
 from .simulation import iso, parse_dt, utcnow
 from .workflow import TASK_LABELS, WORKFLOW_SCHEMA, WorkflowGameService, WorkflowSimulationEngine
@@ -109,6 +112,68 @@ class FinalWorkflowSimulationEngine(WorkflowSimulationEngine):
         self._create_review(conn, player_id, order_id, force=False)
         return False
 
+    def _simulate_management_events(self, conn, player_id: int, sim_hours: float, now) -> int:
+        created = super()._simulate_management_events(conn, player_id, sim_hours, now)
+
+        # Normal staff turnover is separate from dishonest absconding. A person can decide
+        # to leave because of low loyalty or sustained stress. They stop accepting new work,
+        # but remain on the books until the player clears their responsibilities and settles
+        # the remaining deposit + accrued wages through the normal firing flow.
+        hours = min(max(0.0, sim_hours), 12.0)
+        if hours <= 0:
+            return created
+
+        employees = conn.execute(
+            "SELECT * FROM employees WHERE player_id=? AND active=1 AND available=1 ORDER BY id",
+            (player_id,),
+        ).fetchall()
+        for employee in employees:
+            existing = conn.execute(
+                """SELECT 1 FROM inbox
+                   WHERE player_id=? AND status='open' AND kind='resignation_notice'
+                     AND json_extract(payload_json, '$.employee_id')=? LIMIT 1""",
+                (player_id, employee["id"]),
+            ).fetchone()
+            if existing:
+                continue
+
+            loyalty_pressure = max(0.0, 0.58 - float(employee["loyalty"]))
+            stress_pressure = max(0.0, float(employee["stress"]) - 72.0) / 100.0
+            hourly_rate = loyalty_pressure * 0.020 + stress_pressure * 0.012
+            probability = 1.0 - math.exp(-hourly_rate * hours)
+            if probability <= 0 or self.rng.random() >= probability:
+                continue
+
+            exposure = int(self.employee_exposure(conn, player_id, int(employee["id"])))
+            payout = int(employee["deposit"]) + int(employee["wages_accrued"])
+            role = "оптовый" if employee["role"] == "warehouse" else "розничный"
+            conn.execute(
+                "UPDATE employees SET available=0, unavailable_until=NULL WHERE id=?",
+                (employee["id"],),
+            )
+            body = (
+                f"{employee['alias']} сообщил, что хочет закончить работу.\n\n"
+                f"Роль: {role}\n"
+                f"Товар на ответственности: {exposure:,} ₽\n"
+                f"Депозит к возврату: {employee['deposit']:,} ₽\n"
+                f"Начисленная зарплата: {employee['wages_accrued']:,} ₽\n"
+                f"Полный расчёт: <b>{payout:,} ₽</b>\n\n"
+                "Сотрудник больше не берёт новые задачи. Освободи его от товара и проведи увольнение из профиля."
+            )
+            conn.execute(
+                """INSERT INTO inbox(player_id, kind, priority, title, body, payload_json)
+                   VALUES (?, 'resignation_notice', 'important', 'Сотрудник хочет уйти', ?, ?)""",
+                (
+                    player_id,
+                    body,
+                    json.dumps({"employee_id": int(employee["id"])}, ensure_ascii=False),
+                ),
+            )
+            created += 1
+            break
+
+        return created
+
 
 class FinalWorkflowGameService(WorkflowGameService):
     def _task_status(self, player_id: int, employee_id: int) -> str:
@@ -121,6 +186,14 @@ class FinalWorkflowGameService(WorkflowGameService):
                 return "неизвестно"
             if not employee["active"]:
                 return "не работает"
+            resignation = conn.execute(
+                """SELECT 1 FROM inbox
+                   WHERE player_id=? AND status='open' AND kind='resignation_notice'
+                     AND json_extract(payload_json, '$.employee_id')=? LIMIT 1""",
+                (player_id, employee_id),
+            ).fetchone()
+            if resignation:
+                return "готовится уйти"
             if not employee["available"]:
                 return "временно недоступен"
             task = conn.execute(
