@@ -28,6 +28,11 @@ def navigation(back_callback: str, back_text: str = "← Назад") -> InlineK
     ]])
 
 
+def result_actions(back_callback: str, back_text: str = "← Назад") -> InlineKeyboardMarkup:
+    """Compatibility helper for result/detail screens: back to section + main menu."""
+    return navigation(back_callback, back_text)
+
+
 def inbox_list(items) -> InlineKeyboardMarkup:
     rows = []
     markers = {"urgent": "🔴", "important": "🟠", "normal": "⚪"}
