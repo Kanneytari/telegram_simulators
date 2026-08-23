@@ -37,32 +37,24 @@ def build_dispute_router(game) -> Router:
         dispute_id = int(context["dispute_id"])
         amount = int(context["amount"])
         employee_deposit = int(context["employee_deposit"])
+        shop_balance = int(context["shop_balance"])
         employee_alias = context["employee_alias"]
-        rows = [
-            [
-                InlineKeyboardButton(
-                    text="💳 Со счёта магазина",
-                    callback_data=f"dispute:pay:{dispute_id}:{decision}:shop",
-                )
-            ]
-        ]
-        if employee_deposit >= amount:
+        rows = []
+        if shop_balance >= amount:
             rows.append(
-                [
-                    InlineKeyboardButton(
-                        text=f"👤 Из депозита {employee_alias}",
-                        callback_data=f"dispute:pay:{dispute_id}:{decision}:employee",
-                    )
-                ]
+                [InlineKeyboardButton(text="💳 Со счёта магазина", callback_data=f"dispute:pay:{dispute_id}:{decision}:shop")]
             )
         else:
             rows.append(
-                [
-                    InlineKeyboardButton(
-                        text=f"Депозит {employee_alias} · недостаточно",
-                        callback_data="dispute:nofunds",
-                    )
-                ]
+                [InlineKeyboardButton(text="Счёт магазина · недостаточно", callback_data="dispute:nofunds:shop")]
+            )
+        if employee_deposit >= amount:
+            rows.append(
+                [InlineKeyboardButton(text=f"👤 Из депозита {employee_alias}", callback_data=f"dispute:pay:{dispute_id}:{decision}:employee")]
+            )
+        else:
+            rows.append(
+                [InlineKeyboardButton(text=f"Депозит {employee_alias} · недостаточно", callback_data="dispute:nofunds:employee")]
             )
         rows.append(
             [
@@ -94,13 +86,7 @@ def build_dispute_router(game) -> Router:
         item_id = int(callback.data.split(":")[2])
         item = game.inbox_item(callback.from_user.id, item_id)
         if not item or item["status"] != "open":
-            await present(
-                callback.message,
-                "Диспут уже закрыт.",
-                InlineKeyboardMarkup(
-                    inline_keyboard=[[InlineKeyboardButton(text="← Клиенты", callback_data="inbox:clients")]]
-                ),
-            )
+            await present(callback.message, "Диспут уже закрыт.", InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="← Клиенты", callback_data="inbox:clients")]]))
             return
         dispute_id = int(json.loads(item["payload_json"] or "{}")["dispute_id"])
         await render_dispute(callback.message, callback.from_user.id, dispute_id)
@@ -123,17 +109,10 @@ def build_dispute_router(game) -> Router:
         _, _, dispute_id, decision = callback.data.split(":")
         context = game.dispute_payment_context(callback.from_user.id, int(dispute_id), decision)
         if not context:
-            await present(
-                callback.message,
-                "Диспут уже закрыт.",
-                InlineKeyboardMarkup(
-                    inline_keyboard=[[InlineKeyboardButton(text="← Клиенты", callback_data="inbox:clients")]]
-                ),
-            )
+            await present(callback.message, "Диспут уже закрыт.", InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="← Клиенты", callback_data="inbox:clients")]]))
             return
-        amount = int(context["amount"])
         text = (
-            f"<b>Компенсация · {amount:,} ₽</b>\n\n"
+            f"<b>Компенсация · {int(context['amount']):,} ₽</b>\n\n"
             "<b>Источник средств</b>\n"
             f"Счёт магазина: {context['shop_balance']:,} ₽\n"
             f"Депозит {context['employee_alias']}: {context['employee_deposit']:,} ₽\n\n"
@@ -145,12 +124,16 @@ def build_dispute_router(game) -> Router:
     async def pay_compensation(callback: CallbackQuery) -> None:
         await callback.answer()
         _, _, dispute_id, decision, source = callback.data.split(":")
-        result = game.resolve_dispute_with_source(
-            callback.from_user.id,
-            int(dispute_id),
-            decision,
-            source,
-        )
+        dispute_id_int = int(dispute_id)
+        result = game.resolve_dispute_with_source(callback.from_user.id, dispute_id_int, decision, source)
+        remaining = game.dispute_payment_context(callback.from_user.id, dispute_id_int, decision)
+        if remaining:
+            await present(
+                callback.message,
+                f"<b>Компенсация не проведена</b>\n\n{result}\n\nВыбери другой источник.",
+                source_keyboard(remaining, decision),
+            )
+            return
         await present(
             callback.message,
             f"<b>⚖️ Диспут закрыт</b>\n\n{result}",
@@ -178,8 +161,10 @@ def build_dispute_router(game) -> Router:
             ),
         )
 
-    @router.callback_query(F.data == "dispute:nofunds")
+    @router.callback_query(F.data.startswith("dispute:nofunds:"))
     async def no_funds(callback: CallbackQuery) -> None:
-        await callback.answer("В депозите недостаточно средств", show_alert=True)
+        source = callback.data.split(":")[2]
+        text = "На счёте магазина недостаточно средств" if source == "shop" else "В депозите сотрудника недостаточно средств"
+        await callback.answer(text, show_alert=True)
 
     return router
