@@ -58,19 +58,6 @@ CREATE TABLE IF NOT EXISTS supplier_offers (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS batches (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
-    supplier_id INTEGER NOT NULL REFERENCES suppliers(id),
-    product_id INTEGER NOT NULL REFERENCES products(id),
-    quantity INTEGER NOT NULL,
-    remaining INTEGER NOT NULL,
-    unit_cost INTEGER NOT NULL,
-    quality REAL NOT NULL,
-    status TEXT NOT NULL DEFAULT 'warehouse',
-    acquired_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
 CREATE TABLE IF NOT EXISTS employees (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
@@ -96,6 +83,20 @@ CREATE TABLE IF NOT EXISTS employees (
     losses INTEGER NOT NULL DEFAULT 0,
     joined_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_contact_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS batches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
+    supplier_id INTEGER NOT NULL REFERENCES suppliers(id),
+    product_id INTEGER NOT NULL REFERENCES products(id),
+    responsible_employee_id INTEGER REFERENCES employees(id),
+    quantity INTEGER NOT NULL,
+    remaining INTEGER NOT NULL,
+    unit_cost INTEGER NOT NULL,
+    quality REAL NOT NULL,
+    status TEXT NOT NULL DEFAULT 'warehouse',
+    acquired_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS candidates (
@@ -161,6 +162,20 @@ CREATE TABLE IF NOT EXISTS orders (
     employee_deposit_contribution INTEGER NOT NULL DEFAULT 0,
     quality REAL NOT NULL,
     status TEXT NOT NULL DEFAULT 'completed',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS reviews (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
+    order_id INTEGER NOT NULL UNIQUE REFERENCES orders(id) ON DELETE CASCADE,
+    client_id INTEGER NOT NULL REFERENCES clients(id),
+    product_id INTEGER NOT NULL REFERENCES products(id),
+    employee_id INTEGER NOT NULL REFERENCES employees(id),
+    rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+    text TEXT NOT NULL,
+    quality_sentiment TEXT NOT NULL,
+    delivery_sentiment TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -233,6 +248,9 @@ CREATE INDEX IF NOT EXISTS idx_inbox_player_status ON inbox(player_id, status, p
 CREATE INDEX IF NOT EXISTS idx_disputes_player_status ON disputes(player_id, status);
 CREATE INDEX IF NOT EXISTS idx_orders_player_created ON orders(player_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_batches_player_status ON batches(player_id, status);
+CREATE INDEX IF NOT EXISTS idx_batches_responsible ON batches(player_id, responsible_employee_id, status);
+CREATE INDEX IF NOT EXISTS idx_reviews_product_created ON reviews(player_id, product_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_reviews_employee_created ON reviews(player_id, employee_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_employees_player_active ON employees(player_id, active);
 CREATE INDEX IF NOT EXISTS idx_payroll_player_created ON payroll_runs(player_id, created_at);
 """
@@ -266,11 +284,11 @@ class Database:
     def init(self) -> None:
         with self.connect() as conn:
             conn.executescript(SCHEMA)
-            # Lightweight migrations keep existing local SQLite saves compatible.
             self._ensure_column(conn, "employees", "deposit_contribution_pct", "INTEGER NOT NULL DEFAULT 10")
             self._ensure_column(conn, "employees", "wages_accrued", "INTEGER NOT NULL DEFAULT 0")
             self._ensure_column(conn, "employees", "total_wages_paid", "INTEGER NOT NULL DEFAULT 0")
             self._ensure_column(conn, "employees", "deposit_from_wages", "INTEGER NOT NULL DEFAULT 0")
+            self._ensure_column(conn, "batches", "responsible_employee_id", "INTEGER REFERENCES employees(id)")
             self._ensure_column(conn, "candidates", "campaign_id", "INTEGER")
             self._ensure_column(conn, "candidates", "source_channel", "TEXT")
             self._ensure_column(conn, "candidates", "offered_pay", "INTEGER")
@@ -285,7 +303,6 @@ class Database:
             self._ensure_column(conn, "disputes", "refund_employee_id", "INTEGER")
 
             conn.execute("UPDATE employees SET deposit_contribution_pct=10 WHERE deposit_contribution_pct IS NULL")
-            # Legacy MVP rates were intentionally tiny. Bring old retail saves onto the new market scale.
             conn.execute("UPDATE employees SET pay_per_job=1500 WHERE role='courier' AND pay_per_job<500")
             conn.execute("UPDATE employees SET pay_per_job=5000 WHERE role='warehouse' AND pay_per_job<1000")
             conn.execute("UPDATE settings SET last_payroll_at=CURRENT_TIMESTAMP WHERE last_payroll_at IS NULL")
