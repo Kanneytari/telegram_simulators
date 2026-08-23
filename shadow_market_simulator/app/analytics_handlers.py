@@ -5,6 +5,11 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from .db import Database
+from .delivery_feedback_analytics import (
+    delivery_staff_rows,
+    delivery_staff_text,
+    employee_delivery_reviews_text,
+)
 from .detailed_analytics import normalize_period, section_text
 
 
@@ -79,6 +84,15 @@ def build_analytics_router(db: Database, game, simulation) -> Router:
                     callback_data=f"analytics:detail:quality:{period}",
                 ),
             ],
+        ]
+        if section == "staff":
+            rows.append([
+                InlineKeyboardButton(
+                    text="🚩 Негатив по доставке",
+                    callback_data=f"analytics:deliverybad:list:{period}:0",
+                )
+            ])
+        rows.extend([
             [
                 InlineKeyboardButton(
                     text=("✓ " if period == "7" else "") + "7 дней",
@@ -97,7 +111,69 @@ def build_analytics_router(db: Database, game, simulation) -> Router:
                 InlineKeyboardButton(text="← Аналитика", callback_data="menu:analytics"),
                 InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home"),
             ],
-        ]
+        ])
+        return InlineKeyboardMarkup(inline_keyboard=rows)
+
+    def delivery_staff_keyboard(player_id: int, period: str) -> InlineKeyboardMarkup:
+        period = normalize_period(period)
+        rows = []
+        for employee in delivery_staff_rows(db, player_id, period):
+            bad = int(employee["bad_delivery"])
+            if bad <= 0:
+                continue
+            alias = str(employee["alias"])
+            if len(alias) > 28:
+                alias = alias[:25] + "..."
+            rows.append([
+                InlineKeyboardButton(
+                    text=f"👤 {alias} · {bad}",
+                    callback_data=f"analytics:deliverybad:emp:{employee['id']}:{period}:0",
+                )
+            ])
+        rows.extend([
+            [
+                InlineKeyboardButton(
+                    text=("✓ " if period == "7" else "") + "7 дней",
+                    callback_data="analytics:deliverybad:list:7:0",
+                ),
+                InlineKeyboardButton(
+                    text=("✓ " if period == "30" else "") + "30 дней",
+                    callback_data="analytics:deliverybad:list:30:0",
+                ),
+                InlineKeyboardButton(
+                    text=("✓ " if period == "all" else "") + "Всё время",
+                    callback_data="analytics:deliverybad:list:all:0",
+                ),
+            ],
+            [
+                InlineKeyboardButton(text="← Сотрудники", callback_data=f"analytics:detail:staff:{period}"),
+                InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home"),
+            ],
+        ])
+        return InlineKeyboardMarkup(inline_keyboard=rows)
+
+    def delivery_employee_keyboard(employee_id: int, period: str, page: int, pages: int) -> InlineKeyboardMarkup:
+        period = normalize_period(period)
+        nav = []
+        if page > 0:
+            nav.append(
+                InlineKeyboardButton(
+                    text="← Новее",
+                    callback_data=f"analytics:deliverybad:emp:{employee_id}:{period}:{page - 1}",
+                )
+            )
+        if page + 1 < pages:
+            nav.append(
+                InlineKeyboardButton(
+                    text="Раньше →",
+                    callback_data=f"analytics:deliverybad:emp:{employee_id}:{period}:{page + 1}",
+                )
+            )
+        rows = [nav] if nav else []
+        rows.extend([
+            [InlineKeyboardButton(text="← Все сотрудники", callback_data=f"analytics:deliverybad:list:{period}:0")],
+            [InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home")],
+        ])
         return InlineKeyboardMarkup(inline_keyboard=rows)
 
     def text(player_id: int) -> str:
@@ -205,6 +281,45 @@ def build_analytics_router(db: Database, game, simulation) -> Router:
         await callback.answer()
         game.process_payroll(callback.from_user.id)
         await present(callback.message, game.payroll_summary(callback.from_user.id), payroll_keyboard())
+
+    @router.callback_query(F.data.startswith("analytics:deliverybad:list:"))
+    async def delivery_bad_list(callback: CallbackQuery) -> None:
+        await callback.answer()
+        parts = (callback.data or "").split(":")
+        period = normalize_period(parts[3] if len(parts) > 3 else "30")
+        simulation.advance(callback.from_user.id)
+        await present(
+            callback.message,
+            delivery_staff_text(db, callback.from_user.id, period),
+            delivery_staff_keyboard(callback.from_user.id, period),
+        )
+
+    @router.callback_query(F.data.startswith("analytics:deliverybad:emp:"))
+    async def delivery_bad_employee(callback: CallbackQuery) -> None:
+        await callback.answer()
+        parts = (callback.data or "").split(":")
+        try:
+            employee_id = int(parts[3])
+        except (IndexError, ValueError):
+            return
+        period = normalize_period(parts[4] if len(parts) > 4 else "30")
+        try:
+            page = max(0, int(parts[5])) if len(parts) > 5 else 0
+        except ValueError:
+            page = 0
+        simulation.advance(callback.from_user.id)
+        rendered, pages, page = employee_delivery_reviews_text(
+            db,
+            callback.from_user.id,
+            employee_id,
+            period,
+            page,
+        )
+        await present(
+            callback.message,
+            rendered,
+            delivery_employee_keyboard(employee_id, period, page, pages),
+        )
 
     @router.callback_query(F.data.startswith("analytics:detail:"))
     async def detailed(callback: CallbackQuery) -> None:
