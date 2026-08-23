@@ -15,7 +15,7 @@ from .dispute_handlers import build_dispute_router
 from .extended_handlers import build_extended_router
 from .handlers import build_router
 from .keyboards import notification_actions
-from .operations import OperationsGameService, OperationsSimulationEngine
+from .operations_final import FinalOperationsGameService, FinalOperationsSimulationEngine
 from .operations_handlers import build_operations_router
 from .recruitment_handlers import build_recruitment_router
 from .recruitment_runtime import NightshiftRecruitmentService
@@ -27,8 +27,8 @@ from .time_handlers import build_time_router
 async def notification_loop(
     bot: Bot,
     db: Database,
-    simulation: OperationsSimulationEngine,
-    game: OperationsGameService,
+    simulation: FinalOperationsSimulationEngine,
+    game: FinalOperationsGameService,
     recruitment: NightshiftRecruitmentService,
     interval: int,
 ) -> None:
@@ -67,50 +67,30 @@ async def notification_loop(
 
 async def main() -> None:
     settings = load_settings()
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    )
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
     db = Database(settings.db_path)
     db.init()
-    simulation = OperationsSimulationEngine(db, speed=settings.simulation_speed)
+    simulation = FinalOperationsSimulationEngine(db, speed=settings.simulation_speed)
     simulation.seed_catalog()
-    game = OperationsGameService(db, simulation)
+    game = FinalOperationsGameService(db, simulation)
     recruitment = NightshiftRecruitmentService(db, speed=settings.simulation_speed)
 
-    bot = Bot(
-        settings.bot_token,
-        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
-    )
+    bot = Bot(settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dispatcher = Dispatcher()
 
-    # Specific flows go first; legacy handlers remain compatibility fallbacks.
     dispatcher.include_router(build_operations_router(game))
     dispatcher.include_router(build_dispute_router(game))
     dispatcher.include_router(build_storefront_router(db, game, simulation))
     dispatcher.include_router(build_analytics_router(db, game, simulation))
     dispatcher.include_router(build_time_router(db, simulation, recruitment, settings.admin_ids))
     dispatcher.include_router(build_action_router(game))
-    dispatcher.include_router(
-        build_extended_router(db, game, simulation, recruitment, settings.admin_ids)
-    )
-    dispatcher.include_router(
-        build_recruitment_router(db, game, simulation, recruitment, settings.admin_ids)
-    )
+    dispatcher.include_router(build_extended_router(db, game, simulation, recruitment, settings.admin_ids))
+    dispatcher.include_router(build_recruitment_router(db, game, simulation, recruitment, settings.admin_ids))
     dispatcher.include_router(build_router(db, game, simulation, settings.admin_ids))
 
     await bot.delete_webhook(drop_pending_updates=True)
-    notifier = asyncio.create_task(
-        notification_loop(
-            bot,
-            db,
-            simulation,
-            game,
-            recruitment,
-            settings.simulation_interval_seconds,
-        )
-    )
+    notifier = asyncio.create_task(notification_loop(bot, db, simulation, game, recruitment, settings.simulation_interval_seconds))
     try:
         await dispatcher.start_polling(bot)
     finally:
