@@ -154,4 +154,18 @@ def build_workflow_dashboard_router(db, game, simulation, admin_ids: frozenset[i
         await callback.answer()
         await show_team(callback.message, callback.from_user.id, edit=True)
 
+    @router.callback_query(F.data == "reset:confirm")
+    async def reset_confirm(callback: CallbackQuery) -> None:
+        await callback.answer()
+        with db.connect() as conn:
+            conn.execute("DELETE FROM shops WHERE player_id=?", (callback.from_user.id,))
+        simulation.ensure_player(callback.from_user.id, callback.from_user.username)
+        await show_dashboard(callback.message, callback.from_user.id, edit=True)
+
+    @router.callback_query(F.data == "reset:cancel")
+    async def reset_cancel(callback: CallbackQuery) -> None:
+        await callback.answer("Сброс отменён")
+        simulation.ensure_player(callback.from_user.id, callback.from_user.username)
+        await show_dashboard(callback.message, callback.from_user.id, edit=True)
+
     return router
