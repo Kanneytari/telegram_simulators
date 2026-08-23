@@ -13,6 +13,10 @@ ROLE_NAMES["courier"] = "Розничный сотрудник"
 class NightshiftSimulationEngine(PlayerSimulationEngine):
     """Final game simulation layer with current wage scale and staff-message enrichment."""
 
+    def effective_speed(self, player_id: int) -> float:
+        # /speed is absolute relative to standard time: x60 == one game hour per real minute.
+        return self.player_multiplier(player_id)
+
     def ensure_player(self, player_id: int, username: str | None) -> bool:
         created = super().ensure_player(player_id, username)
         with self.db.connect() as conn:
