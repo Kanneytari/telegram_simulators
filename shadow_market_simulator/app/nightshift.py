@@ -2,8 +2,12 @@ from __future__ import annotations
 
 import json
 
+from .game import ROLE_NAMES
 from .runtime import PlayerSimulationEngine, ROLE_MARKET_PAY
 from .simulation import iso, utcnow
+
+ROLE_NAMES["warehouse"] = "Оптовый сотрудник"
+ROLE_NAMES["courier"] = "Розничный сотрудник"
 
 
 class NightshiftSimulationEngine(PlayerSimulationEngine):
@@ -13,7 +17,6 @@ class NightshiftSimulationEngine(PlayerSimulationEngine):
         created = super().ensure_player(player_id, username)
         with self.db.connect() as conn:
             if created:
-                # Both starter employees are retail staff. The market reference is 1,500 ₽ per completed order.
                 conn.execute(
                     """UPDATE employees
                        SET pay_per_job=?, deposit_contribution_pct=10
