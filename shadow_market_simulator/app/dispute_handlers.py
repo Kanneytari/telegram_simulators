@@ -99,8 +99,8 @@ def build_dispute_router(game) -> Router:
     @router.callback_query(F.data.startswith("dispute:ask:"))
     async def ask_employee(callback: CallbackQuery) -> None:
         dispute_id = int(callback.data.split(":")[2])
-        reply = game.ask_employee_about_dispute(callback.from_user.id, dispute_id)
-        await callback.answer("Пояснение получено" if reply else "Нет ответа")
+        status = game.ask_employee_about_dispute(callback.from_user.id, dispute_id)
+        await callback.answer(status[:200])
         await render_dispute(callback.message, callback.from_user.id, dispute_id)
 
     @router.callback_query(F.data.startswith("dispute:amount:"))
