@@ -25,6 +25,12 @@ class FinalGameService(NightshiftGameService):
             ).fetchone()
             if not settings:
                 return None
+            if not settings["last_payroll_at"]:
+                conn.execute(
+                    "UPDATE settings SET last_payroll_at=? WHERE player_id=?",
+                    (iso(now), player_id),
+                )
+                return None
 
             last = parse_dt(settings["last_payroll_at"])
             elapsed_real_hours = max(0.0, (now - last).total_seconds() / 3600.0)
@@ -171,7 +177,7 @@ class FinalGameService(NightshiftGameService):
             ).fetchone()
 
         accrued = sum(int(row["wages_accrued"]) for row in rows)
-        last = parse_dt(settings["last_payroll_at"])
+        last = parse_dt(settings["last_payroll_at"]) if settings and settings["last_payroll_at"] else now
         elapsed_game = max(0.0, (now - last).total_seconds() / 3600.0) * speed
         remaining_game = max(0.0, 24.0 - elapsed_game)
         remaining_real_minutes = remaining_game / speed * 60.0
