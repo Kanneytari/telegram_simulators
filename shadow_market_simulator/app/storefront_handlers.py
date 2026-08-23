@@ -21,12 +21,14 @@ def build_storefront_router(db: Database, game, simulation) -> Router:
         with db.connect() as conn:
             return conn.execute(
                 """SELECT p.id, p.title,
-                          COALESCE((SELECT SUM(b.remaining) FROM batches b
-                                    WHERE b.player_id=? AND b.product_id=p.id AND b.status='warehouse'), 0) stock,
+                          COALESCE((SELECT SUM(rp.position_count*rp.pack_size)
+                                    FROM retail_positions rp JOIN employees e ON e.id=rp.employee_id
+                                    WHERE rp.player_id=? AND rp.product_id=p.id
+                                      AND rp.position_count>0 AND e.active=1),0) stock,
                           COALESCE((SELECT COUNT(*) FROM reviews r
-                                    WHERE r.player_id=? AND r.product_id=p.id), 0) review_count,
+                                    WHERE r.player_id=? AND r.product_id=p.id),0) review_count,
                           COALESCE((SELECT AVG(r.rating) FROM reviews r
-                                    WHERE r.player_id=? AND r.product_id=p.id), 0) review_avg
+                                    WHERE r.player_id=? AND r.product_id=p.id),0) review_avg
                    FROM products p
                    WHERE p.active=1
                      AND EXISTS (SELECT 1 FROM listings l
@@ -40,8 +42,10 @@ def build_storefront_router(db: Database, game, simulation) -> Router:
             product = conn.execute("SELECT * FROM products WHERE id=? AND active=1", (product_id,)).fetchone()
             if not product:
                 return None, [], 0, 0.0, 0
-            stock = int(conn.execute(
-                "SELECT COALESCE(SUM(remaining),0) FROM batches WHERE player_id=? AND product_id=? AND status='warehouse'",
+            published_units = int(conn.execute(
+                """SELECT COALESCE(SUM(rp.position_count*rp.pack_size),0)
+                   FROM retail_positions rp JOIN employees e ON e.id=rp.employee_id
+                   WHERE rp.player_id=? AND rp.product_id=? AND rp.position_count>0 AND e.active=1""",
                 (player_id, product_id),
             ).fetchone()[0])
             review_stats = conn.execute(
@@ -49,26 +53,37 @@ def build_storefront_router(db: Database, game, simulation) -> Router:
                 (player_id, product_id),
             ).fetchone()
             listings = conn.execute(
-                "SELECT * FROM listings WHERE player_id=? AND product_id=? AND active=1 ORDER BY pack_size",
+                """SELECT l.*,
+                          COALESCE((SELECT SUM(rp.position_count)
+                                    FROM retail_positions rp JOIN employees e ON e.id=rp.employee_id
+                                    WHERE rp.player_id=l.player_id
+                                      AND rp.product_id=l.product_id
+                                      AND rp.pack_size=l.pack_size
+                                      AND rp.position_count>0 AND e.active=1),0) positions
+                   FROM listings l
+                   WHERE l.player_id=? AND l.product_id=? AND l.active=1
+                   ORDER BY l.pack_size""",
                 (player_id, product_id),
             ).fetchall()
-        return product, [(row, stock // int(row["pack_size"])) for row in listings], stock, float(review_stats["avg"]), int(review_stats["count"])
+        return product, listings, published_units, float(review_stats["avg"]), int(review_stats["count"])
 
     def listing_context(player_id: int, listing_id: int):
         with db.connect() as conn:
             row = conn.execute(
-                """SELECT l.*, p.title, p.base_market_price
+                """SELECT l.*, p.title, p.base_market_price,
+                          COALESCE((SELECT SUM(rp.position_count)
+                                    FROM retail_positions rp JOIN employees e ON e.id=rp.employee_id
+                                    WHERE rp.player_id=l.player_id AND rp.product_id=l.product_id
+                                      AND rp.pack_size=l.pack_size AND rp.position_count>0 AND e.active=1),0) positions,
+                          COALESCE((SELECT SUM(rp.position_count*rp.pack_size)
+                                    FROM retail_positions rp JOIN employees e ON e.id=rp.employee_id
+                                    WHERE rp.player_id=l.player_id AND rp.product_id=l.product_id
+                                      AND rp.position_count>0 AND e.active=1),0) published_units
                    FROM listings l JOIN products p ON p.id=l.product_id
                    WHERE l.id=? AND l.player_id=? AND l.active=1""",
                 (listing_id, player_id),
             ).fetchone()
-            if not row:
-                return None
-            stock = int(conn.execute(
-                "SELECT COALESCE(SUM(remaining),0) FROM batches WHERE player_id=? AND product_id=? AND status='warehouse'",
-                (player_id, row["product_id"]),
-            ).fetchone()[0])
-        return row, stock // int(row["pack_size"]), stock
+        return row
 
     def root_keyboard(rows) -> InlineKeyboardMarkup:
         buttons = []
@@ -83,15 +98,12 @@ def build_storefront_router(db: Database, game, simulation) -> Router:
 
     def product_keyboard(product_id: int, listings, review_count: int) -> InlineKeyboardMarkup:
         rows = []
-        for listing, positions in listings:
+        for listing in listings:
             rows.append([InlineKeyboardButton(
-                text=f"×{listing['pack_size']} · {listing['price']:,} ₽ · {positions} поз.",
+                text=f"×{listing['pack_size']} · {listing['price']:,} ₽ · {int(listing['positions'])} поз.",
                 callback_data=f"store:listing:{listing['id']}",
             )])
-        rows.append([InlineKeyboardButton(
-            text=f"⭐ Отзывы · {review_count}",
-            callback_data=f"store:reviews:{product_id}",
-        )])
+        rows.append([InlineKeyboardButton(text=f"⭐ Отзывы · {review_count}", callback_data=f"store:reviews:{product_id}")])
         rows.append([
             InlineKeyboardButton(text="← Товары", callback_data="menu:listings"),
             InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home"),
@@ -114,30 +126,33 @@ def build_storefront_router(db: Database, game, simulation) -> Router:
     async def render_root(target: Message, player_id: int) -> None:
         simulation.advance(player_id)
         rows = product_rows(player_id)
-        text = "<b>🏷 Витрина</b>\n\nВыбери товар.\n\nЧисло рядом с товаром — общий остаток на складе."
+        text = (
+            "<b>🏷 Витрина</b>\n\n"
+            "Выбери товар.\n\n"
+            "Здесь учитываются только уже подготовленные и опубликованные розничные позиции."
+        )
         await present(target, text, root_keyboard(rows))
 
     async def render_product(target: Message, player_id: int, product_id: int) -> None:
         simulation.advance(player_id)
-        product, listings, total_stock, review_avg, review_count = product_listings(player_id, product_id)
+        product, listings, published_units, review_avg, review_count = product_listings(player_id, product_id)
         if not product:
             await render_root(target, player_id)
             return
         review_line = f"⭐ Отзывы: {review_avg:.2f} · {review_count}" if review_count else "Отзывы: пока нет"
         text = (
             f"<b>{product['title']}</b>\n\n"
-            f"Остаток: <b>{total_stock} ед.</b>\n"
+            f"На витрине: <b>{published_units} ед.</b>\n"
             f"{review_line}\n\n"
-            "Выбери фасовку. Число «поз.» показывает, сколько таких позиций сейчас можно выставить из текущего остатка."
+            "Выбери фасовку. Число «поз.» — текущее количество готовых позиций, ожидающих продажи."
         )
         await present(target, text, product_keyboard(product_id, listings, review_count))
 
     async def render_listing(target: Message, player_id: int, listing_id: int) -> None:
-        context = listing_context(player_id, listing_id)
-        if not context:
+        row = listing_context(player_id, listing_id)
+        if not row:
             await render_root(target, player_id)
             return
-        row, positions, stock = context
         unit_price = row["price"] / max(1, row["pack_size"])
         market_delta = (unit_price / row["base_market_price"] - 1.0) * 100.0
         text = (
@@ -146,9 +161,9 @@ def build_storefront_router(db: Database, game, simulation) -> Router:
             f"Цена: <b>{row['price']:,} ₽</b>\n"
             f"За единицу: {unit_price:,.0f} ₽\n"
             f"К базовой цене: {market_delta:+.1f}%\n\n"
-            "<b>Остаток</b>\n"
-            f"На складе: {stock} ед.\n"
-            f"Ожидают продажи: <b>{positions} поз.</b>"
+            "<b>Витрина</b>\n"
+            f"Всего опубликовано: {int(row['published_units'])} ед.\n"
+            f"Ожидают продажи в этой фасовке: <b>{int(row['positions'])} поз.</b>"
         )
         await present(target, text, listing_keyboard(listing_id, int(row["product_id"])))
 
