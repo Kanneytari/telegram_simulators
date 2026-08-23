@@ -24,6 +24,7 @@ from .time_handlers import build_time_router
 from .workflow_dashboard_handlers import build_workflow_dashboard_router
 from .workflow_final import FinalWorkflowGameService, FinalWorkflowSimulationEngine
 from .workflow_handlers import build_workflow_router
+from .workflow_reassign_handlers import build_workflow_reassign_router
 
 
 async def notification_loop(
@@ -78,6 +79,7 @@ async def main() -> None:
 
     # Specific flows go first; compatibility routers remain as fallbacks.
     dispatcher.include_router(build_workflow_dashboard_router(db, game, simulation))
+    dispatcher.include_router(build_workflow_reassign_router(game))
     dispatcher.include_router(build_workflow_router(game))
     dispatcher.include_router(build_operations_router(game))
     dispatcher.include_router(build_dispute_router(game))
