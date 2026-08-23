@@ -11,26 +11,40 @@ from .config import load_settings
 from .db import Database
 from .game import GameService
 from .handlers import build_router
+from .keyboards import notification_actions
 from .simulation import SimulationEngine, iso, utcnow
 
 
-async def notification_loop(bot: Bot, db: Database, simulation: SimulationEngine, interval: int) -> None:
+async def notification_loop(
+    bot: Bot,
+    db: Database,
+    simulation: SimulationEngine,
+    interval: int,
+) -> None:
     while True:
         try:
             simulation.advance_all()
             with db.connect() as conn:
                 items = conn.execute(
-                    """SELECT * FROM inbox WHERE status='open' AND notified_at IS NULL
-                       AND priority IN ('important','urgent') ORDER BY created_at LIMIT 50"""
+                    """SELECT * FROM inbox
+                       WHERE status='open'
+                         AND notified_at IS NULL
+                         AND priority IN ('important','urgent')
+                       ORDER BY created_at
+                       LIMIT 50"""
                 ).fetchall()
                 for item in items:
                     marker = "🔴" if item["priority"] == "urgent" else "🟠"
                     try:
                         await bot.send_message(
                             item["player_id"],
-                            f"{marker} <b>{item['title']}</b>\n\n{item['body']}\n\nОткрой «📨 Входящие», чтобы принять решение.",
+                            f"<b>{marker} {item['title']}</b>\n\n{item['body']}",
+                            reply_markup=notification_actions(item["id"]),
                         )
-                        conn.execute("UPDATE inbox SET notified_at=? WHERE id=?", (iso(utcnow()), item["id"]))
+                        conn.execute(
+                            "UPDATE inbox SET notified_at=? WHERE id=?",
+                            (iso(utcnow()), item["id"]),
+                        )
                     except Exception:
                         logging.exception("Failed to deliver inbox item %s", item["id"])
         except Exception:
@@ -40,7 +54,10 @@ async def notification_loop(bot: Bot, db: Database, simulation: SimulationEngine
 
 async def main() -> None:
     settings = load_settings()
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
 
     db = Database(settings.db_path)
     db.init()
@@ -48,12 +65,24 @@ async def main() -> None:
     simulation.seed_catalog()
     game = GameService(db, simulation)
 
-    bot = Bot(settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    bot = Bot(
+        settings.bot_token,
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+    )
     dispatcher = Dispatcher()
-    dispatcher.include_router(build_router(db, game, simulation, settings.admin_ids))
+    dispatcher.include_router(
+        build_router(db, game, simulation, settings.admin_ids)
+    )
 
     await bot.delete_webhook(drop_pending_updates=True)
-    notifier = asyncio.create_task(notification_loop(bot, db, simulation, settings.simulation_interval_seconds))
+    notifier = asyncio.create_task(
+        notification_loop(
+            bot,
+            db,
+            simulation,
+            settings.simulation_interval_seconds,
+        )
+    )
     try:
         await dispatcher.start_polling(bot)
     finally:
