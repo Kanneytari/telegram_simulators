@@ -108,3 +108,36 @@ def test_publication_history_drives_productivity_and_inventory(tmp_path):
     assert "витрина" in text
     assert "Средняя: <b>" in text
     assert "поз. / игровые сутки" in text
+
+
+def test_short_eta_is_safe_for_html_parse_mode(tmp_path):
+    db, _, game = make_system(tmp_path)
+    with db.connect() as conn:
+        courier = conn.execute(
+            "SELECT id FROM employees WHERE player_id=1001 AND role='courier' ORDER BY id LIMIT 1"
+        ).fetchone()
+        batch = conn.execute(
+            "SELECT * FROM batches WHERE player_id=1001 AND remaining>=5 ORDER BY id LIMIT 1"
+        ).fetchone()
+        warehouse = conn.execute(
+            "SELECT id FROM employees WHERE player_id=1001 AND role='warehouse' ORDER BY id LIMIT 1"
+        ).fetchone()
+        cur = conn.execute(
+            """INSERT INTO retail_allocations(
+                   player_id, batch_id, wholesale_employee_id, retail_employee_id,
+                   product_id, quantity, unit_cost, quality, status, received_at
+               ) VALUES (1001, ?, ?, ?, ?, 5, ?, ?, 'preparing', CURRENT_TIMESTAMP)""",
+            (batch["id"], warehouse["id"], courier["id"], batch["product_id"], batch["unit_cost"], batch["quality"]),
+        )
+        conn.execute(
+            """INSERT INTO employee_tasks(
+                   player_id, employee_id, kind, batch_id, allocation_id,
+                   product_id, quantity, completes_at, note
+               ) VALUES (1001, ?, 'prepare_positions', ?, ?, ?, 5, ?, 'short eta')""",
+            (courier["id"], batch["id"], cur.lastrowid, batch["product_id"], iso(utcnow() + timedelta(minutes=20))),
+        )
+
+    text = game.employee_details(1001, courier["id"])
+    assert "менее 1 ч" in text
+    assert "<1 ч" not in text
+    assert "<1 мин" not in text
