@@ -25,9 +25,9 @@ from .product_review_handlers import build_product_review_router
 from .recruitment_handlers import build_recruitment_router
 from .recruitment_runtime import NightshiftRecruitmentService
 from .simulation import iso, utcnow
+from .staff_relationships import StaffRelationshipGameService, StaffRelationshipSimulationEngine
 from .storefront_handlers import build_storefront_router
 from .time_handlers import build_time_router
-from .wholesale_compensation import WholesaleCompensationGameService, WholesaleCompensationSimulationEngine
 from .workflow_allocation_handlers import build_workflow_allocation_router
 from .workflow_dashboard_handlers import build_workflow_dashboard_router
 from .workflow_handlers import build_workflow_router
@@ -37,8 +37,8 @@ from .workflow_reassign_handlers import build_workflow_reassign_router
 async def notification_loop(
     bot: Bot,
     db: Database,
-    simulation: WholesaleCompensationSimulationEngine,
-    game: WholesaleCompensationGameService,
+    simulation: StaffRelationshipSimulationEngine,
+    game: StaffRelationshipGameService,
     recruitment: NightshiftRecruitmentService,
     analytics: AnalyticsLogger,
     interval: int,
@@ -86,9 +86,9 @@ async def main() -> None:
 
     db = Database(settings.db_path)
     db.init()
-    simulation = WholesaleCompensationSimulationEngine(db, speed=settings.simulation_speed)
+    simulation = StaffRelationshipSimulationEngine(db, speed=settings.simulation_speed)
     simulation.seed_catalog()
-    game = WholesaleCompensationGameService(db, simulation)
+    game = StaffRelationshipGameService(db, simulation)
     recruitment = NightshiftRecruitmentService(db, speed=settings.simulation_speed)
     install_inbox_lifecycle(db)
 
