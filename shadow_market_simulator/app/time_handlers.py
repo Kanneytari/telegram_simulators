@@ -7,10 +7,10 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from .db import Database
-from .simulation import iso, utcnow
+from .simulation import iso, parse_dt, utcnow
 
 
-def build_time_router(db: Database, simulation, recruitment, admin_ids: frozenset[int]) -> Router:
+def build_time_router(db: Database, simulation, recruitment, game, admin_ids: frozenset[int]) -> Router:
     router = Router(name="time-controls")
 
     def keyboard(current: float) -> InlineKeyboardMarkup:
@@ -27,16 +27,60 @@ def build_time_router(db: Database, simulation, recruitment, admin_ids: frozense
             ]
         )
 
+    def rescale_payroll_clock(player_id: int, old_multiplier: float, new_multiplier: float, now=None) -> None:
+        """Preserve already elapsed game hours when /speed changes."""
+        now = now or utcnow()
+        old_speed = max(0.1, float(simulation.speed) * float(old_multiplier))
+        new_speed = max(0.1, float(simulation.speed) * float(new_multiplier))
+        with db.connect() as conn:
+            row = conn.execute(
+                "SELECT last_payroll_at FROM settings WHERE player_id=?",
+                (player_id,),
+            ).fetchone()
+            if not row or not row["last_payroll_at"]:
+                conn.execute(
+                    "UPDATE settings SET last_payroll_at=? WHERE player_id=?",
+                    (iso(now), player_id),
+                )
+                return
+            last = parse_dt(row["last_payroll_at"])
+            elapsed_real_seconds = max(0.0, (now - last).total_seconds())
+            elapsed_game_seconds = elapsed_real_seconds * old_speed
+            adjusted_last = now - timedelta(seconds=elapsed_game_seconds / new_speed)
+            conn.execute(
+                "UPDATE settings SET last_payroll_at=? WHERE player_id=?",
+                (iso(adjusted_last), player_id),
+            )
+
+    def fast_forward_payroll(player_id: int, game_hours: float) -> None:
+        speed = max(0.1, float(simulation.effective_speed(player_id)))
+        with db.connect() as conn:
+            row = conn.execute(
+                "SELECT last_payroll_at FROM settings WHERE player_id=?",
+                (player_id,),
+            ).fetchone()
+            if not row or not row["last_payroll_at"]:
+                return
+            last = parse_dt(row["last_payroll_at"])
+            conn.execute(
+                "UPDATE settings SET last_payroll_at=? WHERE player_id=?",
+                (iso(last - timedelta(hours=max(0.0, game_hours) / speed)), player_id),
+            )
+
     async def apply_speed(target: Message, player_id: int, value: float, *, edit: bool) -> None:
         simulation.advance(player_id)
+        game.process_payroll(player_id)
+        now = utcnow()
         old, new = recruitment.set_player_multiplier(player_id, value)
-        simulation.rescale_existing_timers(player_id, old, new)
+        rescale_payroll_clock(player_id, old, new, now=now)
+        simulation.rescale_existing_timers(player_id, old, new, now=now)
+        real_day_minutes = 24.0 * 60.0 / max(0.1, float(simulation.effective_speed(player_id)))
         text = (
             "<b>⚙️ Скорость игры</b>\n\n"
             f"Множитель: <b>x{new:g}</b>\n"
-            f"1 игровой час: ~{60/new:.1f} реальной мин.\n\n"
-            "Игровые дедлайны пересчитаны.\n"
-            "Payroll остаётся раз в реальные 24 часа."
+            f"1 игровой час: ~{60/new:.1f} реальной мин.\n"
+            f"Игровые сутки: ~{real_day_minutes:.0f} реальной мин.\n\n"
+            "Игровые дедлайны и срок выплаты зарплаты пересчитаны."
         )
         if edit:
             await target.edit_text(text, reply_markup=keyboard(new))
@@ -97,8 +141,8 @@ def build_time_router(db: Database, simulation, recruitment, admin_ids: frozense
         simulation.ensure_player(message.from_user.id, message.from_user.username)
         speed_value = simulation.effective_speed(message.from_user.id)
 
-        # Existing deadlines are moved by six game hours; payroll is deliberately excluded.
         simulation.fast_forward_timers(message.from_user.id, 6)
+        fast_forward_payroll(message.from_user.id, 6)
         with db.connect() as conn:
             conn.execute(
                 "UPDATE shops SET last_simulated_at=? WHERE player_id=?",
@@ -107,14 +151,24 @@ def build_time_router(db: Database, simulation, recruitment, admin_ids: frozense
 
         result = simulation.advance(message.from_user.id)
         candidates = recruitment.fast_forward(message.from_user.id, 6)
+        payroll = game.process_payroll(message.from_user.id)
+        if payroll is None:
+            payroll_text = "ещё не наступил срок"
+        elif payroll["status"] == "paid":
+            payroll_text = f"выплачено {payroll['cash']:,} ₽"
+        elif payroll["status"] == "shortfall":
+            payroll_text = "задержано: не хватает денег"
+        else:
+            payroll_text = "расчётный день завершён, начислений нет"
+
         await message.answer(
             "<b>⏩ Тестовый тик</b>\n\n"
             "Промотано: <b>6 игровых часов</b>\n\n"
             f"Заказов: {result.orders_created}\n"
             f"Диспутов: {result.disputes_created}\n"
             f"Событий: {result.messages_created}\n"
-            f"Новых кандидатов: {candidates}\n\n"
-            "Payroll не проматывается."
+            f"Новых кандидатов: {candidates}\n"
+            f"Зарплата: {payroll_text}"
         )
 
     return router
