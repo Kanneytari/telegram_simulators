@@ -56,7 +56,7 @@ def test_order_accrues_wage_instead_of_paying_immediately(tmp_path):
     assert after_balance == before_balance + order["revenue"]
 
 
-def test_daily_payroll_pays_cash_and_grows_deposit(tmp_path):
+def test_game_day_payroll_pays_cash_and_grows_deposit(tmp_path):
     db, _, game, _ = make_system(tmp_path)
     with db.connect() as conn:
         employee = conn.execute(
@@ -85,6 +85,46 @@ def test_daily_payroll_pays_cash_and_grows_deposit(tmp_path):
     assert employee["deposit"] == old_deposit + 1000
     assert balance == 41000
     assert runs == 1
+
+
+def test_payroll_at_x60_is_due_after_about_24_real_minutes(tmp_path):
+    db, simulation, game, recruitment = make_system(tmp_path)
+    recruitment.set_player_multiplier(1001, 60)
+    assert simulation.effective_speed(1001) == 60
+
+    with db.connect() as conn:
+        employee = conn.execute(
+            "SELECT * FROM employees WHERE player_id=1001 ORDER BY id LIMIT 1"
+        ).fetchone()
+        conn.execute("UPDATE employees SET wages_accrued=10000 WHERE id=?", (employee["id"],))
+        conn.execute("UPDATE shops SET balance=50000 WHERE player_id=1001")
+        conn.execute(
+            "UPDATE settings SET last_payroll_at=? WHERE player_id=1001",
+            (iso(utcnow() - timedelta(minutes=25)),),
+        )
+
+    result = game.process_payroll(1001)
+    assert result is not None
+    assert result["status"] == "paid"
+    assert result["gross"] == 10000
+
+
+def test_payroll_at_x60_is_not_due_before_game_day_ends(tmp_path):
+    db, simulation, game, recruitment = make_system(tmp_path)
+    recruitment.set_player_multiplier(1001, 60)
+    assert simulation.effective_speed(1001) == 60
+
+    with db.connect() as conn:
+        employee = conn.execute(
+            "SELECT * FROM employees WHERE player_id=1001 ORDER BY id LIMIT 1"
+        ).fetchone()
+        conn.execute("UPDATE employees SET wages_accrued=10000 WHERE id=?", (employee["id"],))
+        conn.execute(
+            "UPDATE settings SET last_payroll_at=? WHERE player_id=1001",
+            (iso(utcnow() - timedelta(minutes=20)),),
+        )
+
+    assert game.process_payroll(1001) is None
 
 
 def test_speed_multiplier_is_per_player(tmp_path):
