@@ -4,11 +4,204 @@ import json
 from datetime import timedelta
 
 from .runtime import NightshiftGameService
-from .simulation import iso, utcnow
+from .simulation import iso, parse_dt, utcnow
 
 
 class FinalGameService(NightshiftGameService):
     """Small final overrides that depend on the player-aware simulation clock."""
+
+    def process_payroll(self, player_id: int, now=None) -> dict | None:
+        """Settle accrued wages once per 24 game hours.
+
+        The real interval therefore depends on the player's current time multiplier.
+        /speed preserves already elapsed game time, while /tick advances this clock.
+        """
+        now = now or utcnow()
+        speed = max(0.1, float(self.simulation.effective_speed(player_id)))
+        with self.db.connect() as conn:
+            settings = conn.execute(
+                "SELECT * FROM settings WHERE player_id=?",
+                (player_id,),
+            ).fetchone()
+            if not settings:
+                return None
+
+            last = parse_dt(settings["last_payroll_at"])
+            elapsed_real_hours = max(0.0, (now - last).total_seconds() / 3600.0)
+            elapsed_game_hours = elapsed_real_hours * speed
+            if elapsed_game_hours < 24.0:
+                return None
+
+            employees = conn.execute(
+                "SELECT * FROM employees WHERE player_id=? AND wages_accrued>0 ORDER BY id",
+                (player_id,),
+            ).fetchall()
+            gross = sum(int(e["wages_accrued"]) for e in employees)
+            if gross <= 0:
+                conn.execute(
+                    "UPDATE settings SET last_payroll_at=? WHERE player_id=?",
+                    (iso(now), player_id),
+                )
+                return {"gross": 0, "cash": 0, "deposit": 0, "employees": 0, "status": "empty"}
+
+            cash_due = 0
+            deposit_due = 0
+            settlements = []
+            for employee in employees:
+                accrued = int(employee["wages_accrued"])
+                pct = int(employee["deposit_contribution_pct"] or 0)
+                deposit_part = max(0, min(accrued, int(round(accrued * pct / 100.0))))
+                cash_part = accrued - deposit_part
+                cash_due += cash_part
+                deposit_due += deposit_part
+                settlements.append((employee, accrued, cash_part, deposit_part))
+
+            shop = conn.execute(
+                "SELECT balance FROM shops WHERE player_id=?",
+                (player_id,),
+            ).fetchone()
+            balance = int(shop["balance"])
+            if balance < cash_due:
+                existing = conn.execute(
+                    """SELECT 1 FROM inbox
+                       WHERE player_id=? AND status='open' AND kind='payroll_shortfall'""",
+                    (player_id,),
+                ).fetchone()
+                if not existing:
+                    shortage = cash_due - balance
+                    conn.execute(
+                        """INSERT INTO inbox(player_id, kind, priority, title, body, payload_json)
+                           VALUES (?, 'payroll_shortfall', 'urgent', 'Не хватает на выплаты', ?, '{}')""",
+                        (
+                            player_id,
+                            f"К выплате: {cash_due:,} ₽\n"
+                            f"На счету: {balance:,} ₽\n\n"
+                            f"🔴 Не хватает {shortage:,} ₽. Выплата сотрудникам задержана.",
+                        ),
+                    )
+                return {
+                    "gross": gross,
+                    "cash": cash_due,
+                    "deposit": deposit_due,
+                    "employees": len(employees),
+                    "status": "shortfall",
+                }
+
+            conn.execute(
+                "UPDATE shops SET balance=balance-? WHERE player_id=?",
+                (cash_due, player_id),
+            )
+            for employee, accrued, cash_part, deposit_part in settlements:
+                conn.execute(
+                    """UPDATE employees
+                       SET wages_accrued=0,
+                           total_wages_paid=total_wages_paid+?,
+                           deposit=deposit+?,
+                           deposit_from_wages=deposit_from_wages+?
+                       WHERE id=?""",
+                    (accrued, deposit_part, deposit_part, employee["id"]),
+                )
+                conn.execute(
+                    """INSERT INTO ledger(player_id, amount, kind, reference_type, reference_id, note)
+                       VALUES (?, ?, 'salary', 'employee', ?, ?)""",
+                    (
+                        player_id,
+                        -cash_part,
+                        employee["id"],
+                        f"Суточная выплата {employee['alias']}: {cash_part:,} ₽; в депозит {deposit_part:,} ₽",
+                    ),
+                )
+
+            conn.execute(
+                """INSERT INTO payroll_runs(player_id, gross_wages, cash_paid, deposit_added, employee_count)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (player_id, gross, cash_due, deposit_due, len(employees)),
+            )
+            conn.execute(
+                "UPDATE settings SET last_payroll_at=? WHERE player_id=?",
+                (iso(now), player_id),
+            )
+            conn.execute(
+                "UPDATE inbox SET status='closed' WHERE player_id=? AND status='open' AND kind='payroll_shortfall'",
+                (player_id,),
+            )
+            conn.execute(
+                """INSERT INTO inbox(player_id, kind, priority, title, body, payload_json, expires_at)
+                   VALUES (?, 'payroll_report', 'normal', 'Суточные выплаты', ?, '{}', ?)""",
+                (
+                    player_id,
+                    f"Начислено: {gross:,} ₽\n"
+                    f"Выплачено: {cash_due:,} ₽\n"
+                    f"В депозит: {deposit_due:,} ₽\n\n"
+                    f"Сотрудников в выплате: {len(employees)}",
+                    iso(now + timedelta(hours=12 / speed)),
+                ),
+            )
+            return {
+                "gross": gross,
+                "cash": cash_due,
+                "deposit": deposit_due,
+                "employees": len(employees),
+                "status": "paid",
+            }
+
+    def payroll_summary(self, player_id: int) -> str:
+        now = utcnow()
+        speed = max(0.1, float(self.simulation.effective_speed(player_id)))
+        with self.db.connect() as conn:
+            settings = conn.execute(
+                "SELECT * FROM settings WHERE player_id=?",
+                (player_id,),
+            ).fetchone()
+            rows = conn.execute(
+                """SELECT alias, role, pay_per_job, deposit_contribution_pct, deposit,
+                          wages_accrued, total_wages_paid, deposit_from_wages, active
+                   FROM employees
+                   WHERE player_id=?
+                   ORDER BY active DESC, wages_accrued DESC, alias""",
+                (player_id,),
+            ).fetchall()
+            seven = conn.execute(
+                """SELECT COALESCE(SUM(gross_wages),0) gross,
+                          COALESCE(SUM(cash_paid),0) cash,
+                          COALESCE(SUM(deposit_added),0) deposit
+                   FROM payroll_runs
+                   WHERE player_id=? AND created_at>=datetime('now','-7 day')""",
+                (player_id,),
+            ).fetchone()
+
+        accrued = sum(int(row["wages_accrued"]) for row in rows)
+        last = parse_dt(settings["last_payroll_at"])
+        elapsed_game = max(0.0, (now - last).total_seconds() / 3600.0) * speed
+        remaining_game = max(0.0, 24.0 - elapsed_game)
+        remaining_real_minutes = remaining_game / speed * 60.0
+        if remaining_real_minutes >= 120:
+            real_eta = f"~{remaining_real_minutes / 60.0:.1f} ч"
+        else:
+            real_eta = f"~{remaining_real_minutes:.0f} мин"
+
+        lines = []
+        for row in rows[:12]:
+            status = "" if row["active"] else " · ушёл"
+            lines.append(
+                f"{row['alias']}{status}\n"
+                f"Ставка {row['pay_per_job']:,} ₽ · депозит {row['deposit_contribution_pct']}%\n"
+                f"К выплате {row['wages_accrued']:,} ₽ · депозит {row['deposit']:,} ₽"
+            )
+
+        return (
+            "<b>💸 Выплаты сотрудникам</b>\n\n"
+            "<b>Следующая выплата</b>\n"
+            f"Через ~{remaining_game:.1f} игровых ч · {real_eta}\n"
+            f"Скорость: x{speed:g}\n"
+            f"Начислено сейчас: <b>{accrued:,} ₽</b>\n\n"
+            "<b>За 7 реальных дней</b>\n"
+            f"Начислено: {seven['gross']:,} ₽\n"
+            f"Выплачено деньгами: {seven['cash']:,} ₽\n"
+            f"Переведено в депозиты: {seven['deposit']:,} ₽\n\n"
+            "<b>По сотрудникам</b>\n"
+            + ("\n\n".join(lines) if lines else "Нет сотрудников.")
+        )
 
     def handle_inbox_action(self, player_id: int, item_id: int, action: str) -> str:
         with self.db.connect() as conn:
