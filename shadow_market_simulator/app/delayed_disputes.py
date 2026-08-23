@@ -5,7 +5,12 @@ from datetime import timedelta
 
 from .customer_expectations import PriceExpectationSimulationEngine
 from .procurement_market import ProcurementMarketGameService
-from .simulation import iso, parse_dt, utcnow
+from .simulation import parse_dt, utcnow
+
+
+def precise_iso(dt) -> str:
+    """Serialize short game timers without losing sub-second precision."""
+    return dt.isoformat(timespec="microseconds")
 
 
 class DelayedDisputeSimulationEngine(PriceExpectationSimulationEngine):
@@ -27,7 +32,7 @@ class DelayedDisputeSimulationEngine(PriceExpectationSimulationEngine):
                      AND courier_reply_pending IS NOT NULL
                      AND courier_reply_due_at IS NOT NULL
                      AND courier_reply_due_at<=?""",
-                (player_id, iso(now)),
+                (player_id, precise_iso(now)),
             ).fetchall()
             for row in rows:
                 conn.execute(
@@ -68,7 +73,7 @@ class DelayedDisputeSimulationEngine(PriceExpectationSimulationEngine):
                 due = now + timedelta(seconds=remaining_game / new_speed)
                 conn.execute(
                     "UPDATE disputes SET courier_reply_due_at=? WHERE id=?",
-                    (iso(due), row["id"]),
+                    (precise_iso(due), row["id"]),
                 )
 
     def fast_forward_timers(self, player_id: int, game_hours: float) -> None:
@@ -87,7 +92,7 @@ class DelayedDisputeSimulationEngine(PriceExpectationSimulationEngine):
             for row in rows:
                 conn.execute(
                     "UPDATE disputes SET courier_reply_due_at=? WHERE id=?",
-                    (iso(parse_dt(row["courier_reply_due_at"]) - shift), row["id"]),
+                    (precise_iso(parse_dt(row["courier_reply_due_at"]) - shift), row["id"]),
                 )
         self.materialize_due_replies(player_id)
 
@@ -156,7 +161,7 @@ class DelayedDisputeGameService(ProcurementMarketGameService):
                 """UPDATE disputes
                    SET courier_reply_pending=?, courier_reply_due_at=?
                    WHERE id=? AND player_id=?""",
-                (reply, iso(due), dispute_id, player_id),
+                (reply, precise_iso(due), dispute_id, player_id),
             )
             return f"Запрос отправлен. Ответ ожидается примерно через {self._format_game_minutes(delay_game_minutes)}."
 
