@@ -17,10 +17,11 @@ from .extended_handlers import build_extended_router
 from .handlers import build_router
 from .keyboards import notification_actions
 from .operations_handlers import build_operations_router
+from .procurement_handlers import build_procurement_router
+from .procurement_market import ProcurementMarketGameService, ProcurementMarketSimulationEngine
 from .recruitment_handlers import build_recruitment_router
 from .recruitment_runtime import NightshiftRecruitmentService
 from .simulation import iso, utcnow
-from .staff_insights import StaffInsightGameService, StaffInsightSimulationEngine
 from .storefront_handlers import build_storefront_router
 from .time_handlers import build_time_router
 from .workflow_allocation_handlers import build_workflow_allocation_router
@@ -32,8 +33,8 @@ from .workflow_reassign_handlers import build_workflow_reassign_router
 async def notification_loop(
     bot: Bot,
     db: Database,
-    simulation: StaffInsightSimulationEngine,
-    game: StaffInsightGameService,
+    simulation: ProcurementMarketSimulationEngine,
+    game: ProcurementMarketGameService,
     recruitment: NightshiftRecruitmentService,
     analytics: AnalyticsLogger,
     interval: int,
@@ -81,9 +82,9 @@ async def main() -> None:
 
     db = Database(settings.db_path)
     db.init()
-    simulation = StaffInsightSimulationEngine(db, speed=settings.simulation_speed)
+    simulation = ProcurementMarketSimulationEngine(db, speed=settings.simulation_speed)
     simulation.seed_catalog()
-    game = StaffInsightGameService(db, simulation)
+    game = ProcurementMarketGameService(db, simulation)
     recruitment = NightshiftRecruitmentService(db, speed=settings.simulation_speed)
 
     # Install after all feature schemas so triggers can reference workflow/recruitment tables.
@@ -100,6 +101,7 @@ async def main() -> None:
     dispatcher.include_router(build_workflow_reassign_router(game))
     dispatcher.include_router(build_workflow_allocation_router(game))
     dispatcher.include_router(build_workflow_router(game))
+    dispatcher.include_router(build_procurement_router(game))
     dispatcher.include_router(build_operations_router(game))
     dispatcher.include_router(build_dispute_router(game))
     dispatcher.include_router(build_storefront_router(db, game, simulation))
