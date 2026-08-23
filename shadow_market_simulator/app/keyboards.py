@@ -83,16 +83,22 @@ def dispute_actions(dispute_id: int) -> InlineKeyboardMarkup:
 def employee_list(employees) -> InlineKeyboardMarkup:
     rows = []
     for employee in employees:
-        if employee["role"] == "warehouse":
-            label = f"📦 {employee['alias']} · опт · {employee['jobs_done']} операций"
-        else:
-            rate = employee["disputes"] / employee["jobs_done"] * 100.0 if employee["jobs_done"] else 0.0
-            label = f"{employee['alias']} · розница · {employee['jobs_done']} заказов · {rate:.1f}% споров"
-        rows.append([InlineKeyboardButton(text=label, callback_data=f"employee:{employee['id']}")])
+        role = "опт" if employee["role"] == "warehouse" else "розница"
+        status = employee.get("status_text", "свободен") if isinstance(employee, dict) else "свободен"
+        exposure = int(employee.get("exposure", 0)) if isinstance(employee, dict) else 0
+        risk = " 🔴" if exposure > int(employee["deposit"]) else ""
+        rows.append([InlineKeyboardButton(
+            text=f"{employee['alias']} · {role} · {status}{risk}",
+            callback_data=f"employee:{employee['id']}",
+        )])
     rows.extend([
         [
             InlineKeyboardButton(text="👤 Кандидаты", callback_data="candidates:list"),
             InlineKeyboardButton(text="🔎 Набор", callback_data="recruit:menu"),
+        ],
+        [
+            InlineKeyboardButton(text="⚙️ Фасовки", callback_data="team:packrules"),
+            InlineKeyboardButton(text="📦 Без ответственного", callback_data="team:unassigned"),
         ],
         [
             InlineKeyboardButton(text="🔄 Обновить", callback_data="menu:team"),
