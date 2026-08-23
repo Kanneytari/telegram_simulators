@@ -74,7 +74,7 @@ def test_delivery_negative_reviews_are_grouped_by_employee(tmp_path):
 
     text = delivery_staff_text(db, 1001, "30")
     assert str(first["alias"]) in text
-    assert "3 из 4 (75.0%)" in text
+    assert "Негатив по доставке: <b>3</b> из 4 (75.0%)" in text
     assert "Всего негативных отзывов: <b>3</b> из 5 (60.0%)" in text
 
 
