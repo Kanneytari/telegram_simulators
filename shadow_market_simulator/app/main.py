@@ -10,6 +10,7 @@ from aiogram.enums import ParseMode
 from .action_handlers import build_action_router
 from .config import load_settings
 from .db import Database
+from .dispute_handlers import build_dispute_router
 from .extended_handlers import build_extended_router
 from .handlers import build_router
 from .keyboards import notification_actions
@@ -18,6 +19,7 @@ from .recruitment_handlers import build_recruitment_router
 from .recruitment_runtime import NightshiftRecruitmentService
 from .services import FinalGameService
 from .simulation import iso, utcnow
+from .storefront_handlers import build_storefront_router
 from .time_handlers import build_time_router
 
 
@@ -83,6 +85,8 @@ async def main() -> None:
     dispatcher = Dispatcher()
 
     # Most specific routers go first; legacy handlers remain as compatibility fallbacks.
+    dispatcher.include_router(build_dispute_router(game))
+    dispatcher.include_router(build_storefront_router(db, game, simulation))
     dispatcher.include_router(
         build_time_router(db, simulation, recruitment, settings.admin_ids)
     )
