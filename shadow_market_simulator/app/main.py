@@ -9,25 +9,30 @@ from aiogram.enums import ParseMode
 
 from .config import load_settings
 from .db import Database
-from .game import GameService
+from .extended_handlers import build_extended_router
 from .handlers import build_router
 from .keyboards import notification_actions
-from .recruitment import RecruitmentService
+from .nightshift import NightshiftSimulationEngine
 from .recruitment_handlers import build_recruitment_router
-from .simulation import SimulationEngine, iso, utcnow
+from .recruitment_runtime import NightshiftRecruitmentService
+from .runtime import NightshiftGameService
+from .simulation import iso, utcnow
 
 
 async def notification_loop(
     bot: Bot,
     db: Database,
-    simulation: SimulationEngine,
-    recruitment: RecruitmentService,
+    simulation: NightshiftSimulationEngine,
+    game: NightshiftGameService,
+    recruitment: NightshiftRecruitmentService,
     interval: int,
 ) -> None:
     while True:
         try:
             simulation.advance_all()
             recruitment.advance_all()
+            # Payroll is deliberately real-time and is not accelerated by /speed.
+            game.process_payroll_all()
             with db.connect() as conn:
                 items = conn.execute(
                     """SELECT * FROM inbox
@@ -65,18 +70,28 @@ async def main() -> None:
 
     db = Database(settings.db_path)
     db.init()
-    simulation = SimulationEngine(db, speed=settings.simulation_speed)
+    simulation = NightshiftSimulationEngine(db, speed=settings.simulation_speed)
     simulation.seed_catalog()
-    game = GameService(db, simulation)
-    recruitment = RecruitmentService(db, speed=settings.simulation_speed)
+    game = NightshiftGameService(db, simulation)
+    recruitment = NightshiftRecruitmentService(db, speed=settings.simulation_speed)
 
     bot = Bot(
         settings.bot_token,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
     dispatcher = Dispatcher()
-    # Новый роутер регистрируется первым и перехватывает старые callback-и найма.
-    # Это позволяет сохранить совместимость со старыми сообщениями бота.
+
+    # Order matters: extended UX overrides legacy callbacks while the old router
+    # stays as a compatibility fallback for previously sent Telegram messages.
+    dispatcher.include_router(
+        build_extended_router(
+            db,
+            game,
+            simulation,
+            recruitment,
+            settings.admin_ids,
+        )
+    )
     dispatcher.include_router(
         build_recruitment_router(
             db,
@@ -96,6 +111,7 @@ async def main() -> None:
             bot,
             db,
             simulation,
+            game,
             recruitment,
             settings.simulation_interval_seconds,
         )
