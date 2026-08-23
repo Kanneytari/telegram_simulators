@@ -8,6 +8,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
 from .action_handlers import build_action_router
+from .analytics_handlers import build_analytics_router
 from .config import load_settings
 from .db import Database
 from .dispute_handlers import build_dispute_router
@@ -87,6 +88,7 @@ async def main() -> None:
     # Most specific routers go first; legacy handlers remain as compatibility fallbacks.
     dispatcher.include_router(build_dispute_router(game))
     dispatcher.include_router(build_storefront_router(db, game, simulation))
+    dispatcher.include_router(build_analytics_router(db, game, simulation))
     dispatcher.include_router(
         build_time_router(db, simulation, recruitment, settings.admin_ids)
     )
