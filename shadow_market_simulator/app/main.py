@@ -12,6 +12,7 @@ from .analytics_handlers import build_analytics_router
 from .analytics_log import AnalyticsLogger, AnalyticsLoggingMiddleware
 from .config import load_settings
 from .db import Database
+from .deposit_share_handlers import build_deposit_share_router
 from .dispute_handlers import build_dispute_router
 from .extended_handlers import build_extended_router
 from .handlers import build_router
@@ -104,6 +105,9 @@ async def main() -> None:
     dispatcher.include_router(build_workflow_dashboard_router(db, game, simulation, settings.admin_ids))
     dispatcher.include_router(build_workflow_reassign_router(game))
     dispatcher.include_router(build_workflow_allocation_router(game))
+    # Must be before the legacy workflow employee-profile handler so the profile can
+    # expose the deposit-share negotiation entry point.
+    dispatcher.include_router(build_deposit_share_router(game))
     dispatcher.include_router(build_workflow_router(game))
     dispatcher.include_router(build_procurement_router(game))
     dispatcher.include_router(build_product_review_router(game))
