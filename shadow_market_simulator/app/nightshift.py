@@ -10,13 +10,13 @@ from .simulation import iso, parse_dt, utcnow
 ROLE_NAMES["warehouse"] = "Оптовый сотрудник"
 ROLE_NAMES["courier"] = "Розничный сотрудник"
 
-# Broad product categories keep the setting recognizable without copying real-world
-# illegal-market listings or current black-market prices. Ruble values are internal
-# game balance values, not sourced market data.
+# The game uses real substance names for immersion. Prices, demand and quality
+# coefficients below are fictional balancing values and are not sourced from
+# current illegal-market listings.
 GAME_PRODUCTS = (
-    (1, "STIMULANT", "Стимулятор", 6000, 18.0, 0.95),
-    (2, "EMPATHOGEN", "Эмпатоген", 8000, 10.0, 1.10),
-    (3, "CANNABINOID", "Каннабиноид", 11000, 6.0, 0.90),
+    (1, "AMPHETAMINE", "Амфетамин", 6000, 18.0, 0.95),
+    (2, "MDMA", "MDMA", 8000, 10.0, 1.10),
+    (3, "COCAINE", "Кокаин", 11000, 6.0, 0.90),
 )
 
 STARTER_UNIT_COSTS = {
