@@ -5,7 +5,7 @@ from datetime import timedelta
 
 from .recruitment import RecruitmentService
 from .runtime import ROLE_MARKET_PAY
-from .simulation import clamp, iso
+from .simulation import clamp, iso, parse_dt, utcnow
 
 
 class NightshiftRecruitmentService(RecruitmentService):
@@ -22,6 +22,33 @@ class NightshiftRecruitmentService(RecruitmentService):
                 "UPDATE recruitment_campaigns SET pay_per_job=? WHERE pay_per_job<500 AND status='active'",
                 (ROLE_MARKET_PAY["courier"],),
             )
+
+    def effective_speed(self, player_id: int) -> float:
+        return self.player_multiplier(player_id)
+
+    def set_player_multiplier(self, player_id: int, multiplier: float) -> tuple[float, float]:
+        multiplier = max(0.1, min(240.0, float(multiplier)))
+        now = utcnow()
+        old = self.player_multiplier(player_id)
+        with self.db.connect() as conn:
+            campaigns = conn.execute(
+                """SELECT id, resolves_at FROM recruitment_campaigns
+                   WHERE player_id=? AND status='active'""",
+                (player_id,),
+            ).fetchall()
+            for campaign in campaigns:
+                remaining_real = max(0.0, (parse_dt(campaign["resolves_at"]) - now).total_seconds())
+                remaining_game = remaining_real * old
+                new_real = remaining_game / multiplier
+                conn.execute(
+                    "UPDATE recruitment_campaigns SET resolves_at=? WHERE id=?",
+                    (iso(now + timedelta(seconds=new_real)), campaign["id"]),
+                )
+            conn.execute(
+                "UPDATE settings SET time_multiplier=? WHERE player_id=?",
+                (multiplier, player_id),
+            )
+        return old, multiplier
 
     def ensure_draft(self, player_id: int, channel: str | None = None):
         draft = super().ensure_draft(player_id, channel)
