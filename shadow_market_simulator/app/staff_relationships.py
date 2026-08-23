@@ -7,7 +7,7 @@ from .wholesale_compensation import (
 )
 
 
-SALES_ACTIVITY_MULTIPLIER = 3.0
+SALES_ACTIVITY_MULTIPLIER = 5.0
 
 
 STAFF_RELATIONSHIP_SCHEMA = """
