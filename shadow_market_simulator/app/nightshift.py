@@ -161,6 +161,23 @@ class NightshiftSimulationEngine(PlayerSimulationEngine):
                         (iso(parse_dt(row[column]) - shift), row["id"]),
                     )
 
+    def _expire_items(self, conn, player_id: int, now) -> None:
+        super()._expire_items(conn, player_id, now)
+        auto_resolved = conn.execute(
+            """SELECT d.id, o.revenue
+               FROM disputes d JOIN orders o ON o.id=d.order_id
+               WHERE d.player_id=? AND d.decision='auto_partial'
+                 AND d.refund_source IS NULL""",
+            (player_id,),
+        ).fetchall()
+        for row in auto_resolved:
+            conn.execute(
+                """UPDATE disputes
+                   SET refund_amount=?, refund_source='shop', refund_employee_id=NULL
+                   WHERE id=?""",
+                (int(row["revenue"] * 0.5), row["id"]),
+            )
+
     def _simulate_management_events(self, conn, player_id: int, sim_hours: float, now) -> int:
         created = super()._simulate_management_events(conn, player_id, sim_hours, now)
 
