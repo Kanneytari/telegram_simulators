@@ -58,7 +58,8 @@ async def notification_loop(
                             f"<b>{marker} {item['title']}</b>\n\n{item['body']}",
                             reply_markup=notification_actions(item["id"]),
                         )
-                        conn.execute("UPDATE inbox SET notified_at=? WHERE id=?", (iso(utcnow()), item["id"]))
+                        # Log before opening a write transaction on the loop connection.
+                        # Otherwise the second analytics connection could hit SQLite's write lock.
                         try:
                             analytics.log_notification(
                                 int(item["player_id"]),
@@ -68,6 +69,7 @@ async def notification_loop(
                             )
                         except Exception:
                             logging.exception("Failed to log notification %s", item["id"])
+                        conn.execute("UPDATE inbox SET notified_at=? WHERE id=?", (iso(utcnow()), item["id"]))
                     except Exception:
                         logging.exception("Failed to deliver inbox item %s", item["id"])
         except Exception:
