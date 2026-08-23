@@ -7,6 +7,9 @@ from .wholesale_compensation import (
 )
 
 
+SALES_ACTIVITY_MULTIPLIER = 3.0
+
+
 STAFF_RELATIONSHIP_SCHEMA = """
 CREATE TABLE IF NOT EXISTS staff_relationship_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -111,12 +114,27 @@ def _apply_overexposure_effect(
 
 
 class StaffRelationshipSimulationEngine(WholesaleCompensationSimulationEngine):
-    """Adds hidden staff reactions to trust-heavy inventory assignments."""
+    """Adds hidden staff reactions and a faster sales pace to the live simulation."""
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
             conn.executescript(STAFF_RELATIONSHIP_SCHEMA)
+
+    def _simulate_sales(self, conn, player_id: int, shop, sim_hours: float, now):
+        """Increase only market activity, leaving all other game clocks unchanged.
+
+        Price, rating, product demand and pack-size modifiers are still applied by the
+        inherited sales formula. Multiplying the effective sales window simply raises
+        the number of purchase attempts by the requested pacing factor.
+        """
+        return super()._simulate_sales(
+            conn,
+            player_id,
+            shop,
+            max(0.0, float(sim_hours)) * SALES_ACTIVITY_MULTIPLIER,
+            now,
+        )
 
     def _process_tasks(self, conn, player_id: int, now) -> int:
         due_handoffs = conn.execute(
