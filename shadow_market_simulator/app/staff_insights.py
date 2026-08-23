@@ -185,7 +185,7 @@ class StaffInsightGameService(FinalWorkflowGameService):
             if task:
                 remaining_real = max(0.0, (parse_dt(task["completes_at"]) - now).total_seconds() / 3600.0)
                 remaining_game = remaining_real * self.simulation.effective_speed(player_id)
-                eta = "<1 ч" if remaining_game < 1 else f"~{remaining_game:.1f} ч"
+                eta = "менее 1 ч" if remaining_game < 1 else f"~{remaining_game:.1f} ч"
                 labels = {
                     "receive_batch": "получает партию",
                     "handoff": "готовит передачу",
@@ -196,7 +196,7 @@ class StaffInsightGameService(FinalWorkflowGameService):
                 if employee["unavailable_until"]:
                     remaining_real = max(0.0, (parse_dt(employee["unavailable_until"]) - now).total_seconds() / 3600.0)
                     remaining_game = remaining_real * self.simulation.effective_speed(player_id)
-                    eta = "<1 ч" if remaining_game < 1 else f"~{remaining_game:.1f} ч"
+                    eta = "менее 1 ч" if remaining_game < 1 else f"~{remaining_game:.1f} ч"
                     return f"временная пауза · {eta}"
                 return "временно недоступен"
             if employee["role"] == "courier":
@@ -246,8 +246,8 @@ class StaffInsightGameService(FinalWorkflowGameService):
             lines.append(f"Задача: {labels.get(task['kind'], task['kind'])}")
             if task["product_title"]:
                 lines.append(f"Товар: {task['product_title']} · {int(task['quantity'])} ед.")
-            real_eta = "<1 мин" if remaining_real_min < 1 else f"~{remaining_real_min:.0f} мин"
-            game_eta = "<1 ч" if remaining_game_h < 1 else f"~{remaining_game_h:.1f} ч"
+            real_eta = "менее 1 мин" if remaining_real_min < 1 else f"~{remaining_real_min:.0f} мин"
+            game_eta = "менее 1 ч" if remaining_game_h < 1 else f"~{remaining_game_h:.1f} ч"
             lines.append(f"Осталось: {game_eta} игровых · {real_eta} реальных")
         return lines
 
