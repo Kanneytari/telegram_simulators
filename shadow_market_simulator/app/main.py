@@ -20,11 +20,11 @@ from .operations_handlers import build_operations_router
 from .recruitment_handlers import build_recruitment_router
 from .recruitment_runtime import NightshiftRecruitmentService
 from .simulation import iso, utcnow
+from .staff_insights import StaffInsightGameService, StaffInsightSimulationEngine
 from .storefront_handlers import build_storefront_router
 from .time_handlers import build_time_router
 from .workflow_allocation_handlers import build_workflow_allocation_router
 from .workflow_dashboard_handlers import build_workflow_dashboard_router
-from .workflow_final import FinalWorkflowGameService, FinalWorkflowSimulationEngine
 from .workflow_handlers import build_workflow_router
 from .workflow_reassign_handlers import build_workflow_reassign_router
 
@@ -32,8 +32,8 @@ from .workflow_reassign_handlers import build_workflow_reassign_router
 async def notification_loop(
     bot: Bot,
     db: Database,
-    simulation: FinalWorkflowSimulationEngine,
-    game: FinalWorkflowGameService,
+    simulation: StaffInsightSimulationEngine,
+    game: StaffInsightGameService,
     recruitment: NightshiftRecruitmentService,
     analytics: AnalyticsLogger,
     interval: int,
@@ -58,8 +58,6 @@ async def notification_loop(
                             f"<b>{marker} {item['title']}</b>\n\n{item['body']}",
                             reply_markup=notification_actions(item["id"]),
                         )
-                        # Log before opening a write transaction on the loop connection.
-                        # Otherwise the second analytics connection could hit SQLite's write lock.
                         try:
                             analytics.log_notification(
                                 int(item["player_id"]),
@@ -83,9 +81,9 @@ async def main() -> None:
 
     db = Database(settings.db_path)
     db.init()
-    simulation = FinalWorkflowSimulationEngine(db, speed=settings.simulation_speed)
+    simulation = StaffInsightSimulationEngine(db, speed=settings.simulation_speed)
     simulation.seed_catalog()
-    game = FinalWorkflowGameService(db, simulation)
+    game = StaffInsightGameService(db, simulation)
     recruitment = NightshiftRecruitmentService(db, speed=settings.simulation_speed)
 
     # Install after all feature schemas so triggers can reference workflow/recruitment tables.
@@ -95,12 +93,9 @@ async def main() -> None:
     bot = Bot(settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dispatcher = Dispatcher()
 
-    # Log every Telegram command/callback independently from handler implementation.
-    # Analytics failures are swallowed by the middleware and never interrupt gameplay.
     dispatcher.message.outer_middleware(AnalyticsLoggingMiddleware(analytics))
     dispatcher.callback_query.outer_middleware(AnalyticsLoggingMiddleware(analytics))
 
-    # Specific flows go first; compatibility routers remain as fallbacks.
     dispatcher.include_router(build_workflow_dashboard_router(db, game, simulation))
     dispatcher.include_router(build_workflow_reassign_router(game))
     dispatcher.include_router(build_workflow_allocation_router(game))
