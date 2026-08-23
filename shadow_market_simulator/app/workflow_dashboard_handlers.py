@@ -8,7 +8,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message, ReplyKey
 from .keyboards import employee_list, main_menu
 
 
-def build_workflow_dashboard_router(db, game, simulation) -> Router:
+def build_workflow_dashboard_router(db, game, simulation, admin_ids: frozenset[int]) -> Router:
     router = Router(name="workflow-dashboard")
 
     async def present(target: Message, text: str, markup: InlineKeyboardMarkup | None = None, *, edit: bool = True) -> None:
@@ -106,7 +106,12 @@ def build_workflow_dashboard_router(db, game, simulation) -> Router:
 
     async def show_dashboard(target: Message, player_id: int, *, edit: bool) -> None:
         text, opened, urgent = dashboard_snapshot(player_id)
-        await present(target, text, main_menu(opened, urgent), edit=edit)
+        await present(
+            target,
+            text,
+            main_menu(opened, urgent, is_admin=player_id in admin_ids),
+            edit=edit,
+        )
 
     async def show_team(target: Message, player_id: int, *, edit: bool) -> None:
         simulation.advance(player_id)
