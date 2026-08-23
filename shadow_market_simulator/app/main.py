@@ -15,10 +15,10 @@ from .dispute_handlers import build_dispute_router
 from .extended_handlers import build_extended_router
 from .handlers import build_router
 from .keyboards import notification_actions
-from .nightshift import NightshiftSimulationEngine
+from .operations import OperationsGameService, OperationsSimulationEngine
+from .operations_handlers import build_operations_router
 from .recruitment_handlers import build_recruitment_router
 from .recruitment_runtime import NightshiftRecruitmentService
-from .services import FinalGameService
 from .simulation import iso, utcnow
 from .storefront_handlers import build_storefront_router
 from .time_handlers import build_time_router
@@ -27,8 +27,8 @@ from .time_handlers import build_time_router
 async def notification_loop(
     bot: Bot,
     db: Database,
-    simulation: NightshiftSimulationEngine,
-    game: FinalGameService,
+    simulation: OperationsSimulationEngine,
+    game: OperationsGameService,
     recruitment: NightshiftRecruitmentService,
     interval: int,
 ) -> None:
@@ -74,9 +74,9 @@ async def main() -> None:
 
     db = Database(settings.db_path)
     db.init()
-    simulation = NightshiftSimulationEngine(db, speed=settings.simulation_speed)
+    simulation = OperationsSimulationEngine(db, speed=settings.simulation_speed)
     simulation.seed_catalog()
-    game = FinalGameService(db, simulation)
+    game = OperationsGameService(db, simulation)
     recruitment = NightshiftRecruitmentService(db, speed=settings.simulation_speed)
 
     bot = Bot(
@@ -85,35 +85,20 @@ async def main() -> None:
     )
     dispatcher = Dispatcher()
 
-    # Most specific routers go first; legacy handlers remain as compatibility fallbacks.
+    # Specific flows go first; legacy handlers remain compatibility fallbacks.
+    dispatcher.include_router(build_operations_router(game))
     dispatcher.include_router(build_dispute_router(game))
     dispatcher.include_router(build_storefront_router(db, game, simulation))
     dispatcher.include_router(build_analytics_router(db, game, simulation))
-    dispatcher.include_router(
-        build_time_router(db, simulation, recruitment, settings.admin_ids)
-    )
+    dispatcher.include_router(build_time_router(db, simulation, recruitment, settings.admin_ids))
     dispatcher.include_router(build_action_router(game))
     dispatcher.include_router(
-        build_extended_router(
-            db,
-            game,
-            simulation,
-            recruitment,
-            settings.admin_ids,
-        )
+        build_extended_router(db, game, simulation, recruitment, settings.admin_ids)
     )
     dispatcher.include_router(
-        build_recruitment_router(
-            db,
-            game,
-            simulation,
-            recruitment,
-            settings.admin_ids,
-        )
+        build_recruitment_router(db, game, simulation, recruitment, settings.admin_ids)
     )
-    dispatcher.include_router(
-        build_router(db, game, simulation, settings.admin_ids)
-    )
+    dispatcher.include_router(build_router(db, game, simulation, settings.admin_ids))
 
     await bot.delete_webhook(drop_pending_updates=True)
     notifier = asyncio.create_task(
