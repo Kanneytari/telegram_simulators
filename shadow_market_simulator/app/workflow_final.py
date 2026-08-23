@@ -118,10 +118,10 @@ class FinalWorkflowSimulationEngine(WorkflowSimulationEngine):
     def _simulate_management_events(self, conn, player_id: int, sim_hours: float, now) -> int:
         created = super()._simulate_management_events(conn, player_id, sim_hours, now)
 
-        # Normal staff turnover is separate from dishonest absconding. A person can decide
-        # to leave because of low loyalty or sustained stress. They stop accepting new work,
-        # but remain on the books until the player clears their responsibilities and settles
-        # the remaining deposit + accrued wages through the normal firing flow.
+        # Normal turnover is distinct from theft. To avoid a stuck state, a voluntary
+        # resignation notice is generated only when the employee has no inventory exposure.
+        # Staff with inventory finish the current product loop first; overexposure theft risk
+        # remains an independent mechanism.
         hours = min(max(0.0, sim_hours), 12.0)
         if hours <= 0:
             return created
@@ -140,6 +140,16 @@ class FinalWorkflowSimulationEngine(WorkflowSimulationEngine):
             if existing:
                 continue
 
+            exposure = int(self.employee_exposure(conn, player_id, int(employee["id"])))
+            if exposure > 0:
+                continue
+            active_task = conn.execute(
+                "SELECT 1 FROM employee_tasks WHERE player_id=? AND employee_id=? AND status='active' LIMIT 1",
+                (player_id, employee["id"]),
+            ).fetchone()
+            if active_task:
+                continue
+
             loyalty_pressure = max(0.0, 0.58 - float(employee["loyalty"]))
             stress_pressure = max(0.0, float(employee["stress"]) - 72.0) / 100.0
             hourly_rate = loyalty_pressure * 0.020 + stress_pressure * 0.012
@@ -147,7 +157,6 @@ class FinalWorkflowSimulationEngine(WorkflowSimulationEngine):
             if probability <= 0 or self.rng.random() >= probability:
                 continue
 
-            exposure = int(self.employee_exposure(conn, player_id, int(employee["id"])))
             payout = int(employee["deposit"]) + int(employee["wages_accrued"])
             role = "оптовый" if employee["role"] == "warehouse" else "розничный"
             conn.execute(
@@ -157,11 +166,11 @@ class FinalWorkflowSimulationEngine(WorkflowSimulationEngine):
             body = (
                 f"{employee['alias']} сообщил, что хочет закончить работу.\n\n"
                 f"Роль: {role}\n"
-                f"Товар на ответственности: {exposure:,} ₽\n"
+                f"Товар на ответственности: 0 ₽\n"
                 f"Депозит к возврату: {employee['deposit']:,} ₽\n"
                 f"Начисленная зарплата: {employee['wages_accrued']:,} ₽\n"
                 f"Полный расчёт: <b>{payout:,} ₽</b>\n\n"
-                "Сотрудник больше не берёт новые задачи. Освободи его от товара и проведи увольнение из профиля."
+                "Сотрудник больше не берёт новые задачи. Проведи увольнение и расчёт из его профиля."
             )
             conn.execute(
                 """INSERT INTO inbox(player_id, kind, priority, title, body, payload_json)
