@@ -5,7 +5,7 @@ from app.staff_relationships import (
 from app.wholesale_compensation import WholesaleCompensationSimulationEngine
 
 
-def test_live_sales_window_is_tripled_without_changing_parent_formula(monkeypatch):
+def test_live_sales_window_is_quintupled_without_changing_parent_formula(monkeypatch):
     captured = {}
 
     def fake_parent_sales(self, conn, player_id, shop, sim_hours, now):
@@ -22,8 +22,8 @@ def test_live_sales_window_is_tripled_without_changing_parent_formula(monkeypatc
     engine = object.__new__(StaffRelationshipSimulationEngine)
     result = engine._simulate_sales(None, 1001, None, 2.0, None)
 
-    assert SALES_ACTIVITY_MULTIPLIER == 3.0
-    assert captured["sim_hours"] == 6.0
+    assert SALES_ACTIVITY_MULTIPLIER == 5.0
+    assert captured["sim_hours"] == 10.0
     assert result == (7, 2)
 
 
