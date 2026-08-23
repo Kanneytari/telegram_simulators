@@ -83,12 +83,12 @@ def dispute_actions(dispute_id: int) -> InlineKeyboardMarkup:
 def employee_list(employees) -> InlineKeyboardMarkup:
     rows = []
     for employee in employees:
-        role = "опт" if employee["role"] == "warehouse" else "розница"
+        role_icon = "🚚" if employee["role"] == "warehouse" else "👤"
         status = employee.get("status_text", "свободен") if isinstance(employee, dict) else "свободен"
         exposure = int(employee.get("exposure", 0)) if isinstance(employee, dict) else 0
         risk = " 🔴" if exposure > int(employee["deposit"]) else ""
         rows.append([InlineKeyboardButton(
-            text=f"{employee['alias']} · {role} · {status}{risk}",
+            text=f"{role_icon} {employee['alias']} · {status}{risk}",
             callback_data=f"employee:{employee['id']}",
         )])
     rows.extend([
@@ -178,73 +178,3 @@ def offer_list(offers) -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home"),
     ])
     return InlineKeyboardMarkup(inline_keyboard=rows)
-
-
-def offer_actions(offer_id: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="👤 Выбрать ответственного", callback_data=f"offer:confirm:{offer_id}")],
-        [
-            InlineKeyboardButton(text="← Закупки", callback_data="menu:offers"),
-            InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home"),
-        ],
-    ])
-
-
-def offer_confirm(offer_id: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="👤 Выбрать ответственного", callback_data=f"offer:buy:{offer_id}")],
-        [
-            InlineKeyboardButton(text="← Назад", callback_data=f"offer:{offer_id}"),
-            InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home"),
-        ],
-    ])
-
-
-def listing_list(listings) -> InlineKeyboardMarkup:
-    rows = [[InlineKeyboardButton(
-        text=f"{listing['title']} ×{listing['pack_size']} · {listing['price']:,} ₽",
-        callback_data=f"listing:{listing['id']}",
-    )] for listing in listings]
-    rows.append([
-        InlineKeyboardButton(text="🔄 Обновить", callback_data="menu:listings"),
-        InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home"),
-    ])
-    return InlineKeyboardMarkup(inline_keyboard=rows)
-
-
-def listing_actions(listing_id: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="−5%", callback_data=f"listing:price:{listing_id}:-5"),
-            InlineKeyboardButton(text="+5%", callback_data=f"listing:price:{listing_id}:5"),
-        ],
-        [
-            InlineKeyboardButton(text="← Витрина", callback_data="menu:listings"),
-            InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home"),
-        ],
-    ])
-
-
-def analytics_actions() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="🔄 Обновить", callback_data="menu:analytics"),
-        InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home"),
-    ]])
-
-
-def result_actions(back_callback: str, back_text: str) -> InlineKeyboardMarkup:
-    return navigation(back_callback, back_text)
-
-
-def reset_confirmation() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🗑 Да, начать заново", callback_data="reset:confirm")],
-        [InlineKeyboardButton(text="Отмена", callback_data="reset:cancel")],
-    ])
-
-
-def notification_actions(item_id: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Открыть сообщение", callback_data=f"inbox:item:{item_id}")],
-        [InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home")],
-    ])
