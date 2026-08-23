@@ -84,27 +84,31 @@ class FinalGameService(NightshiftGameService):
                 )
             return result
 
+        context = self.dispute_payment_context(player_id, dispute_id, decision)
+        if not context:
+            return "Этот диспут уже закрыт."
+        refund = int(context["amount"])
+
         if source == "shop":
-            context = self.dispute_payment_context(player_id, dispute_id, decision)
-            if not context:
-                return "Этот диспут уже закрыт."
+            if int(context["shop_balance"]) < refund:
+                return (
+                    "На счёте магазина недостаточно денег.\n\n"
+                    f"Нужно: {refund:,} ₽\n"
+                    f"Доступно: {context['shop_balance']:,} ₽"
+                )
             result = super().resolve_dispute(player_id, dispute_id, decision)
             with self.db.connect() as conn:
                 conn.execute(
                     """UPDATE disputes
                        SET refund_amount=?, refund_source='shop', refund_employee_id=NULL
                        WHERE id=? AND player_id=?""",
-                    (context["amount"], dispute_id, player_id),
+                    (refund, dispute_id, player_id),
                 )
             return f"{result}\nИсточник: счёт магазина."
 
-        context = self.dispute_payment_context(player_id, dispute_id, decision)
-        if not context:
-            return "Этот диспут уже закрыт."
-        refund = int(context["amount"])
         if int(context["employee_deposit"]) < refund:
             return (
-                f"Недостаточно средств в депозите сотрудника.\n\n"
+                "Недостаточно средств в депозите сотрудника.\n\n"
                 f"Нужно: {refund:,} ₽\n"
                 f"Доступно: {context['employee_deposit']:,} ₽"
             )
