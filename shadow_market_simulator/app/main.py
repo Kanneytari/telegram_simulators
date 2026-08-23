@@ -96,7 +96,7 @@ async def main() -> None:
     dispatcher.message.outer_middleware(AnalyticsLoggingMiddleware(analytics))
     dispatcher.callback_query.outer_middleware(AnalyticsLoggingMiddleware(analytics))
 
-    dispatcher.include_router(build_workflow_dashboard_router(db, game, simulation))
+    dispatcher.include_router(build_workflow_dashboard_router(db, game, simulation, settings.admin_ids))
     dispatcher.include_router(build_workflow_reassign_router(game))
     dispatcher.include_router(build_workflow_allocation_router(game))
     dispatcher.include_router(build_workflow_router(game))
