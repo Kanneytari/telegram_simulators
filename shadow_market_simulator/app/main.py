@@ -17,6 +17,7 @@ from .recruitment_handlers import build_recruitment_router
 from .recruitment_runtime import NightshiftRecruitmentService
 from .runtime import NightshiftGameService
 from .simulation import iso, utcnow
+from .time_handlers import build_time_router
 
 
 async def notification_loop(
@@ -31,7 +32,6 @@ async def notification_loop(
         try:
             simulation.advance_all()
             recruitment.advance_all()
-            # Payroll is deliberately real-time and is not accelerated by /speed.
             game.process_payroll_all()
             with db.connect() as conn:
                 items = conn.execute(
@@ -81,8 +81,10 @@ async def main() -> None:
     )
     dispatcher = Dispatcher()
 
-    # Order matters: extended UX overrides legacy callbacks while the old router
-    # stays as a compatibility fallback for previously sent Telegram messages.
+    # Most specific routers go first; legacy handlers remain as compatibility fallbacks.
+    dispatcher.include_router(
+        build_time_router(db, simulation, recruitment, settings.admin_ids)
+    )
     dispatcher.include_router(
         build_extended_router(
             db,
