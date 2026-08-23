@@ -10,9 +10,35 @@ from .simulation import iso, parse_dt, utcnow
 ROLE_NAMES["warehouse"] = "Оптовый сотрудник"
 ROLE_NAMES["courier"] = "Розничный сотрудник"
 
+# Broad product categories keep the setting recognizable without copying real-world
+# illegal-market listings or current black-market prices. Ruble values are internal
+# game balance values, not sourced market data.
+GAME_PRODUCTS = (
+    (1, "STIMULANT", "Стимулятор", 6000, 18.0, 0.95),
+    (2, "EMPATHOGEN", "Эмпатоген", 8000, 10.0, 1.10),
+    (3, "CANNABINOID", "Каннабиноид", 11000, 6.0, 0.90),
+)
+
+STARTER_UNIT_COSTS = {
+    1: 3000,
+    2: 3900,
+    3: 5200,
+}
+
 
 class NightshiftSimulationEngine(PlayerSimulationEngine):
     """Final game simulation layer with personal game time and staff-message enrichment."""
+
+    def seed_catalog(self) -> None:
+        super().seed_catalog()
+        with self.db.connect() as conn:
+            for product_id, code, title, base_price, base_demand, complaint_modifier in GAME_PRODUCTS:
+                conn.execute(
+                    """UPDATE products
+                       SET code=?, title=?, base_market_price=?, base_demand=?, complaint_modifier=?
+                       WHERE id=?""",
+                    (code, title, base_price, base_demand, complaint_modifier, product_id),
+                )
 
     def effective_speed(self, player_id: int) -> float:
         # /speed is absolute relative to standard time: x60 == one game hour per real minute.
@@ -28,6 +54,22 @@ class NightshiftSimulationEngine(PlayerSimulationEngine):
                        WHERE player_id=? AND role='courier'""",
                     (ROLE_MARKET_PAY["courier"], player_id),
                 )
+                for product_id, _, _, base_price, _, _ in GAME_PRODUCTS:
+                    prices = {
+                        1: int(round(base_price * 1.05 / 100.0) * 100),
+                        2: int(round(base_price * 1.95 / 100.0) * 100),
+                        5: int(round(base_price * 4.55 / 100.0) * 100),
+                    }
+                    for pack_size, price in prices.items():
+                        conn.execute(
+                            """UPDATE listings SET price=?
+                               WHERE player_id=? AND product_id=? AND pack_size=?""",
+                            (price, player_id, product_id, pack_size),
+                        )
+                    conn.execute(
+                        "UPDATE batches SET unit_cost=? WHERE player_id=? AND product_id=?",
+                        (STARTER_UNIT_COSTS[product_id], player_id, product_id),
+                    )
             conn.execute(
                 "UPDATE settings SET last_payroll_at=COALESCE(last_payroll_at, ?) WHERE player_id=?",
                 (iso(utcnow()), player_id),
