@@ -113,3 +113,23 @@ def test_shop_refund_reduces_shop_profit(tmp_path):
     assert shop["total_profit"] == before_profit - 5000
     assert dispute["refund_source"] == "shop"
     assert dispute["refund_amount"] == 5000
+
+
+def test_expired_dispute_records_automatic_shop_refund(tmp_path):
+    db, simulation, _ = make_game(tmp_path)
+    dispute_id, _ = create_dispute(db, 10000)
+    now = utcnow()
+    with db.connect() as conn:
+        conn.execute(
+            """UPDATE inbox SET expires_at=?
+               WHERE player_id=1001 AND kind='dispute'
+                 AND json_extract(payload_json, '$.dispute_id')=?""",
+            (iso(now - timedelta(minutes=1)), dispute_id),
+        )
+        simulation._expire_items(conn, 1001, now)
+
+    with db.connect() as conn:
+        dispute = conn.execute("SELECT * FROM disputes WHERE id=?", (dispute_id,)).fetchone()
+    assert dispute["decision"] == "auto_partial"
+    assert dispute["refund_source"] == "shop"
+    assert dispute["refund_amount"] == 5000
