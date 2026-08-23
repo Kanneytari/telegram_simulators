@@ -16,9 +16,12 @@ from .delayed_disputes import DelayedDisputeGameService, DelayedDisputeSimulatio
 from .dispute_handlers import build_dispute_router
 from .extended_handlers import build_extended_router
 from .handlers import build_router
+from .inbox_close_handlers import build_inbox_close_router
+from .inbox_lifecycle import install_inbox_lifecycle
 from .keyboards import notification_actions
 from .operations_handlers import build_operations_router
 from .procurement_handlers import build_procurement_router
+from .product_review_handlers import build_product_review_router
 from .recruitment_handlers import build_recruitment_router
 from .recruitment_runtime import NightshiftRecruitmentService
 from .simulation import iso, utcnow
@@ -86,6 +89,7 @@ async def main() -> None:
     simulation.seed_catalog()
     game = DelayedDisputeGameService(db, simulation)
     recruitment = NightshiftRecruitmentService(db, speed=settings.simulation_speed)
+    install_inbox_lifecycle(db)
 
     # Install after all feature schemas so triggers can reference workflow/recruitment tables.
     analytics = AnalyticsLogger(db)
@@ -102,11 +106,13 @@ async def main() -> None:
     dispatcher.include_router(build_workflow_allocation_router(game))
     dispatcher.include_router(build_workflow_router(game))
     dispatcher.include_router(build_procurement_router(game))
+    dispatcher.include_router(build_product_review_router(game))
     dispatcher.include_router(build_operations_router(game))
     dispatcher.include_router(build_dispute_router(game))
     dispatcher.include_router(build_storefront_router(db, game, simulation))
     dispatcher.include_router(build_analytics_router(db, game, simulation))
     dispatcher.include_router(build_time_router(db, simulation, recruitment, game, settings.admin_ids))
+    dispatcher.include_router(build_inbox_close_router(db, game, simulation, settings.admin_ids))
     dispatcher.include_router(build_action_router(game))
     dispatcher.include_router(build_extended_router(db, game, simulation, recruitment, settings.admin_ids))
     dispatcher.include_router(build_recruitment_router(db, game, simulation, recruitment, settings.admin_ids))
