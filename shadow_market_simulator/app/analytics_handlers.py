@@ -114,6 +114,12 @@ def build_analytics_router(db: Database, game, simulation) -> Router:
                    WHERE player_id=? AND created_at>=datetime('now','-7 day')""",
                 (player_id,),
             ).fetchone()
+            wholesale_wages = int(conn.execute(
+                """SELECT COALESCE(SUM(amount),0)
+                   FROM wholesale_delivery_payments
+                   WHERE player_id=? AND created_at>=datetime('now','-7 day')""",
+                (player_id,),
+            ).fetchone()[0])
             disputes = int(conn.execute(
                 "SELECT COUNT(*) FROM disputes WHERE player_id=? AND created_at>=datetime('now','-7 day')",
                 (player_id,),
@@ -156,7 +162,9 @@ def build_analytics_router(db: Database, game, simulation) -> Router:
                 (player_id,),
             ).fetchone()
 
-        margin = stats["profit"] / stats["revenue"] * 100 if stats["revenue"] else 0.0
+        adjusted_profit = int(stats["profit"]) - wholesale_wages
+        total_wages = int(stats["wages"]) + wholesale_wages
+        margin = adjusted_profit / stats["revenue"] * 100 if stats["revenue"] else 0.0
         dispute_rate = disputes / stats["orders"] * 100 if stats["orders"] else 0.0
         review_block = (
             f"Отзывов: {reviews['count']} · ⭐ {float(reviews['avg']):.2f}\n"
@@ -171,7 +179,7 @@ def build_analytics_router(db: Database, game, simulation) -> Router:
             "<b>Продажи</b>\n"
             f"Заказов: {stats['orders']}\n"
             f"Выручка: <b>{stats['revenue']:,} ₽</b>\n"
-            f"Расчётная прибыль: {stats['profit']:,} ₽ ({margin:.1f}%)\n\n"
+            f"Расчётная прибыль: {adjusted_profit:,} ₽ ({margin:.1f}%)\n\n"
             "<b>Отзывы</b>\n"
             f"{review_block}\n\n"
             "<b>Диспуты</b>\n"
@@ -180,7 +188,7 @@ def build_analytics_router(db: Database, game, simulation) -> Router:
             f"За счёт магазина: {compensation['shop_paid']:,} ₽\n"
             f"Из депозитов сотрудников: {compensation['employee_paid']:,} ₽\n\n"
             "<b>Персонал</b>\n"
-            f"Начислено зарплаты: {stats['wages']:,} ₽\n"
+            f"Начислено зарплаты: {total_wages:,} ₽\n"
             f"Выплачено деньгами: {payroll['cash']:,} ₽\n"
             f"В депозиты: {payroll['deposit']:,} ₽\n"
             f"К ближайшей выплате: <b>{accrued:,} ₽</b>\n\n"
