@@ -174,6 +174,9 @@ CREATE TABLE IF NOT EXISTS disputes (
     courier_reply TEXT,
     status TEXT NOT NULL DEFAULT 'open',
     decision TEXT,
+    refund_amount INTEGER NOT NULL DEFAULT 0,
+    refund_source TEXT,
+    refund_employee_id INTEGER,
     deadline_at TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     resolved_at TEXT
@@ -277,6 +280,9 @@ class Database:
             self._ensure_column(conn, "orders", "employee_deposit_contribution", "INTEGER NOT NULL DEFAULT 0")
             self._ensure_column(conn, "settings", "time_multiplier", "REAL NOT NULL DEFAULT 1.0")
             self._ensure_column(conn, "settings", "last_payroll_at", "TEXT")
+            self._ensure_column(conn, "disputes", "refund_amount", "INTEGER NOT NULL DEFAULT 0")
+            self._ensure_column(conn, "disputes", "refund_source", "TEXT")
+            self._ensure_column(conn, "disputes", "refund_employee_id", "INTEGER")
 
             conn.execute("UPDATE employees SET deposit_contribution_pct=10 WHERE deposit_contribution_pct IS NULL")
             # Legacy MVP rates were intentionally tiny. Bring old retail saves onto the new market scale.
