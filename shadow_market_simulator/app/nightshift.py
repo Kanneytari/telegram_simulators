@@ -201,6 +201,54 @@ class NightshiftSimulationEngine(PlayerSimulationEngine):
                 (body, json.dumps(payload, ensure_ascii=False), item["id"]),
             )
 
+        # Reformat older one-line event generators into the same compact block layout.
+        compact_items = conn.execute(
+            """SELECT * FROM inbox
+               WHERE player_id=? AND status='open'
+                 AND kind IN ('leave_request','advance_request','discount_request')""",
+            (player_id,),
+        ).fetchall()
+        for item in compact_items:
+            if "\n\n" in item["body"]:
+                continue
+            payload = json.loads(item["payload_json"] or "{}")
+            if item["kind"] == "leave_request":
+                employee = conn.execute(
+                    "SELECT alias FROM employees WHERE id=? AND player_id=?",
+                    (payload.get("employee_id"), player_id),
+                ).fetchone()
+                if employee:
+                    body = (
+                        f"{employee['alias']} просит временную паузу.\n\n"
+                        "Срок при согласовании: 6 игровых часов\n"
+                        "Причина: личные обстоятельства"
+                    )
+                    conn.execute("UPDATE inbox SET body=? WHERE id=?", (body, item["id"]))
+            elif item["kind"] == "advance_request":
+                employee = conn.execute(
+                    "SELECT alias, deposit FROM employees WHERE id=? AND player_id=?",
+                    (payload.get("employee_id"), player_id),
+                ).fetchone()
+                if employee:
+                    body = (
+                        f"{employee['alias']} просит вернуть часть депозита.\n\n"
+                        f"Сумма: <b>{int(payload.get('amount', 0)):,} ₽</b>\n"
+                        f"Текущий депозит: {int(employee['deposit']):,} ₽"
+                    )
+                    conn.execute("UPDATE inbox SET body=? WHERE id=?", (body, item["id"]))
+            else:
+                client = conn.execute(
+                    "SELECT alias FROM clients WHERE id=? AND player_id=?",
+                    (payload.get("client_id"), player_id),
+                ).fetchone()
+                if client:
+                    body = (
+                        f"{client['alias']} просит небольшую скидку.\n\n"
+                        f"Размер: <b>{int(payload.get('percent', 0))}%</b>\n"
+                        "Причина: не хватает суммы после изменения курса."
+                    )
+                    conn.execute("UPDATE inbox SET body=? WHERE id=?", (body, item["id"]))
+
         # Exit messages are staff messages too; attach the employee id so the UI can open their profile.
         exits = conn.execute(
             """SELECT * FROM inbox
