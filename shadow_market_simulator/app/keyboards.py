@@ -29,7 +29,6 @@ def navigation(back_callback: str, back_text: str = "← Назад") -> InlineK
 
 
 def result_actions(back_callback: str, back_text: str = "← Назад") -> InlineKeyboardMarkup:
-    """Compatibility helper for result/detail screens: back to section + main menu."""
     return navigation(back_callback, back_text)
 
 
@@ -183,3 +182,70 @@ def offer_list(offers) -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home"),
     ])
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def offer_actions(offer_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💳 Купить", callback_data=f"offer:confirm:{offer_id}")],
+        [
+            InlineKeyboardButton(text="← Закупки", callback_data="menu:offers"),
+            InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home"),
+        ],
+    ])
+
+
+def offer_confirm(offer_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Подтвердить", callback_data=f"offer:buy:{offer_id}")],
+        [InlineKeyboardButton(text="← Назад", callback_data=f"offer:{offer_id}")],
+        [InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home")],
+    ])
+
+
+def listing_list(listings) -> InlineKeyboardMarkup:
+    rows = []
+    for listing in listings:
+        stock = listing["stock"] if "stock" in listing.keys() else 0
+        rows.append([InlineKeyboardButton(
+            text=f"{listing['title']} ×{listing['pack_size']} · {listing['price']:,} ₽ · {stock} ед.",
+            callback_data=f"listing:{listing['id']}",
+        )])
+    rows.append([
+        InlineKeyboardButton(text="🔄 Обновить", callback_data="menu:listings"),
+        InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home"),
+    ])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def listing_actions(listing_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="−5%", callback_data=f"listing:price:{listing_id}:-5"),
+            InlineKeyboardButton(text="+5%", callback_data=f"listing:price:{listing_id}:5"),
+        ],
+        [
+            InlineKeyboardButton(text="← Витрина", callback_data="menu:listings"),
+            InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home"),
+        ],
+    ])
+
+
+def analytics_actions() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔄 Обновить", callback_data="menu:analytics")],
+        [InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home")],
+    ])
+
+
+def reset_confirmation() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🗑 Да, начать заново", callback_data="reset:confirm")],
+        [InlineKeyboardButton(text="Отмена", callback_data="reset:cancel")],
+    ])
+
+
+def notification_actions(item_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Открыть сообщение", callback_data=f"inbox:item:{item_id}")],
+        [InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home")],
+    ])
