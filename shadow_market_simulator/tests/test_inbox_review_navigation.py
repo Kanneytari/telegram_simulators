@@ -62,6 +62,8 @@ def test_empty_recruitment_result_is_closed_immediately(tmp_path):
 
 def test_close_destination_depends_on_remaining_open_messages(tmp_path):
     db = make_db(tmp_path)
+    with db.connect() as conn:
+        conn.execute("UPDATE inbox SET status='closed' WHERE player_id=1001")
     assert close_destination(db, 1001) == "home"
     with db.connect() as conn:
         item = conn.execute(
