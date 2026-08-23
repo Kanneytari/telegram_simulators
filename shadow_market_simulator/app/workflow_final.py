@@ -3,9 +3,12 @@ from __future__ import annotations
 import json
 import math
 
-from .runtime import ROLE_MARKET_PAY
+from .runtime import ROLE_MARKET_PAY, STAFF_INBOX_KINDS
 from .simulation import iso, parse_dt, utcnow
 from .workflow import TASK_LABELS, WORKFLOW_SCHEMA, WorkflowGameService, WorkflowSimulationEngine
+
+# Keep the existing Staff Inbox UI without duplicating its routing code.
+STAFF_INBOX_KINDS.add("resignation_notice")
 
 
 class FinalWorkflowSimulationEngine(WorkflowSimulationEngine):
