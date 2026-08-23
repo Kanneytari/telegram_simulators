@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS employees (
     role TEXT NOT NULL,
     pay_per_job INTEGER NOT NULL,
     deposit INTEGER NOT NULL DEFAULT 0,
+    deposit_contribution_pct INTEGER NOT NULL DEFAULT 10,
     has_car INTEGER NOT NULL DEFAULT 0,
     reliability REAL NOT NULL,
     attention REAL NOT NULL,
@@ -108,7 +109,13 @@ CREATE TABLE IF NOT EXISTS candidates (
     loyalty REAL NOT NULL,
     summary TEXT NOT NULL,
     expires_at TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'open'
+    status TEXT NOT NULL DEFAULT 'open',
+    campaign_id INTEGER,
+    source_channel TEXT,
+    offered_pay INTEGER,
+    min_deposit INTEGER,
+    deposit_contribution_pct INTEGER NOT NULL DEFAULT 10,
+    experience_level INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS clients (
@@ -148,6 +155,7 @@ CREATE TABLE IF NOT EXISTS orders (
     revenue INTEGER NOT NULL,
     cost INTEGER NOT NULL,
     employee_cost INTEGER NOT NULL,
+    employee_deposit_contribution INTEGER NOT NULL DEFAULT 0,
     quality REAL NOT NULL,
     status TEXT NOT NULL DEFAULT 'completed',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -199,7 +207,8 @@ CREATE TABLE IF NOT EXISTS settings (
     auto_refund_limit INTEGER NOT NULL DEFAULT 0,
     auto_partial_limit INTEGER NOT NULL DEFAULT 0,
     notifications_enabled INTEGER NOT NULL DEFAULT 1,
-    hardcore INTEGER NOT NULL DEFAULT 0
+    hardcore INTEGER NOT NULL DEFAULT 0,
+    time_multiplier REAL NOT NULL DEFAULT 1.0
 );
 
 CREATE INDEX IF NOT EXISTS idx_inbox_player_status ON inbox(player_id, status, priority);
@@ -229,6 +238,23 @@ class Database:
         conn.execute("PRAGMA foreign_keys = ON")
         return conn
 
+    @staticmethod
+    def _ensure_column(conn: sqlite3.Connection, table: str, column: str, definition: str) -> None:
+        columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+        if column not in columns:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
     def init(self) -> None:
         with self.connect() as conn:
             conn.executescript(SCHEMA)
+            # Lightweight migrations keep existing local SQLite saves compatible.
+            self._ensure_column(conn, "employees", "deposit_contribution_pct", "INTEGER NOT NULL DEFAULT 10")
+            self._ensure_column(conn, "candidates", "campaign_id", "INTEGER")
+            self._ensure_column(conn, "candidates", "source_channel", "TEXT")
+            self._ensure_column(conn, "candidates", "offered_pay", "INTEGER")
+            self._ensure_column(conn, "candidates", "min_deposit", "INTEGER")
+            self._ensure_column(conn, "candidates", "deposit_contribution_pct", "INTEGER NOT NULL DEFAULT 10")
+            self._ensure_column(conn, "candidates", "experience_level", "INTEGER NOT NULL DEFAULT 0")
+            self._ensure_column(conn, "orders", "employee_deposit_contribution", "INTEGER NOT NULL DEFAULT 0")
+            self._ensure_column(conn, "settings", "time_multiplier", "REAL NOT NULL DEFAULT 1.0")
+            conn.execute("UPDATE employees SET deposit_contribution_pct=10 WHERE deposit_contribution_pct IS NULL")
