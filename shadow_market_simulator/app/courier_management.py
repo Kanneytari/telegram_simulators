@@ -137,8 +137,8 @@ class CourierManagementGameService(CourierCoreGameService):
                 "SELECT * FROM candidates WHERE id=? AND player_id=? AND status='open'",
                 (candidate_id, player_id),
             ).fetchone()
-            equipment = conn.execute(
-                "SELECT * FROM courier_candidate_equipment WHERE candidate_id=?",
+            profile = conn.execute(
+                "SELECT phone_level FROM courier_candidate_profiles WHERE candidate_id=?",
                 (candidate_id,),
             ).fetchone()
         result = super().hire_candidate(player_id, candidate_id)
@@ -162,7 +162,7 @@ class CourierManagementGameService(CourierCoreGameService):
                 (
                     max(60_000, int(employee["deposit"])),
                     2 if int(candidate["has_car"]) else 0,
-                    int(equipment["phone_level"]) if equipment else 0,
+                    int(profile["phone_level"]) if profile else 0,
                     int(employee["id"]),
                 ),
             )

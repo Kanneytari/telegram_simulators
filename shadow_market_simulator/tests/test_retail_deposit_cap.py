@@ -7,7 +7,7 @@ from app.courier_management import CourierManagementSimulationEngine
 from app.courier_recruitment import CourierRecruitmentService
 from app.db import Database
 from app.recruitment import CHANNELS
-from app.recruitment_runtime import RETAIL_STARTING_DEPOSIT_CAP
+from app.recruitment import RETAIL_STARTING_DEPOSIT_CAP
 from app.simulation import utcnow
 
 

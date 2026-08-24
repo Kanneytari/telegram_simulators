@@ -13,7 +13,7 @@ def make_system(tmp_path):
     simulation = CompensationSimulationEngine(db, rng=random.Random(12))
     simulation.ensure_player(1001, "tester")
     game = CompensationGameService(db, simulation, rng=random.Random(13))
-    recruitment = NightshiftRecruitmentService(db, rng=random.Random(14))
+    recruitment = RecruitmentService(db, rng=random.Random(14))
     return db, simulation, game, recruitment
 
 

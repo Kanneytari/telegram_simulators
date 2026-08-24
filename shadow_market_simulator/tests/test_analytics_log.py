@@ -14,7 +14,7 @@ def make_system(tmp_path):
     simulation = FinalWorkflowSimulationEngine(db, rng=random.Random(51))
     simulation.seed_catalog()
     game = FinalWorkflowGameService(db, simulation, rng=random.Random(52))
-    recruitment = NightshiftRecruitmentService(db, rng=random.Random(53))
+    recruitment = RecruitmentService(db, rng=random.Random(53))
     analytics = AnalyticsLogger(db)
     analytics.install()
     simulation.ensure_player(1001, "tester")

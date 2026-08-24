@@ -37,21 +37,17 @@ CREATE TABLE candidates (
     player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
     alias TEXT NOT NULL,
     role TEXT NOT NULL,
-    desired_pay INTEGER NOT NULL DEFAULT 0,
     deposit INTEGER NOT NULL,
     has_car INTEGER NOT NULL,
     reliability REAL NOT NULL,
     attention REAL NOT NULL,
     honesty REAL NOT NULL,
     loyalty REAL NOT NULL,
-    summary TEXT NOT NULL,
     expires_at TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'open',
     campaign_id INTEGER,
     source_channel TEXT,
-    offered_pay INTEGER,
     min_deposit INTEGER,
-    deposit_contribution_pct INTEGER NOT NULL DEFAULT 0,
     experience_level INTEGER NOT NULL DEFAULT 0
 );
 
@@ -95,10 +91,6 @@ CREATE TABLE compensation_policy_changes (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE courier_candidate_equipment (
-    candidate_id INTEGER PRIMARY KEY REFERENCES candidates(id) ON DELETE CASCADE,
-    phone_level INTEGER NOT NULL DEFAULT 0 CHECK(phone_level BETWEEN 0 AND 2)
-);
 
 CREATE TABLE courier_candidate_profiles (
     candidate_id INTEGER PRIMARY KEY REFERENCES candidates(id) ON DELETE CASCADE,
@@ -106,7 +98,8 @@ CREATE TABLE courier_candidate_profiles (
     precision REAL NOT NULL,
     resilience REAL NOT NULL,
     integrity REAL NOT NULL,
-    trait TEXT NOT NULL
+    trait TEXT NOT NULL,
+    phone_level INTEGER NOT NULL DEFAULT 0 CHECK(phone_level BETWEEN 0 AND 2)
 );
 
 CREATE TABLE courier_management (
@@ -352,9 +345,7 @@ CREATE TABLE recruitment_campaigns (
     candidates_created INTEGER NOT NULL DEFAULT 0,
     traffic_multiplier INTEGER NOT NULL DEFAULT 1,
     duration_hours INTEGER NOT NULL DEFAULT 4,
-    pay_per_job INTEGER NOT NULL DEFAULT 220,
     min_deposit INTEGER NOT NULL DEFAULT 25000,
-    deposit_contribution_pct INTEGER NOT NULL DEFAULT 10,
     car_required INTEGER NOT NULL DEFAULT 0,
     experience_required INTEGER NOT NULL DEFAULT 0,
     expected_min INTEGER NOT NULL DEFAULT 0,
@@ -373,9 +364,7 @@ CREATE TABLE recruitment_drafts (
     channel TEXT NOT NULL DEFAULT 'stickers',
     traffic_multiplier INTEGER NOT NULL DEFAULT 1,
     duration_hours INTEGER NOT NULL DEFAULT 4,
-    pay_per_job INTEGER NOT NULL DEFAULT 220,
     min_deposit INTEGER NOT NULL DEFAULT 25000,
-    deposit_contribution_pct INTEGER NOT NULL DEFAULT 10,
     car_required INTEGER NOT NULL DEFAULT 0,
     experience_required INTEGER NOT NULL DEFAULT 0,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP

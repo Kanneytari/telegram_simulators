@@ -17,7 +17,7 @@ def make_system(tmp_path):
     simulation.seed_catalog()
     simulation.ensure_player(1001, "tester")
     game = CompensationGameService(db, simulation, rng=random.Random(8))
-    recruitment = NightshiftRecruitmentService(db, speed=1.0, rng=random.Random(9))
+    recruitment = RecruitmentService(db, speed=1.0, rng=random.Random(9))
     return db, simulation, game, recruitment
 
 
