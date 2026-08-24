@@ -10,9 +10,9 @@ from .db import Database
 
 
 PRODUCTS = (
-    (1, "NEON", "Neon", 1450, 18.0, 0.9),
-    (2, "AMBER", "Amber", 2050, 10.0, 1.1),
-    (3, "ECHO", "Echo", 3100, 6.0, 1.3),
+    (1, "AMPHETAMINE", "Амфетамин", 6000, 18.0, 0.95),
+    (2, "MDMA", "MDMA", 8000, 10.0, 1.10),
+    (3, "COCAINE", "Кокаин", 11000, 6.0, 0.90),
     (4, "MEPHEDRONE", "Мефедрон", 7000, 15.0, 1.00),
     (5, "KETAMINE", "Кетамин", 7500, 9.0, 1.15),
     (6, "LSD", "LSD", 9000, 7.0, 0.85),
@@ -24,7 +24,6 @@ SUPPLIERS = (
     (3, "ORBIT", "Orbit", 0.97, 80.0, 6.5, 0.90),
 )
 
-ALIASES = ["Крот", "Сова", "Лис", "Маяк", "Ворон", "Тень", "Мята", "Риф", "Пульс", "Шум"]
 CLIENT_ALIASES = ["raven_91", "voidrunner", "pluto", "redfox", "greycat", "northwind", "mono", "spark", "dust", "quiet"]
 
 
@@ -79,14 +78,13 @@ class SimulationEngine:
             )
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
-        """Create a new shop and starter state. Returns True only on first creation."""
         self.seed_catalog()
         now = utcnow()
         with self.db.connect() as conn:
-            exists = conn.execute("SELECT 1 FROM shops WHERE player_id = ?", (player_id,)).fetchone()
+            exists = conn.execute("SELECT 1 FROM shops WHERE player_id=?", (player_id,)).fetchone()
             if exists:
                 conn.execute(
-                    "UPDATE shops SET username = ?, last_seen_at = ? WHERE player_id = ?",
+                    "UPDATE shops SET username=?, last_seen_at=? WHERE player_id=?",
                     (username, iso(now), player_id),
                 )
                 return False
@@ -98,62 +96,53 @@ class SimulationEngine:
             conn.execute("INSERT INTO settings(player_id) VALUES (?)", (player_id,))
 
             employees = [
-                ("Крот", "courier", 170, 35000, 0, 0.91, 0.88, 0.90, 0.72, 14.0),
-                ("Сова", "courier", 205, 60000, 1, 0.84, 0.94, 0.86, 0.81, 8.0),
+                ("Крот", "courier", 35_000, 0, 0.91, 0.88, 0.90, 0.72, 14.0),
+                ("Сова", "courier", 60_000, 1, 0.84, 0.94, 0.86, 0.81, 8.0),
             ]
             for row in employees:
                 conn.execute(
                     """INSERT INTO employees(
-                        player_id, alias, role, pay_per_job, deposit, has_car,
-                        reliability, attention, honesty, loyalty, stress
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                           player_id, alias, role, deposit, has_car,
+                           reliability, attention, honesty, loyalty, stress
+                       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     (player_id, *row),
                 )
 
             for index in range(24):
-                account_age = self.rng.randint(12, 1500)
-                marketplace_orders = self.rng.randint(1, 180)
                 conn.execute(
                     """INSERT INTO clients(
-                        player_id, alias, account_age_days, marketplace_orders,
-                        fraud_propensity, patience, loyalty, review_tendency
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                           player_id, alias, account_age_days, marketplace_orders,
+                           fraud_propensity, patience, review_tendency
+                       ) VALUES (?, ?, ?, ?, ?, ?, ?)""",
                     (
                         player_id,
                         f"{self.rng.choice(CLIENT_ALIASES)}_{index + 1}",
-                        account_age,
-                        marketplace_orders,
+                        self.rng.randint(12, 1500),
+                        self.rng.randint(1, 180),
                         self.rng.uniform(0.01, 0.18),
                         self.rng.uniform(0.35, 0.95),
-                        self.rng.uniform(0.25, 0.90),
                         self.rng.uniform(0.25, 0.85),
                     ),
                 )
 
             for product_id, _, _, base_price, _, _ in PRODUCTS:
-                conn.execute(
-                    "INSERT INTO listings(player_id, product_id, pack_size, price) VALUES (?, ?, 1, ?)",
-                    (player_id, product_id, int(base_price * 1.05)),
-                )
-                conn.execute(
-                    "INSERT INTO listings(player_id, product_id, pack_size, price) VALUES (?, ?, 2, ?)",
-                    (player_id, product_id, int(base_price * 1.95)),
-                )
-                conn.execute(
-                    "INSERT INTO listings(player_id, product_id, pack_size, price) VALUES (?, ?, 5, ?)",
-                    (player_id, product_id, int(base_price * 4.55)),
-                )
+                for pack_size, multiplier in ((1, 1.05), (2, 1.95), (5, 4.55)):
+                    price = int(round(base_price * multiplier / 100.0) * 100)
+                    conn.execute(
+                        "INSERT INTO listings(player_id, product_id, pack_size, price) VALUES (?, ?, ?, ?)",
+                        (player_id, product_id, pack_size, price),
+                    )
 
             starter_batches = [
-                (1, 1, 80, 80, 770, 84.0),
-                (3, 2, 45, 45, 1180, 79.0),
-                (1, 3, 25, 25, 1880, 90.0),
+                (1, 1, 80, 80, 3000, 84.0),
+                (3, 2, 45, 45, 3900, 79.0),
+                (1, 3, 25, 25, 5200, 90.0),
             ]
             for supplier_id, product_id, qty, remaining, unit_cost, quality in starter_batches:
                 conn.execute(
                     """INSERT INTO batches(
-                        player_id, supplier_id, product_id, quantity, remaining, unit_cost, quality
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                           player_id, supplier_id, product_id, quantity, remaining, unit_cost, quality
+                       ) VALUES (?, ?, ?, ?, ?, ?, ?)""",
                     (player_id, supplier_id, product_id, qty, remaining, unit_cost, quality),
                 )
 
@@ -162,7 +151,6 @@ class SimulationEngine:
                 (player_id,),
             )
             self._create_offer(conn, player_id, now)
-            self._create_candidate(conn, player_id, now)
             conn.execute(
                 """INSERT INTO inbox(player_id, kind, priority, title, body, payload_json, expires_at)
                    VALUES (?, 'tutorial', 'normal', 'Смена началась',
@@ -189,7 +177,6 @@ class SimulationEngine:
             self._reactivate_employees(conn, player_id, now)
             self._expire_items(conn, player_id, now)
             self._maybe_refresh_offer(conn, player_id, now)
-            self._maybe_refresh_candidate(conn, player_id, now)
             conn.execute(
                 "UPDATE shops SET last_simulated_at = ?, last_seen_at = ? WHERE player_id = ?",
                 (iso(now), iso(now), player_id),
@@ -262,102 +249,7 @@ class SimulationEngine:
         )
 
     def _simulate_management_events(self, conn, player_id: int, sim_hours: float, now: datetime) -> int:
-        created = 0
-        # A small chance per simulated hour, capped so returning after a long break does not flood the inbox.
-        chances = min(sim_hours, 12.0)
-        if self.rng.random() < 1 - math.exp(-0.055 * chances):
-            employee = conn.execute(
-                "SELECT * FROM employees WHERE player_id = ? AND active = 1 ORDER BY RANDOM() LIMIT 1", (player_id,)
-            ).fetchone()
-            if employee:
-                kind = self.rng.choice(["raise_request", "leave_request", "advance_request"])
-                payload = {"employee_id": employee["id"]}
-                if kind == "raise_request":
-                    body = f"{employee['alias']}: работаю уже не первую смену на старых условиях. Можно пересмотреть ставку?"
-                    title = "Разговор об оплате"
-                elif kind == "leave_request":
-                    body = f"{employee['alias']}: нужно несколько дней без нагрузки по личным причинам."
-                    title = "Просьба о паузе"
-                else:
-                    amount = min(12000, max(2000, int(employee["deposit"] * 0.12)))
-                    payload["amount"] = amount
-                    body = f"{employee['alias']}: можно временно высвободить {amount:,} ₽ из моего обеспечения?"
-                    title = "Запрос сотрудника"
-                expires = now + timedelta(hours=4)
-                conn.execute(
-                    """INSERT INTO inbox(player_id, kind, priority, title, body, payload_json, expires_at)
-                       VALUES (?, ?, 'normal', ?, ?, ?, ?)""",
-                    (player_id, kind, title, body, json.dumps(payload, ensure_ascii=False), iso(expires)),
-                )
-                created += 1
-
-        if self.rng.random() < 1 - math.exp(-0.035 * chances):
-            client = conn.execute(
-                "SELECT * FROM clients WHERE player_id = ? AND shop_orders > 0 ORDER BY RANDOM() LIMIT 1", (player_id,)
-            ).fetchone()
-            if client:
-                percent = self.rng.choice([2, 3, 4, 5])
-                conn.execute(
-                    """INSERT INTO inbox(player_id, kind, priority, title, body, payload_json, expires_at)
-                       VALUES (?, 'discount_request', 'important', 'Просьба постоянного клиента', ?, ?, ?)""",
-                    (
-                        player_id,
-                        f"{client['alias']}: из-за изменения курса не хватает совсем немного. Можешь дать скидку {percent}%?",
-                        json.dumps({"client_id": client["id"], "percent": percent}, ensure_ascii=False),
-                        iso(now + timedelta(minutes=45)),
-                    ),
-                )
-                created += 1
-        # Low loyalty and high stress can end employment without waiting for a scripted quest.
-        employees = conn.execute(
-            "SELECT * FROM employees WHERE player_id=? AND active=1", (player_id,)
-        ).fetchall()
-        for employee in employees:
-            loyalty_risk = max(0.0, 0.62 - float(employee["loyalty"])) * 0.028 * min(sim_hours, 12.0)
-            stress_risk = max(0.0, float(employee["stress"]) - 70.0) / 100.0 * 0.025 * min(sim_hours, 12.0)
-            if self.rng.random() >= loyalty_risk + stress_risk:
-                continue
-            dishonest_exit = self.rng.random() > float(employee["honesty"])
-            if dishonest_exit:
-                gross_loss = self.rng.randint(12000, 65000)
-                covered = min(int(employee["deposit"]), gross_loss)
-                net_loss = gross_loss - covered
-                conn.execute(
-                    "UPDATE employees SET active=0, available=0, losses=losses+?, deposit=0 WHERE id=?",
-                    (gross_loss, employee["id"]),
-                )
-                if net_loss:
-                    conn.execute("UPDATE shops SET balance=balance-?, total_profit=total_profit-? WHERE player_id=?", (net_loss, net_loss, player_id))
-                    conn.execute(
-                        "INSERT INTO ledger(player_id, amount, kind, reference_type, reference_id, note) VALUES (?, ?, 'employee_loss', 'employee', ?, ?)",
-                        (player_id, -net_loss, employee["id"], f"Потери после ухода {employee['alias']}"),
-                    )
-                body = (
-                    f"{employee['alias']} перестал выходить на связь. Зафиксирован риск на {gross_loss:,} ₽; "
-                    f"обеспечение закрыло {covered:,} ₽. Чистая потеря магазина: {net_loss:,} ₽."
-                )
-                title = "Сотрудник пропал со связи"
-                priority = "urgent"
-            else:
-                deposit = int(employee["deposit"])
-                conn.execute(
-                    "UPDATE employees SET active=0, available=0, deposit=0 WHERE id=?", (employee["id"],)
-                )
-                conn.execute("UPDATE shops SET balance=balance-? WHERE player_id=?", (deposit, player_id))
-                conn.execute(
-                    "INSERT INTO ledger(player_id, amount, kind, reference_type, reference_id, note) VALUES (?, ?, 'deposit_out', 'employee', ?, ?)",
-                    (player_id, -deposit, employee["id"], f"Возврат обеспечения при уходе {employee['alias']}"),
-                )
-                body = f"{employee['alias']} сообщил об уходе. Обеспечение {deposit:,} ₽ возвращено, производственная мощность снизилась."
-                title = "Сотрудник ушёл"
-                priority = "important"
-            conn.execute(
-                "INSERT INTO inbox(player_id, kind, priority, title, body, payload_json) VALUES (?, 'employee_exit', ?, ?, ?, '{}')",
-                (player_id, priority, title, body),
-            )
-            created += 1
-            break
-        return created
+        return 0
 
     def _reactivate_employees(self, conn, player_id: int, now: datetime) -> None:
         conn.execute(
@@ -415,32 +307,6 @@ class SimulationEngine:
             """INSERT INTO supplier_offers(player_id, supplier_id, product_id, quantity, unit_cost, quality_hint, expires_at)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
             (player_id, supplier["id"], product["id"], qty, unit_cost, quality_hint, iso(now + timedelta(hours=8))),
-        )
-
-    def _maybe_refresh_candidate(self, conn, player_id: int, now: datetime) -> None:
-        count = conn.execute(
-            "SELECT COUNT(*) FROM candidates WHERE player_id = ? AND status = 'open'", (player_id,)
-        ).fetchone()[0]
-        if count < 2:
-            self._create_candidate(conn, player_id, now)
-
-    def _create_candidate(self, conn, player_id: int, now: datetime) -> None:
-        alias = self.rng.choice(ALIASES) + str(self.rng.randint(2, 99))
-        role = "courier"
-        reliability = self.rng.uniform(0.60, 0.97)
-        attention = self.rng.uniform(0.58, 0.98)
-        honesty = self.rng.uniform(0.55, 0.99)
-        loyalty = self.rng.uniform(0.45, 0.90)
-        desired = int(145 + (reliability + attention) * 55 + self.rng.randint(-20, 30))
-        deposit = self.rng.choice([15000, 25000, 40000, 60000, 90000])
-        has_car = int(self.rng.random() < 0.42)
-        experience = self.rng.choice(["без опыта", "есть небольшой опыт", "говорит, что работал раньше"])
-        summary = f"{experience}; {'есть автомобиль' if has_car else 'без автомобиля'}; готовое обеспечение {deposit:,} ₽"
-        conn.execute(
-            """INSERT INTO candidates(player_id, alias, role, desired_pay, deposit, has_car,
-               reliability, attention, honesty, loyalty, summary, expires_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (player_id, alias, role, desired, deposit, has_car, reliability, attention, honesty, loyalty, summary, iso(now + timedelta(hours=10))),
         )
 
     def _has_stock(self, conn, player_id: int, product_id: int, qty: int) -> bool:

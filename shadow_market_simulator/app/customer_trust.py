@@ -142,11 +142,6 @@ class CustomerTrustSimulationEngine(StaffRelationshipSimulationEngine):
                WHERE player_id=?""",
             (trust, availability, player_id),
         )
-        # Keep the old technical field coherent for lower layers that still read it.
-        conn.execute(
-            "UPDATE shops SET rating=? WHERE player_id=?",
-            (clamp(trust / 20.0, 1.0, 5.0), player_id),
-        )
         return {
             "trust_score": trust,
             "availability": availability,

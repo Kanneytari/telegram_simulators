@@ -5,7 +5,6 @@ import math
 from datetime import timedelta
 
 from .operations import OperationsGameService, OperationsSimulationEngine
-from .runtime import ROLE_MARKET_PAY
 from .simulation import clamp, iso, parse_dt, utcnow
 
 
@@ -236,8 +235,8 @@ class WorkflowSimulationEngine(OperationsSimulationEngine):
 
     def _simulate_management_events(self, conn, player_id: int, sim_hours: float, now) -> int:
         created = 0
-        chances = min(sim_hours, 12.0)
-        if self.rng.random() < 1 - math.exp(-0.035 * chances):
+        hours = min(max(0.0, sim_hours), 12.0)
+        if self.rng.random() < 1 - math.exp(-0.035 * hours):
             client = conn.execute(
                 "SELECT * FROM clients WHERE player_id=? AND shop_orders>0 ORDER BY RANDOM() LIMIT 1",
                 (player_id,),
@@ -257,6 +256,47 @@ class WorkflowSimulationEngine(OperationsSimulationEngine):
                 created += 1
 
         created += self._check_overexposure_risk(conn, player_id, sim_hours, now)
+        employees = conn.execute(
+            "SELECT * FROM employees WHERE player_id=? AND active=1 AND available=1 ORDER BY id",
+            (player_id,),
+        ).fetchall()
+        for employee in employees:
+            if self.employee_exposure(conn, player_id, int(employee["id"])) > 0:
+                continue
+            if conn.execute(
+                "SELECT 1 FROM employee_tasks WHERE player_id=? AND employee_id=? AND status='active' LIMIT 1",
+                (player_id, employee["id"]),
+            ).fetchone():
+                continue
+            if conn.execute(
+                """SELECT 1 FROM inbox WHERE player_id=? AND status='open' AND kind='resignation_notice'
+                   AND json_extract(payload_json, '$.employee_id')=? LIMIT 1""",
+                (player_id, employee["id"]),
+            ).fetchone():
+                continue
+            loyalty_pressure = max(0.0, 0.58 - float(employee["loyalty"]))
+            stress_pressure = max(0.0, float(employee["stress"]) - 72.0) / 100.0
+            probability = 1.0 - math.exp(-(loyalty_pressure * 0.020 + stress_pressure * 0.012) * hours)
+            if probability <= 0 or self.rng.random() >= probability:
+                continue
+            payout = int(employee["deposit"]) + int(employee["wages_accrued"])
+            role = "оптовый" if employee["role"] == "warehouse" else "розничный"
+            conn.execute("UPDATE employees SET available=0, unavailable_until=NULL WHERE id=?", (employee["id"],))
+            body = (
+                f"{employee['alias']} сообщил, что хочет закончить работу.\n\n"
+                f"Роль: {role}\nТовар на ответственности: 0 ₽\n"
+                f"Депозит к возврату: {employee['deposit']:,} ₽\n"
+                f"Начисленная зарплата: {employee['wages_accrued']:,} ₽\n"
+                f"Полный расчёт: <b>{payout:,} ₽</b>\n\n"
+                "Сотрудник больше не берёт новые задачи. Проведи увольнение и расчёт из его профиля."
+            )
+            conn.execute(
+                """INSERT INTO inbox(player_id, kind, priority, title, body, payload_json)
+                   VALUES (?, 'resignation_notice', 'important', 'Сотрудник хочет уйти', ?, ?)""",
+                (player_id, body, json.dumps({"employee_id": int(employee["id"])}, ensure_ascii=False)),
+            )
+            created += 1
+            break
         return created
 
     def _check_overexposure_risk(self, conn, player_id: int, sim_hours: float, now) -> int:
@@ -448,45 +488,6 @@ class WorkflowGameService(OperationsGameService):
     def _employee_exposure(self, player_id: int, employee_id: int) -> int:
         with self.db.connect() as conn:
             return int(self.simulation.employee_exposure(conn, player_id, employee_id))
-
-    def employee_details(self, player_id: int, employee_id: int) -> str | None:
-        with self.db.connect() as conn:
-            employee = conn.execute("SELECT * FROM employees WHERE id=? AND player_id=?", (employee_id, player_id)).fetchone()
-            if not employee:
-                return None
-            service = conn.execute(
-                """SELECT COUNT(*) count, COALESCE(AVG(courier_rating),0) avg
-                   FROM order_ratings WHERE player_id=? AND employee_id=?""",
-                (player_id, employee_id),
-            ).fetchone()
-        exposure = self._employee_exposure(player_id, employee_id)
-        unsecured = max(0, exposure - int(employee["deposit"]))
-        dispute_rate = employee["disputes"] / employee["jobs_done"] * 100.0 if employee["jobs_done"] else 0.0
-        role = "Оптовый сотрудник" if employee["role"] == "warehouse" else "Розничный сотрудник"
-        text = (
-            f"<b>👤 {employee['alias']}</b> · {role}\n\n"
-            f"<b>Сейчас</b>\n"
-            f"Статус: <b>{self._task_status(player_id, employee_id)}</b>\n\n"
-            f"<b>Условия</b>\n"
-            f"Ставка: {employee['pay_per_job']:,} ₽ / операцию\n"
-            f"Депозит: <b>{employee['deposit']:,} ₽</b>\n"
-            f"Отчисление в депозит: {employee['deposit_contribution_pct']}%\n"
-            f"Начислено: {employee['wages_accrued']:,} ₽\n\n"
-            f"<b>Ответственность</b>\n"
-            f"Товар на руках: {exposure:,} ₽\n"
-            f"Не покрыто депозитом: <b>{unsecured:,} ₽</b>\n\n"
-            f"<b>Статистика</b>\n"
-            f"Операций: {employee['jobs_done']}\n"
-            f"Диспутов: {employee['disputes']} ({dispute_rate:.1f}%)\n"
-            f"Потери: {employee['losses']:,} ₽"
-        )
-        if employee["role"] == "courier":
-            text += f"\nОценок работы: {service['count']}"
-            if service["count"]:
-                text += f" · ⭐ {float(service['avg']):.2f}/5"
-        if unsecured > 0:
-            text += "\n\n🔴 Часть товара не покрыта депозитом. Риск потери выше."
-        return text
 
     def warehouse_staff_for_offer(self, player_id: int, offer_id: int):
         with self.db.connect() as conn:
@@ -719,36 +720,36 @@ class WorkflowGameService(OperationsGameService):
                 "SELECT 1 FROM employee_tasks WHERE employee_id=? AND status='active' LIMIT 1",
                 (employee_id,),
             ).fetchone()
-            if exposure > 0 or active_task:
-                return "Сначала сотрудник должен завершить текущие задачи и не иметь товара на руках."
+            pending = conn.execute(
+                """SELECT 1 FROM retail_allocations
+                   WHERE player_id=? AND status IN ('waiting','preparing')
+                     AND (retail_employee_id=? OR wholesale_employee_id=?) LIMIT 1""",
+                (player_id, employee_id, employee_id),
+            ).fetchone()
+            if exposure > 0 or active_task or pending:
+                return "Сначала сотрудник должен завершить текущие задачи и не иметь назначенного товара."
             new_role = "warehouse" if employee["role"] == "courier" else "courier"
-            new_pay = ROLE_MARKET_PAY[new_role]
-            conn.execute(
-                "UPDATE employees SET role=?, pay_per_job=? WHERE id=?",
-                (new_role, new_pay, employee_id),
-            )
-            if new_role == "courier":
-                products = conn.execute("SELECT id FROM products WHERE active=1").fetchall()
-                for product in products:
-                    conn.execute(
-                        "INSERT OR IGNORE INTO packaging_rules(player_id, employee_id, product_id) VALUES (?, ?, ?)",
-                        (player_id, employee_id, product["id"]),
-                    )
+            conn.execute("UPDATE employees SET role=? WHERE id=?", (new_role, employee_id))
         role_title = "оптовый" if new_role == "warehouse" else "розничный"
-        return f"{employee['alias']} переведён в роль «{role_title}». Новая базовая ставка: {new_pay:,} ₽ / операцию."
+        return f"{employee['alias']} переведён в роль «{role_title}»."
 
 
 
     def fire_employee(self, player_id: int, employee_id: int) -> dict:
-        exposure = self._employee_exposure(player_id, employee_id)
         with self.db.connect() as conn:
+            pending = conn.execute(
+                """SELECT 1 FROM retail_allocations
+                   WHERE player_id=? AND status IN ('waiting','preparing')
+                     AND (retail_employee_id=? OR wholesale_employee_id=?) LIMIT 1""",
+                (player_id, employee_id, employee_id),
+            ).fetchone()
             task = conn.execute(
                 "SELECT 1 FROM employee_tasks WHERE employee_id=? AND status='active' LIMIT 1",
                 (employee_id,),
             ).fetchone()
-        if exposure > 0 or task:
+        if pending or task or self._employee_exposure(player_id, employee_id) > 0:
             return {
                 "status": "inventory",
-                "message": "Нельзя уволить сотрудника, пока у него есть товар или незавершённая задача. Сначала освободи его от ответственности.",
+                "message": "Нельзя уволить сотрудника: у него есть товар, назначенная передача или незавершённая задача.",
             }
         return super().fire_employee(player_id, employee_id)

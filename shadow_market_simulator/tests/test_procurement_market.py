@@ -39,7 +39,7 @@ def test_market_has_one_to_five_offers_per_product_and_size(tmp_path):
     assert all(1 <= value <= 5 for value in counts.values())
 
     products = game.procurement_products(1001)
-    assert len(products) == 3
+    assert len(products) == 6
     for product in products:
         assert set(product["counts"]) == set(PROCUREMENT_BATCH_SIZES)
         assert all(1 <= count <= 5 for count in product["counts"].values())

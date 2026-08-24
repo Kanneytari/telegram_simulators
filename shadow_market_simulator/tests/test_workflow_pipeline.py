@@ -115,14 +115,10 @@ def test_manual_allocation_flows_to_packaging_and_storefront(tmp_path):
 
 def test_packaging_rule_always_sums_to_100(tmp_path):
     db, _, game = make_system(tmp_path)
-    with db.connect() as conn:
-        retail = conn.execute(
-            "SELECT id FROM employees WHERE player_id=1001 AND role='courier' LIMIT 1"
-        ).fetchone()
     game.adjust_global_packaging_rule(1001, 5, 10)
-    rule = next(row for row in game.packaging_rules(1001, int(retail["id"])) if row["product_id"] == 1)
-    assert int(rule["pct_1"]) + int(rule["pct_2"]) + int(rule["pct_5"]) == 100
-    assert int(rule["pct_5"]) == 20
+    rule = game.global_packaging_rule(1001)
+    assert rule["pct_1"] + rule["pct_2"] + rule["pct_5"] == 100
+    assert rule["pct_5"] == 20
 
 
 def test_role_change_requires_no_inventory_or_pending_assignment(tmp_path):

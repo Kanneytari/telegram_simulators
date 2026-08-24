@@ -60,7 +60,6 @@ class CourierCoreSimulationEngine(CustomerTrustSimulationEngine):
                    ) VALUES (?, ?, ?, ?, ?, ?, ?)""",
                 (int(row["id"]), int(row["player_id"]), pace, precision, resilience, integrity, trait),
             )
-            self._sync_legacy_mirrors_conn(conn, int(row["id"]))
 
     def _profile_conn(self, conn, employee_id: int):
         return conn.execute(
@@ -71,24 +70,6 @@ class CourierCoreSimulationEngine(CustomerTrustSimulationEngine):
     def _profile(self, employee_id: int):
         with self.db.connect() as conn:
             return self._profile_conn(conn, employee_id)
-
-    def _sync_legacy_mirrors_conn(self, conn, employee_id: int) -> None:
-        profile = self._profile_conn(conn, employee_id)
-        if not profile:
-            return
-        # Lower shared layers still read these columns. For couriers they are only
-        # mirrors of the canonical profile, never independently generated stats.
-        conn.execute(
-            """UPDATE employees
-               SET reliability=?, attention=?, honesty=?
-               WHERE id=? AND role='courier'""",
-            (
-                float(profile["pace"]),
-                float(profile["precision"]),
-                float(profile["integrity"]),
-                employee_id,
-            ),
-        )
 
     @staticmethod
     def _learning_bonus(profile) -> float:
@@ -434,38 +415,44 @@ class CourierCoreGameService(CustomerTrustGameService):
                 "SELECT * FROM candidates WHERE id=? AND player_id=? AND status='open'",
                 (candidate_id, player_id),
             ).fetchone()
+            if not candidate:
+                return "Кандидат уже недоступен."
             profile = conn.execute(
                 "SELECT * FROM courier_candidate_profiles WHERE candidate_id=?",
                 (candidate_id,),
             ).fetchone()
-        result = super().hire_candidate(player_id, candidate_id)
-        if not candidate or candidate["role"] != "courier" or not profile:
-            return result
-        with self.db.connect() as conn:
-            employee = conn.execute(
-                """SELECT * FROM employees
-                   WHERE player_id=? AND alias=? AND role='courier'
-                   ORDER BY id DESC LIMIT 1""",
-                (player_id, candidate["alias"]),
-            ).fetchone()
-            if not employee:
-                return result
-            conn.execute(
-                """INSERT OR REPLACE INTO courier_profiles(
-                       employee_id, player_id, pace, precision, resilience, integrity, trait
-                   ) VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            deposit = int(candidate["deposit"])
+            cur = conn.execute(
+                """INSERT INTO employees(
+                       player_id, alias, role, deposit, has_car,
+                       reliability, attention, honesty, loyalty
+                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
-                    int(employee["id"]),
-                    player_id,
-                    float(profile["pace"]),
-                    float(profile["precision"]),
-                    float(profile["resilience"]),
-                    float(profile["integrity"]),
-                    str(profile["trait"]),
+                    player_id, candidate["alias"], candidate["role"], deposit,
+                    candidate["has_car"], candidate["reliability"], candidate["attention"],
+                    candidate["honesty"], candidate["loyalty"],
                 ),
             )
-            self.simulation._sync_legacy_mirrors_conn(conn, int(employee["id"]))
-        return result
+            employee_id = int(cur.lastrowid)
+            conn.execute("UPDATE shops SET balance=balance+? WHERE player_id=?", (deposit, player_id))
+            conn.execute(
+                """INSERT INTO ledger(player_id, amount, kind, reference_type, reference_id, note)
+                   VALUES (?, ?, 'deposit_in', 'employee', ?, ?)""",
+                (player_id, deposit, employee_id, f"Стартовый депозит сотрудника {candidate['alias']}"),
+            )
+            conn.execute("UPDATE candidates SET status='hired' WHERE id=?", (candidate_id,))
+            if candidate["role"] == "courier" and profile:
+                conn.execute(
+                    """INSERT INTO courier_profiles(
+                           employee_id, player_id, pace, precision, resilience, integrity, trait
+                       ) VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        employee_id, player_id, profile["pace"], profile["precision"],
+                        profile["resilience"], profile["integrity"], profile["trait"],
+                    ),
+                )
+        role = "Розничный сотрудник" if candidate["role"] == "courier" else "Оптовый сотрудник"
+        return f"<b>{candidate['alias']} принят.</b>\n\nРоль: {role}\nСтартовый депозит: {deposit:,} ₽\nУсловия оплаты: общие для роли."
 
     @staticmethod
     def _reliability_label(employee, profile) -> str:

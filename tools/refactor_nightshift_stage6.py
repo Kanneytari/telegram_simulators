@@ -58,7 +58,7 @@ def clean_simulation() -> None:
         path,
         "SimulationEngine",
         "ensure_player",
-        '''    def ensure_player(self, player_id: int, username: str | None) -> bool:
+        r'''    def ensure_player(self, player_id: int, username: str | None) -> bool:
         self.seed_catalog()
         now = utcnow()
         with self.db.connect() as conn:
@@ -144,7 +144,7 @@ def clean_simulation() -> None:
         path,
         "SimulationEngine",
         "_simulate_management_events",
-        '''    def _simulate_management_events(self, conn, player_id: int, sim_hours: float, now: datetime) -> int:
+        r'''    def _simulate_management_events(self, conn, player_id: int, sim_hours: float, now: datetime) -> int:
         return 0''',
     )
     for name in ("_maybe_refresh_candidate", "_create_candidate"):
@@ -158,7 +158,7 @@ def clean_runtime() -> None:
     path = APP / "runtime.py"
     write(
         path,
-        '''from __future__ import annotations
+        r'''from __future__ import annotations
 
 from .simulation import SimulationEngine, TickResult, iso, parse_dt, utcnow
 
@@ -213,7 +213,7 @@ def clean_nightshift() -> None:
         path,
         "NightshiftSimulationEngine",
         "ensure_player",
-        '''    def ensure_player(self, player_id: int, username: str | None) -> bool:
+        r'''    def ensure_player(self, player_id: int, username: str | None) -> bool:
         created = super().ensure_player(player_id, username)
         with self.db.connect() as conn:
             conn.execute(
@@ -236,7 +236,7 @@ def clean_game_service() -> None:
         path,
         "GameService",
         "dashboard",
-        '''    def dashboard(self, player_id: int) -> str:
+        r'''    def dashboard(self, player_id: int) -> str:
         self.simulation.advance(player_id)
         with self.db.connect() as conn:
             shop = conn.execute("SELECT * FROM shops WHERE player_id=?", (player_id,)).fetchone()
@@ -283,7 +283,7 @@ def clean_game_service() -> None:
         path,
         "GameService",
         "resolve_dispute",
-        '''    def resolve_dispute(self, player_id: int, dispute_id: int, decision: str) -> str:
+        r'''    def resolve_dispute(self, player_id: int, dispute_id: int, decision: str) -> str:
         if decision not in {"refund", "partial", "reject"}:
             raise ValueError("Unsupported dispute decision")
         now = utcnow()
@@ -332,7 +332,7 @@ def clean_game_service() -> None:
         path,
         "GameService",
         "handle_inbox_action",
-        '''    def handle_inbox_action(self, player_id: int, item_id: int, action: str) -> str:
+        r'''    def handle_inbox_action(self, player_id: int, item_id: int, action: str) -> str:
         with self.db.connect() as conn:
             item = conn.execute(
                 "SELECT * FROM inbox WHERE id=? AND player_id=? AND status='open'",
@@ -363,7 +363,7 @@ def write_dispute_payments() -> None:
         services.unlink()
     write(
         APP / "dispute_payments.py",
-        '''from __future__ import annotations
+        r'''from __future__ import annotations
 
 from .game import GameService
 from .simulation import iso, utcnow
@@ -483,7 +483,7 @@ def clean_operations() -> None:
         path,
         "OperationsSimulationEngine",
         "ensure_player",
-        '''    def ensure_player(self, player_id: int, username: str | None) -> bool:
+        r'''    def ensure_player(self, player_id: int, username: str | None) -> bool:
         created = super().ensure_player(player_id, username)
         if not created:
             return False
@@ -533,7 +533,7 @@ def merge_workflow_final() -> None:
         path,
         "WorkflowSimulationEngine",
         "_simulate_management_events",
-        '''    def _simulate_management_events(self, conn, player_id: int, sim_hours: float, now) -> int:
+        r'''    def _simulate_management_events(self, conn, player_id: int, sim_hours: float, now) -> int:
         created = 0
         hours = min(max(0.0, sim_hours), 12.0)
         if self.rng.random() < 1 - math.exp(-0.035 * hours):
@@ -604,7 +604,7 @@ def merge_workflow_final() -> None:
         path,
         "WorkflowGameService",
         "change_employee_role",
-        '''    def change_employee_role(self, player_id: int, employee_id: int) -> str:
+        r'''    def change_employee_role(self, player_id: int, employee_id: int) -> str:
         with self.db.connect() as conn:
             employee = conn.execute(
                 "SELECT * FROM employees WHERE id=? AND player_id=? AND active=1",
@@ -634,7 +634,7 @@ def merge_workflow_final() -> None:
         path,
         "WorkflowGameService",
         "fire_employee",
-        '''    def fire_employee(self, player_id: int, employee_id: int) -> dict:
+        r'''    def fire_employee(self, player_id: int, employee_id: int) -> dict:
         with self.db.connect() as conn:
             pending = conn.execute(
                 """SELECT 1 FROM retail_allocations
@@ -686,7 +686,7 @@ def clean_courier_profiles_and_hiring() -> None:
         path,
         "CourierCoreGameService",
         "hire_candidate",
-        '''    def hire_candidate(self, player_id: int, candidate_id: int) -> str:
+        r'''    def hire_candidate(self, player_id: int, candidate_id: int) -> str:
         with self.db.connect() as conn:
             candidate = conn.execute(
                 "SELECT * FROM candidates WHERE id=? AND player_id=? AND status='open'",
