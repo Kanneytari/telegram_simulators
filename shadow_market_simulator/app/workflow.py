@@ -6,7 +6,7 @@ from datetime import timedelta
 
 from .operations_final import FinalOperationsGameService, FinalOperationsSimulationEngine
 from .runtime import ROLE_MARKET_PAY
-from .simulation import TickResult, clamp, iso, parse_dt, utcnow
+from .simulation import clamp, iso, parse_dt, utcnow
 
 
 WORKFLOW_SCHEMA = """
@@ -82,7 +82,7 @@ TASK_LABELS = {
 
 
 class WorkflowSimulationEngine(FinalOperationsSimulationEngine):
-    """Stateful employee workflow. Physical logistics remain abstract; inventory accountability is explicit."""
+    """Stateful employee workflow with explicit inventory accountability."""
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -112,7 +112,6 @@ class WorkflowSimulationEngine(FinalOperationsSimulationEngine):
                     )
 
     def _seed_retail_positions(self, player_id: int) -> None:
-        """New games start with a small amount already published so the shop is not inert."""
         with self.db.connect() as conn:
             couriers = conn.execute(
                 "SELECT * FROM employees WHERE player_id=? AND active=1 AND role='courier' ORDER BY id",
@@ -148,7 +147,7 @@ class WorkflowSimulationEngine(FinalOperationsSimulationEngine):
                         batch["quality"],
                     ),
                 )
-                self._publish_allocation(conn, player_id, cur.lastrowid)
+                self._publish_allocation(conn, player_id, int(cur.lastrowid))
 
     def _publish_allocation(self, conn, player_id: int, allocation_id: int) -> None:
         allocation = conn.execute(
@@ -362,7 +361,7 @@ class WorkflowSimulationEngine(FinalOperationsSimulationEngine):
                 quality,
             ),
         )
-        order_id = cur.lastrowid
+        order_id = int(cur.lastrowid)
         profit = revenue - cost - employee_cost
         conn.execute(
             """UPDATE shops SET balance=balance+?, total_revenue=total_revenue+?,
@@ -378,7 +377,6 @@ class WorkflowSimulationEngine(FinalOperationsSimulationEngine):
         if self.rng.random() < probability:
             self._open_dispute(conn, player_id, order_id, client, position, quality, revenue, now)
             return True
-        self._create_review(conn, player_id, order_id, force=False)
         return False
 
     def _has_stock(self, conn, player_id: int, product_id: int, qty: int) -> bool:
@@ -504,10 +502,7 @@ class WorkflowSimulationEngine(FinalOperationsSimulationEngine):
             chance = 1.0 - math.exp(-hourly * min(sim_hours, 24.0))
             if self.rng.random() >= chance:
                 continue
-            if dishonesty > 0.40 and self.rng.random() < 0.45:
-                fraction = 1.0
-            else:
-                fraction = self.rng.choice([0.25, 0.50, 0.75])
+            fraction = 1.0 if dishonesty > 0.40 and self.rng.random() < 0.45 else self.rng.choice([0.25, 0.50, 0.75])
             loss_cost = self._employee_absconds(conn, player_id, employee, fraction)
             deposit_forfeit = deposit
             conn.execute(
@@ -683,8 +678,9 @@ class WorkflowGameService(FinalOperationsGameService):
             employee = conn.execute("SELECT * FROM employees WHERE id=? AND player_id=?", (employee_id, player_id)).fetchone()
             if not employee:
                 return None
-            reviews = conn.execute(
-                "SELECT COUNT(*) count, COALESCE(AVG(rating),0) avg FROM reviews WHERE player_id=? AND employee_id=?",
+            service = conn.execute(
+                """SELECT COUNT(*) count, COALESCE(AVG(courier_rating),0) avg
+                   FROM order_ratings WHERE player_id=? AND employee_id=?""",
                 (player_id, employee_id),
             ).fetchone()
         exposure = self._employee_exposure(player_id, employee_id)
@@ -706,11 +702,12 @@ class WorkflowGameService(FinalOperationsGameService):
             f"<b>Статистика</b>\n"
             f"Операций: {employee['jobs_done']}\n"
             f"Диспутов: {employee['disputes']} ({dispute_rate:.1f}%)\n"
-            f"Потери: {employee['losses']:,} ₽\n"
-            f"Отзывы: {reviews['count']}"
+            f"Потери: {employee['losses']:,} ₽"
         )
-        if reviews["count"]:
-            text += f" · ⭐ {float(reviews['avg']):.2f}"
+        if employee["role"] == "courier":
+            text += f"\nОценок работы: {service['count']}"
+            if service["count"]:
+                text += f" · ⭐ {float(service['avg']):.2f}/5"
         if unsecured > 0:
             text += "\n\n🔴 Часть товара не покрыта депозитом. Риск потери выше."
         return text
@@ -784,7 +781,7 @@ class WorkflowGameService(FinalOperationsGameService):
                         offer["quantity"], offer["quantity"], offer["unit_cost"], quality,
                     ),
                 )
-                batch_id = cur.lastrowid
+                batch_id = int(cur.lastrowid)
                 game_hours = 1.5 + int(offer["quantity"]) / 100.0 * 0.8 + self.rng.uniform(0.2, 1.0)
                 conn.execute(
                     """INSERT INTO employee_tasks(
@@ -858,7 +855,7 @@ class WorkflowGameService(FinalOperationsGameService):
                     batch["product_id"], quantity, batch["unit_cost"], batch["quality"],
                 ),
             )
-            allocation_id = cur.lastrowid
+            allocation_id = int(cur.lastrowid)
             game_hours = 0.7 + quantity / 25.0 * 0.8 + self.rng.uniform(0.2, 0.8)
             conn.execute(
                 """INSERT INTO employee_tasks(
@@ -893,8 +890,11 @@ class WorkflowGameService(FinalOperationsGameService):
         for employee in staff:
             exposure = self._employee_exposure(player_id, int(employee["id"]))
             result.append({
-                "id": int(employee["id"]), "alias": employee["alias"], "deposit": int(employee["deposit"]),
-                "exposure": exposure, "free": max(0, int(employee["deposit"]) - exposure),
+                "id": int(employee["id"]),
+                "alias": employee["alias"],
+                "deposit": int(employee["deposit"]),
+                "exposure": exposure,
+                "free": max(0, int(employee["deposit"]) - exposure),
             })
         return batch, result
 
