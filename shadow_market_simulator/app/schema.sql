@@ -98,6 +98,7 @@ CREATE TABLE courier_candidate_profiles (
     resilience REAL NOT NULL,
     integrity REAL NOT NULL,
     trait TEXT NOT NULL,
+    transport_level INTEGER NOT NULL DEFAULT 0 CHECK(transport_level BETWEEN 0 AND 2),
     phone_level INTEGER NOT NULL DEFAULT 0 CHECK(phone_level BETWEEN 0 AND 2)
 );
 
@@ -169,8 +170,6 @@ CREATE TABLE disputes (
     message TEXT NOT NULL,
     evidence_json TEXT NOT NULL,
     courier_reply TEXT,
-    courier_reply_pending TEXT,
-    courier_reply_due_at TEXT,
     status TEXT NOT NULL DEFAULT 'open',
     decision TEXT,
     refund_amount INTEGER NOT NULL DEFAULT 0,
@@ -304,6 +303,13 @@ CREATE TABLE payroll_runs (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE player_tips (
+    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
+    code TEXT NOT NULL,
+    shown_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(player_id, code)
+);
+
 CREATE TABLE procurement_market_state (
     player_id INTEGER PRIMARY KEY REFERENCES shops(player_id) ON DELETE CASCADE,
     last_rotation_at TEXT NOT NULL
@@ -343,7 +349,7 @@ CREATE TABLE recruitment_campaigns (
     traffic_multiplier INTEGER NOT NULL DEFAULT 1,
     duration_hours INTEGER NOT NULL DEFAULT 4,
     min_deposit INTEGER NOT NULL DEFAULT 25000,
-    car_required INTEGER NOT NULL DEFAULT 0,
+    transport_required INTEGER NOT NULL DEFAULT 0 CHECK(transport_required BETWEEN 0 AND 2),
     experience_required INTEGER NOT NULL DEFAULT 0,
     expected_min INTEGER NOT NULL DEFAULT 0,
     expected_max INTEGER NOT NULL DEFAULT 0,
@@ -362,7 +368,7 @@ CREATE TABLE recruitment_drafts (
     traffic_multiplier INTEGER NOT NULL DEFAULT 1,
     duration_hours INTEGER NOT NULL DEFAULT 4,
     min_deposit INTEGER NOT NULL DEFAULT 25000,
-    car_required INTEGER NOT NULL DEFAULT 0,
+    transport_required INTEGER NOT NULL DEFAULT 0 CHECK(transport_required BETWEEN 0 AND 2),
     experience_required INTEGER NOT NULL DEFAULT 0,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

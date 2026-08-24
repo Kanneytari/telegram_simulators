@@ -15,8 +15,8 @@ def callbacks(markup):
 def test_home_uses_only_canonical_sections():
     assert labels(home_keyboard(5, 2)) == [
         "📨 Входящие · 5 · 🔴 2",
-        "📦 Закупки",
-        "🏷 Продажа",
+        "📦 Товар",
+        "🏷 Витрина",
         "👥 Команда",
         "📊 Аналитика",
         "Обновить",
@@ -51,7 +51,7 @@ def test_courier_profile_separates_frequent_and_rare_actions():
 
 def test_packaging_is_nested_under_sales():
     markup = packaging_keyboard({"pct_1": 60, "pct_2": 30, "pct_5": 10})
-    assert "menu:sales" in callbacks(markup)
+    assert "menu:storefront" in callbacks(markup)
     assert "menu:team" not in callbacks(markup)
 
 

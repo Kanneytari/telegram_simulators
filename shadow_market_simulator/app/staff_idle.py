@@ -37,7 +37,7 @@ class IdleAwareGameService(StaffRelationshipGameService):
                 (retail_employee_id, player_id),
             ).fetchone()
         if not employee or not employee["active"] or employee["role"] != "courier":
-            return "Розничный сотрудник недоступен."
+            return "Закладчик недоступен."
         if not employee["available"]:
             return "Сотрудник сейчас на паузе или недоступен и не может принять новую передачу."
         return super().allocate_to_retail(player_id, batch_id, retail_employee_id, quantity)

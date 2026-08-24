@@ -22,7 +22,7 @@ DEPOSIT_TARGETS = (60_000, 100_000, 150_000)
 
 TRANSPORT = {
     0: ("пешком", 0, 0.00),
-    1: ("самокат", 25_000, 0.08),
+    1: ("велосипед", 25_000, 0.08),
     2: ("автомобиль", 75_000, 0.16),
 }
 PHONE = {
@@ -128,7 +128,6 @@ class CourierManagementGameService(CourierCoreGameService):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            pass
             self.simulation._ensure_courier_management_conn(conn)
 
     def hire_candidate(self, player_id: int, candidate_id: int) -> str:
@@ -138,7 +137,7 @@ class CourierManagementGameService(CourierCoreGameService):
                 (candidate_id, player_id),
             ).fetchone()
             profile = conn.execute(
-                "SELECT phone_level FROM courier_candidate_profiles WHERE candidate_id=?",
+                "SELECT transport_level, phone_level FROM courier_candidate_profiles WHERE candidate_id=?",
                 (candidate_id,),
             ).fetchone()
         result = super().hire_candidate(player_id, candidate_id)
@@ -161,7 +160,7 @@ class CourierManagementGameService(CourierCoreGameService):
                    WHERE employee_id=?""",
                 (
                     max(60_000, int(employee["deposit"])),
-                    2 if int(candidate["has_car"]) else 0,
+                    int(profile["transport_level"]) if profile else 0,
                     int(profile["phone_level"]) if profile else 0,
                     int(employee["id"]),
                 ),
@@ -300,10 +299,10 @@ class CourierManagementGameService(CourierCoreGameService):
     @staticmethod
     def _condition(stress: float) -> tuple[str, str]:
         if stress >= 78:
-            return "🔴", "на пределе"
+            return "🔴", "перегружен"
         if stress >= 52:
             return "🟡", "напряжён"
-        return "🟢", "в порядке"
+        return "🟢", "в норме"
 
     @staticmethod
     def _relationship(loyalty: float) -> str:

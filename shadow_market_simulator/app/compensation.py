@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from .delayed_disputes import DelayedDisputeGameService, DelayedDisputeSimulationEngine
+from .procurement_market import ProcurementMarketGameService, ProcurementMarketSimulationEngine
 from .simulation import iso, parse_dt, utcnow
 
 
@@ -57,7 +57,7 @@ def _deposit_part(amount: int, pct: int) -> int:
     return max(0, min(int(amount), int(round(int(amount) * int(pct) / 100.0))))
 
 
-class CompensationSimulationEngine(DelayedDisputeSimulationEngine):
+class CompensationSimulationEngine(ProcurementMarketSimulationEngine):
     """Global commission model for retail and wholesale staff."""
 
     def __init__(self, *args, **kwargs) -> None:
@@ -194,7 +194,7 @@ class CompensationSimulationEngine(DelayedDisputeSimulationEngine):
         return created
 
 
-class CompensationGameService(DelayedDisputeGameService):
+class CompensationGameService(ProcurementMarketGameService):
     """UI-facing commission policies and payroll."""
 
     def __init__(self, *args, **kwargs) -> None:
@@ -568,7 +568,7 @@ class CompensationGameService(DelayedDisputeGameService):
         dispute_rate = employee["disputes"] / employee["jobs_done"] * 100.0 if employee["jobs_done"] else 0.0
         role = str(employee["role"])
         policy = self.compensation_policy(player_id, role)
-        role_title = "Оптовый сотрудник" if role == "warehouse" else "Розничный сотрудник"
+        role_title = "Складмен" if role == "warehouse" else "Закладчик"
         role_icon = "🚚" if role == "warehouse" else "👤"
         activity = "\n".join(self._activity_details(player_id, employee_id))
         inventory = self._inventory_lines(player_id, employee_id, role)

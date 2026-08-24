@@ -15,8 +15,8 @@ VOLUME_OPTIONS = (1, 2, 4)
 DURATION_OPTIONS = (4, 12, 24)
 RETAIL_STARTING_DEPOSIT_CAP = 100_000
 ROLE_TITLES = {
-    "courier": "Розничный сотрудник",
-    "warehouse": "Оптовый сотрудник",
+    "courier": "Закладчик",
+    "warehouse": "Складмен",
 }
 
 
@@ -182,14 +182,14 @@ class RecruitmentService:
             with self.db.connect() as conn:
                 conn.execute(
                     """UPDATE recruitment_drafts
-                       SET role=?, min_deposit=?, updated_at=CURRENT_TIMESTAMP
+                       SET role=?, min_deposit=?, transport_required=0, updated_at=CURRENT_TIMESTAMP
                        WHERE player_id=?""",
                     (value, default_deposit, player_id),
                 )
             return
         if field not in {
             "channel", "traffic_multiplier", "duration_hours", "min_deposit",
-            "car_required", "experience_required",
+            "transport_required", "experience_required",
         }:
             raise ValueError("Unsupported draft field")
         if field == "min_deposit" and self.ensure_draft(player_id)["role"] == "courier":
@@ -242,8 +242,8 @@ class RecruitmentService:
             math.exp(-(min_deposit - deposit_floor) / deposit_scale), 0.18, 1.0
         )
         requirement_factor = 1.0
-        if int(draft["car_required"]):
-            requirement_factor *= 0.58
+        transport_required = int(draft["transport_required"])
+        requirement_factor *= {0: 1.0, 1: 0.75, 2: 0.58}.get(transport_required, 1.0)
         if int(draft["experience_required"]):
             requirement_factor *= 0.55
         expected = (
@@ -296,13 +296,13 @@ class RecruitmentService:
                 """INSERT INTO recruitment_campaigns(
                        player_id, channel, role, cost, resolves_at,
                        traffic_multiplier, duration_hours, min_deposit,
-                       car_required, experience_required, expected_min, expected_max,
+                       transport_required, experience_required, expected_min, expected_max,
                        terms_fixed_fee, terms_base_rate_bps, terms_risk_rate_bps, terms_deposit_pct
                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     player_id, channel.code, draft["role"], quote["cost"], iso(resolves_at),
                     draft["traffic_multiplier"], duration_hours, draft["min_deposit"],
-                    draft["car_required"], draft["experience_required"],
+                    draft["transport_required"], draft["experience_required"],
                     quote["expected_min"], quote["expected_max"],
                     policy["fixed_fee"], policy["base_rate_bps"],
                     policy["risk_rate_bps"], policy["deposit_contribution_pct"],
@@ -408,14 +408,14 @@ class RecruitmentService:
     def _create_candidate(self, conn, player_id: int, campaign, channel: RecruitmentChannel, now) -> None:
         role = str(campaign["role"])
         min_deposit = int(campaign["min_deposit"])
-        car_required = bool(campaign["car_required"])
+        transport_required = int(campaign["transport_required"])
         experience_required = bool(campaign["experience_required"])
         deposit_reference = 300_000 if role == "warehouse" else 25_000
         quality_scale = 900_000 if role == "warehouse" else 100_000
         quality_bonus = (
             channel.quality_bonus
             + clamp((min_deposit - deposit_reference) / quality_scale * 0.12, -0.05, 0.10)
-            + (0.02 if car_required else 0.0)
+            + (0.02 if transport_required >= 2 else 0.01 if transport_required == 1 else 0.0)
             + (0.05 if experience_required else 0.0)
         )
         alias = self.rng.choice(["Гриф", "Луна", "Рысь", "Штрих", "Кедр", "Ноль", "Фаза", "Север", "Ток"]) + str(self.rng.randint(10, 99))
@@ -431,7 +431,7 @@ class RecruitmentService:
             experience_level = self.rng.choice([0, 0, 1, 1])
         else:
             experience_level = self.rng.choice([0, 0, 0, 1])
-        has_car = 1 if car_required else int(self.rng.random() < channel.car_probability)
+        has_car = 1 if transport_required >= 2 else int(self.rng.random() < channel.car_probability)
         if role == "warehouse":
             pool = (200_000, 300_000, 450_000, 650_000, 900_000, 1_200_000, 1_600_000)
         else:

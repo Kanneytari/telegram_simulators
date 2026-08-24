@@ -58,13 +58,13 @@ def test_profile_separates_current_activity_from_inventory(tmp_path):
             """INSERT INTO employee_tasks(
                    player_id, employee_id, kind, batch_id, allocation_id,
                    product_id, quantity, completes_at, note
-               ) VALUES (1001, ?, 'prepare_positions', ?, ?, ?, 10, ?, 'test')""",
+               ) VALUES (1001, ?, 'place_stashes', ?, ?, ?, 10, ?, 'test')""",
             (courier["id"], batch["id"], allocation_id, batch["product_id"], iso(utcnow() + timedelta(hours=2))),
         )
 
     text = game.employee_details(1001, courier["id"])
-    assert "Статус: <b>готовит позиции" in text
-    assert "Задача: Подготовка позиций к публикации" in text
+    assert "Статус: <b>раскидывает клады" in text
+    assert "Задача: Подготовка товара к витрине" in text
     assert "на руках 10 ед." in text
     assert "<b>Товар</b>" in text
 
@@ -108,7 +108,7 @@ def test_publication_history_drives_productivity_and_inventory(tmp_path):
     assert "витрина" in text
     productivity = "\n".join(game._productivity_lines(1001, int(courier["id"])))
     assert "Средняя: <b>" in productivity
-    assert "поз. / игровые сутки" in productivity
+    assert "фасовок / игровые сутки" in productivity
 
 
 def test_short_eta_is_safe_for_html_parse_mode(tmp_path):
@@ -134,7 +134,7 @@ def test_short_eta_is_safe_for_html_parse_mode(tmp_path):
             """INSERT INTO employee_tasks(
                    player_id, employee_id, kind, batch_id, allocation_id,
                    product_id, quantity, completes_at, note
-               ) VALUES (1001, ?, 'prepare_positions', ?, ?, ?, 5, ?, 'short eta')""",
+               ) VALUES (1001, ?, 'place_stashes', ?, ?, ?, 5, ?, 'short eta')""",
             (courier["id"], batch["id"], cur.lastrowid, batch["product_id"], iso(utcnow() + timedelta(minutes=20))),
         )
 

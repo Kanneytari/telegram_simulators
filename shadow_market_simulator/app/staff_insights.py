@@ -25,9 +25,9 @@ class StaffInsightSimulationEngine(WorkflowSimulationEngine):
                        SET body=?
                        WHERE player_id=? AND kind='tutorial' AND status='open'""",
                     (
-                        "Стартовые партии находятся у оптового сотрудника и не выставлены на витрину.\n\n"
-                        "Открой «Команда», выбери оптового сотрудника и самостоятельно распредели товар между розничными сотрудниками. "
-                        "Непокрытый депозитом риск появляется только после твоего решения передать сотруднику слишком дорогой объём.",
+                        "Стартовые партии уже находятся на складе у складмена.\n\n"
+                        "Открой «Товар» → «Склад» и распредели товар между закладчиками. "
+                        "После подготовки фасовки появятся на витрине и начнут продаваться автоматически.",
                         player_id,
                     ),
                 )
@@ -139,9 +139,7 @@ class StaffInsightGameService(WorkflowGameService):
             if resignation:
                 return "готовится уйти"
             task = conn.execute(
-                """SELECT t.*, p.title product_title
-                   FROM employee_tasks t
-                   LEFT JOIN products p ON p.id=t.product_id
+                """SELECT t.* FROM employee_tasks t
                    WHERE t.player_id=? AND t.employee_id=? AND t.status='active'
                    ORDER BY t.completes_at LIMIT 1""",
                 (player_id, employee_id),
@@ -153,7 +151,7 @@ class StaffInsightGameService(WorkflowGameService):
                 labels = {
                     "receive_batch": "получает партию",
                     "handoff": "готовит передачу",
-                    "prepare_positions": "готовит позиции",
+                    "place_stashes": "раскидывает клады",
                 }
                 return f"{labels.get(task['kind'], task['kind'])} · {eta}"
             if not employee["available"]:
@@ -161,7 +159,7 @@ class StaffInsightGameService(WorkflowGameService):
                     remaining_real = max(0.0, (parse_dt(employee["unavailable_until"]) - now).total_seconds() / 3600.0)
                     remaining_game = remaining_real * self.simulation.effective_speed(player_id)
                     eta = "менее 1 ч" if remaining_game < 1 else f"~{remaining_game:.1f} ч"
-                    return f"временная пауза · {eta}"
+                    return f"отдыхает · {eta}" if employee["role"] == "courier" else f"недоступен · {eta}"
                 return "временно недоступен"
             if employee["role"] == "courier":
                 waiting = int(conn.execute(
@@ -171,6 +169,20 @@ class StaffInsightGameService(WorkflowGameService):
                 ).fetchone()[0])
                 if waiting:
                     return f"ожидает товар · {waiting} ед."
+                preparing = int(conn.execute(
+                    """SELECT COALESCE(SUM(quantity),0) FROM retail_allocations
+                       WHERE player_id=? AND retail_employee_id=? AND status='preparing'""",
+                    (player_id, employee_id),
+                ).fetchone()[0])
+                if preparing:
+                    return f"раскидывает клады · {preparing} ед."
+                published = int(conn.execute(
+                    """SELECT COALESCE(SUM(position_count*pack_size),0) FROM retail_positions
+                       WHERE player_id=? AND employee_id=? AND position_count>0""",
+                    (player_id, employee_id),
+                ).fetchone()[0])
+                if published:
+                    return f"ждёт продажи · {published} ед."
             else:
                 ready = int(conn.execute(
                     """SELECT COALESCE(SUM(remaining),0) FROM batches
@@ -179,7 +191,7 @@ class StaffInsightGameService(WorkflowGameService):
                     (player_id, employee_id),
                 ).fetchone()[0])
                 if ready:
-                    return f"свободен · к распределению {ready} ед."
+                    return f"ждёт распределения · {ready} ед."
         return "свободен"
 
     def _activity_details(self, player_id: int, employee_id: int) -> list[str]:
@@ -202,8 +214,8 @@ class StaffInsightGameService(WorkflowGameService):
         if task:
             labels = {
                 "receive_batch": "Получение партии",
-                "handoff": "Подготовка передачи рознице",
-                "prepare_positions": "Подготовка позиций к публикации",
+                "handoff": "Подготовка передачи закладчику",
+                "place_stashes": "Подготовка товара к витрине",
             }
             remaining_real_min = max(0.0, (parse_dt(task["completes_at"]) - now).total_seconds() / 60.0)
             remaining_game_h = remaining_real_min / 60.0 * self.simulation.effective_speed(player_id)
@@ -239,7 +251,6 @@ class StaffInsightGameService(WorkflowGameService):
                         (player_id, employee_id, product["id"]),
                     ).fetchone()
                     published_units = int(published["units"] or 0)
-                    positions = int(published["positions"] or 0)
                     if waiting or preparing or published_units:
                         parts = []
                         if waiting:
@@ -247,7 +258,7 @@ class StaffInsightGameService(WorkflowGameService):
                         if preparing:
                             parts.append(f"на руках {preparing} ед.")
                         if published_units:
-                            parts.append(f"витрина {published_units} ед. / {positions} поз.")
+                            parts.append(f"витрина {published_units} ед.")
                         lines.append(f"{product['title']}: " + " · ".join(parts))
                 else:
                     receiving = int(conn.execute(
@@ -304,8 +315,8 @@ class StaffInsightGameService(WorkflowGameService):
         active_days = max(1.0, (current_hour - first_hour) / 24.0)
         average = int(total["positions"] or 0) / active_days
         lines = [
-            f"Средняя: <b>{average:.1f} поз. / игровые сутки</b>",
-            f"Последние 24 игровых ч: {last} поз.",
+            f"Средняя: <b>{average:.1f} фасовок / игровые сутки</b>",
+            f"Последние 24 игровых ч: {last} фасовок",
         ]
         if previous > 0:
             delta = (last / previous - 1.0) * 100.0

@@ -260,7 +260,7 @@ def test_rest_waits_for_current_task_instead_of_breaking_workflow(tmp_path):
         conn.execute("UPDATE employees SET deposit=0, wages_accrued=0 WHERE player_id=?", (PLAYER_ID,))
         conn.execute(
             """INSERT INTO employee_tasks(player_id, employee_id, kind, quantity, completes_at, note)
-               VALUES (?, ?, 'prepare_positions', 5, ?, 'test')""",
+               VALUES (?, ?, 'place_stashes', 5, ?, 'test')""",
             (PLAYER_ID, employee_id, iso(utcnow() + timedelta(hours=2))),
         )
     assert game.send_to_rest(PLAYER_ID, employee_id, 12)["status"] == "tasks"
@@ -346,7 +346,7 @@ def test_candidate_phone_profile_transfers_on_hire(tmp_path):
         "id": 999,
         "role": "courier",
         "min_deposit": 0,
-        "car_required": 0,
+        "transport_required": 0,
         "experience_required": 0,
     }
     with db.connect() as conn:

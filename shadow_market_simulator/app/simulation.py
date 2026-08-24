@@ -154,7 +154,7 @@ class SimulationEngine:
             conn.execute(
                 """INSERT INTO inbox(player_id, kind, priority, title, body, payload_json, expires_at)
                    VALUES (?, 'tutorial', 'normal', 'Смена началась',
-                   'Магазин работает сам по себе. Продажи, обращения и проблемы будут возникать даже когда ты офлайн. Начни с разделов «Входящие», «Команда» и «Закупки».', '{}', ?)""",
+                   'Магазин работает сам по себе. Продажи, обращения и проблемы будут возникать даже когда ты офлайн. Начни с разделов «Входящие», «Команда» и «Товар».', '{}', ?)""",
                 (player_id, iso(now + timedelta(hours=12))),
             )
             return True

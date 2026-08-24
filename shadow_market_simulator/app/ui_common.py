@@ -46,6 +46,15 @@ def normalize_text(text: str) -> str:
     return _THOUSANDS_COMMA.sub(" ", text)
 
 
+def claim_tip(db, player_id: int, code: str) -> bool:
+    with db.connect() as conn:
+        cur = conn.execute(
+            "INSERT OR IGNORE INTO player_tips(player_id, code) VALUES (?, ?)",
+            (player_id, code),
+        )
+    return cur.rowcount > 0
+
+
 async def present(
     target: Message,
     text: str,

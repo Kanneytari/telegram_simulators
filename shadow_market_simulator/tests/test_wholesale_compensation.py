@@ -62,7 +62,7 @@ def test_wholesale_is_paid_percentage_on_successful_handoff_not_procurement(tmp_
         conn.execute("UPDATE employees SET deposit=0 WHERE id=?", (wholesale_id,))
 
     result = game.buy_offer_for_employee(1001, offer_id, wholesale_id)
-    assert "Оплата будет начислена после успешной передачи товара рознице" in result
+    assert "Оплата складмену будет начислена после успешной передачи товара" in result
 
     with db.connect() as conn:
         after_purchase = conn.execute(

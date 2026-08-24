@@ -34,27 +34,19 @@ async def render_batch(target: Message, game, player_id: int, batch_id: int, *, 
         return
     with game.db.connect() as conn:
         product = conn.execute("SELECT title FROM products WHERE id=?", (batch["product_id"],)).fetchone()
-        responsible = (
-            conn.execute("SELECT alias FROM employees WHERE id=? AND active=1", (batch["responsible_employee_id"],)).fetchone()
-            if batch["responsible_employee_id"] else None
-        )
-        warehouse_count = int(conn.execute(
-            "SELECT COUNT(*) FROM employees WHERE player_id=? AND active=1 AND role='warehouse'",
-            (player_id,),
-        ).fetchone()[0])
-
-    state = "принимается" if batch["status"] == "receiving" else "готова к передаче"
+        responsible = conn.execute("SELECT alias FROM employees WHERE id=? AND active=1", (batch["responsible_employee_id"],)).fetchone() if batch["responsible_employee_id"] else None
+        warehouse_count = int(conn.execute("SELECT COUNT(*) FROM employees WHERE player_id=? AND active=1 AND role='warehouse'", (player_id,)).fetchone()[0])
+    state = "получает" if batch["status"] == "receiving" else "готова к передаче"
     text = (
         f"<b>{clean(product['title'])} · партия #{batch_id}</b>\n\n"
-        f"{int(batch['remaining'])} ед. · {money(int(batch['remaining'] * batch['unit_cost']))}\n"
-        f"Ответственный: {clean(responsible['alias']) if responsible else 'не назначен'} · {state}"
+        f"Осталось: {int(batch['remaining'])} ед. · {money(int(batch['remaining'] * batch['unit_cost']))}\n"
+        f"Складмен: {clean(responsible['alias']) if responsible else 'не назначен'} · {state}"
     )
     rows: list[list[InlineKeyboardButton]] = []
-
     if not responsible:
-        text += "\n\n🔴 Сначала назначь оптового сотрудника."
+        text += "\n\n🔴 Сначала назначь складмена."
         if warehouse_count:
-            rows.append([InlineKeyboardButton(text="Назначить ответственного", callback_data=f"team:reassign:{batch_id}")])
+            rows.append([InlineKeyboardButton(text="Назначить складмена", callback_data=f"team:reassign:{batch_id}")])
         else:
             rows.append([InlineKeyboardButton(text="Нанять сотрудника", callback_data="team:recruit")])
     elif batch["status"] == "warehouse":
@@ -63,75 +55,48 @@ async def render_batch(target: Message, game, player_id: int, batch_id: int, *, 
         for employee in staff:
             live = employees.get(int(employee["id"]), {})
             status = str(live.get("status_text") or "свободен")
-            if status == "свободен":
-                status = "готов принять"
+            if status == "свободен": status = "готов принять"
             unsecured = max(0, int(employee.get("exposure", 0)) - int(employee["deposit"]))
-            risk = f" · 🔴 уже {money(unsecured)}" if unsecured else ""
-            rows.append([InlineKeyboardButton(
-                text=f"{employee['alias']} · {status}{risk}",
-                callback_data=f"team:alloc:{batch_id}:{employee['id']}:{min(10, int(batch['remaining']))}",
-            )])
+            risk = f" · 🔴 уже не покрыто {money(unsecured)}" if unsecured else ""
+            rows.append([InlineKeyboardButton(text=f"{employee['alias']} · {status}{risk}", callback_data=f"team:alloc:{batch_id}:{employee['id']}:{int(employee.get('recommended_quantity', 0))}")])
         if warehouse_count > 1:
-            rows.append([InlineKeyboardButton(text="Сменить ответственного", callback_data=f"team:reassign:{batch_id}")])
-
-    rows.append(nav_row("team:batches", "← Партии"))
+            rows.append([InlineKeyboardButton(text="Сменить складмена", callback_data=f"team:reassign:{batch_id}")])
+    rows.append(nav_row("team:batches", "← Склад"))
     await present(target, notice(flash, text), InlineKeyboardMarkup(inline_keyboard=rows))
-
 
 async def render_candidate(target: Message, game, player_id: int, candidate_id: int) -> None:
     with game.db.connect() as conn:
         row = conn.execute(
-            """SELECT c.*, rc.terms_fixed_fee, rc.terms_base_rate_bps,
-                      rc.terms_risk_rate_bps, rc.terms_deposit_pct
-               FROM candidates c
-               LEFT JOIN recruitment_campaigns rc ON rc.id=c.campaign_id
+            """SELECT c.*, rc.terms_fixed_fee, rc.terms_base_rate_bps, rc.terms_risk_rate_bps, rc.terms_deposit_pct
+               FROM candidates c LEFT JOIN recruitment_campaigns rc ON rc.id=c.campaign_id
                WHERE c.id=? AND c.player_id=? AND c.status='open'""",
             (candidate_id, player_id),
         ).fetchone()
-        profile = conn.execute(
-            "SELECT phone_level FROM courier_candidate_profiles WHERE candidate_id=?",
-            (candidate_id,),
-        ).fetchone()
+        profile = conn.execute("SELECT transport_level, phone_level FROM courier_candidate_profiles WHERE candidate_id=?", (candidate_id,)).fetchone()
     if not row:
-        await present(
-            target,
-            "Кандидат уже недоступен.",
-            InlineKeyboardMarkup(inline_keyboard=[nav_row("team:candidates", "← Кандидаты")]),
-        )
+        await present(target, "Кандидат уже недоступен.", InlineKeyboardMarkup(inline_keyboard=[nav_row("team:candidates", "← Кандидаты")]))
         return
-
-    role = str(row["role"])
-    role_text = "розница" if role == "courier" else "опт"
-    experience = {0: "нет подтверждённого", 1: "есть", 2: "сильный"}.get(int(row["experience_level"] or 0), "нет данных")
-    lines = [
-        f"<b>{'👤' if role == 'courier' else '🚚'} {clean(row['alias'])} · {role_text}</b>",
-        "",
-        f"Депозит: {money(row['deposit'])}",
-        f"Опыт: {experience}",
-        f"Автомобиль: {'есть' if row['has_car'] else 'нет'}",
-    ]
+    role = str(row["role"]); role_text = "закладчик" if role == "courier" else "складмен"
+    experience = {0: "нет", 1: "есть", 2: "сильный"}.get(int(row["experience_level"] or 0), "нет данных")
+    lines = [f"<b>{'👤' if role == 'courier' else '🚚'} {clean(row['alias'])} · {role_text}</b>", "", f"Депозит: {money(row['deposit'])}", f"Опыт: {experience}"]
     policy = game.compensation_policy(player_id, role)
     if role == "courier":
-        phone = PHONE[int(profile["phone_level"] if profile else 0)][0]
-        lines.append(f"Телефон: {phone}")
+        transport_level = int(profile["transport_level"] if profile else 0)
+        lines.extend([f"Передвижение: {TRANSPORT[transport_level][0]}", f"Телефон: {PHONE[int(profile['phone_level'] if profile else 0)][0]}"])
         fixed = int(row["terms_fixed_fee"] if row["terms_fixed_fee"] is not None else policy["fixed_fee"])
         rate = int(row["terms_base_rate_bps"] if row["terms_base_rate_bps"] is not None else policy["base_rate_bps"])
         deposit_pct = int(row["terms_deposit_pct"] if row["terms_deposit_pct"] is not None else policy["deposit_contribution_pct"])
-        terms = f"{money(fixed)} + {pct(rate / 100, 1)} с продажи · депозит {deposit_pct}%"
+        terms = f"{money(fixed)} за заказ + {pct(rate / 100, 1)} с продажи\n{deposit_pct}% заработка идёт в депозит"
     else:
         rate = int(row["terms_base_rate_bps"] if row["terms_base_rate_bps"] is not None else policy["base_rate_bps"])
         deposit_pct = int(row["terms_deposit_pct"] if row["terms_deposit_pct"] is not None else policy["deposit_contribution_pct"])
-        terms = f"{pct(rate / 100, 1)} с передачи · депозит {deposit_pct}%"
+        terms = f"{pct(rate / 100, 1)} с передачи\n{deposit_pct}% заработка идёт в депозит"
     lines.extend(["", "<b>Условия</b>", terms])
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="Нанять", callback_data=f"team:hire:{candidate_id}"),
-            InlineKeyboardButton(text="Отказать", callback_data=f"team:reject:{candidate_id}"),
-        ],
+        [InlineKeyboardButton(text="Нанять", callback_data=f"team:hire:{candidate_id}"), InlineKeyboardButton(text="Отказать", callback_data=f"team:reject:{candidate_id}")],
         nav_row("team:candidates", "← Кандидаты"),
     ])
     await present(target, "\n".join(lines), keyboard)
-
 
 def candidates_keyboard(candidates) -> InlineKeyboardMarkup:
     rows = [[InlineKeyboardButton(
@@ -286,8 +251,8 @@ def build_staff_router(game, simulation, recruitment) -> Router:
             ).fetchone()
         if not employee:
             return
-        current = "опт" if employee["role"] == "warehouse" else "розница"
-        new = "розница" if employee["role"] == "warehouse" else "опт"
+        current = "складмен" if employee["role"] == "warehouse" else "закладчик"
+        new = "закладчик" if employee["role"] == "warehouse" else "складмен"
         await present(
             callback.message,
             f"<b>Сменить роль · {clean(employee['alias'])}</b>\n\nСейчас: {current}\nНовая роль: <b>{new}</b>\n\nСмена возможна только без товара и активных задач.",
@@ -399,7 +364,7 @@ def build_staff_router(game, simulation, recruitment) -> Router:
                 result = "Партия или сотрудник уже недоступны."
             else:
                 conn.execute("UPDATE batches SET responsible_employee_id=? WHERE id=?", (employee_id, batch_id))
-                result = f"Ответственный: {employee['alias']}."
+                result = f"Складмен: {employee['alias']}."
         await render_batch(callback.message, game, callback.from_user.id, batch_id, flash=result)
 
     @router.callback_query(F.data == "team:terms")
@@ -475,7 +440,7 @@ def build_staff_router(game, simulation, recruitment) -> Router:
     async def recruit_set(callback: CallbackQuery) -> None:
         await callback.answer()
         _, _, field, value = callback.data.split(":")
-        recruitment.update_draft(callback.from_user.id, field, value if field == "role" else int(value))
+        recruitment.update_draft(callback.from_user.id, field, int(value))
         await render_recruitment_draft(callback.message, recruitment, callback.from_user.id)
 
     @router.callback_query(F.data.startswith("recruit:adj:"))
@@ -485,12 +450,19 @@ def build_staff_router(game, simulation, recruitment) -> Router:
         recruitment.adjust_draft(callback.from_user.id, field, int(delta))
         await render_recruitment_draft(callback.message, recruitment, callback.from_user.id)
 
-    @router.callback_query(F.data.startswith("recruit:toggle:"))
-    async def recruit_toggle(callback: CallbackQuery) -> None:
+    @router.callback_query(F.data.startswith("recruit:cycle:"))
+    async def recruit_cycle(callback: CallbackQuery) -> None:
         await callback.answer()
         field = callback.data.split(":")[2]
         draft = recruitment.ensure_draft(callback.from_user.id)
-        recruitment.update_draft(callback.from_user.id, field, 0 if draft[field] else 1)
+        if field == "role":
+            recruitment.update_draft(callback.from_user.id, "role", "warehouse" if draft["role"] == "courier" else "courier")
+        elif field == "experience":
+            recruitment.update_draft(callback.from_user.id, "experience_required", 0 if int(draft["experience_required"]) else 1)
+        elif field == "transport" and draft["role"] == "courier":
+            recruitment.update_draft(callback.from_user.id, "transport_required", (int(draft["transport_required"]) + 1) % 3)
+        elif field == "coverage":
+            recruitment.update_draft(callback.from_user.id, "traffic_multiplier", {1: 2, 2: 4, 4: 1}.get(int(draft["traffic_multiplier"]), 1))
         await render_recruitment_draft(callback.message, recruitment, callback.from_user.id)
 
     @router.callback_query(F.data == "recruit:run")
