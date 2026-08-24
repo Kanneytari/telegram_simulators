@@ -172,20 +172,35 @@ CREATE TABLE IF NOT EXISTS orders (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Removed from live UX. Kept temporarily until analytics/event-log migration is
--- completed in this branch, then deleted before merge.
-CREATE TABLE IF NOT EXISTS reviews (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+CREATE TABLE IF NOT EXISTS order_ratings (
+    order_id INTEGER PRIMARY KEY REFERENCES orders(id) ON DELETE CASCADE,
     player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
-    order_id INTEGER NOT NULL UNIQUE REFERENCES orders(id) ON DELETE CASCADE,
     client_id INTEGER NOT NULL REFERENCES clients(id),
-    product_id INTEGER NOT NULL REFERENCES products(id),
     employee_id INTEGER NOT NULL REFERENCES employees(id),
-    rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
-    text TEXT NOT NULL,
-    quality_sentiment TEXT NOT NULL,
-    delivery_sentiment TEXT NOT NULL,
+    product_id INTEGER NOT NULL REFERENCES products(id),
+    product_rating INTEGER NOT NULL CHECK(product_rating BETWEEN 1 AND 5),
+    courier_rating INTEGER NOT NULL CHECK(courier_rating BETWEEN 1 AND 5),
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS client_relationships (
+    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
+    client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    purchases INTEGER NOT NULL DEFAULT 0,
+    lifetime_value INTEGER NOT NULL DEFAULT 0,
+    trust REAL NOT NULL DEFAULT 0.48,
+    last_product_rating INTEGER,
+    last_courier_rating INTEGER,
+    last_purchase_at TEXT,
+    PRIMARY KEY(player_id, client_id)
+);
+
+CREATE TABLE IF NOT EXISTS shop_trust_state (
+    player_id INTEGER PRIMARY KEY REFERENCES shops(player_id) ON DELETE CASCADE,
+    trust_score REAL NOT NULL DEFAULT 64.0,
+    availability_ema REAL NOT NULL DEFAULT 0.60,
+    fairness_ema REAL NOT NULL DEFAULT 0.65,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS disputes (
@@ -261,8 +276,10 @@ CREATE INDEX IF NOT EXISTS idx_orders_player_created ON orders(player_id, create
 CREATE INDEX IF NOT EXISTS idx_orders_repeat ON orders(player_id, customer_was_repeat, created_at);
 CREATE INDEX IF NOT EXISTS idx_batches_player_status ON batches(player_id, status);
 CREATE INDEX IF NOT EXISTS idx_batches_responsible ON batches(player_id, responsible_employee_id, status);
-CREATE INDEX IF NOT EXISTS idx_reviews_product_created ON reviews(player_id, product_id, created_at);
-CREATE INDEX IF NOT EXISTS idx_reviews_employee_created ON reviews(player_id, employee_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_order_ratings_product ON order_ratings(player_id, product_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_order_ratings_employee ON order_ratings(player_id, employee_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_order_ratings_client ON order_ratings(player_id, client_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_client_relationships_value ON client_relationships(player_id, purchases, trust);
 CREATE INDEX IF NOT EXISTS idx_employees_player_active ON employees(player_id, active);
 CREATE INDEX IF NOT EXISTS idx_payroll_player_created ON payroll_runs(player_id, created_at);
 """
@@ -289,7 +306,7 @@ class Database:
 
     @staticmethod
     def _ensure_column(conn: sqlite3.Connection, table: str, column: str, definition: str) -> None:
-        """Temporary compatibility helper for lower layers; fresh schema already contains live columns."""
+        """Compatibility hook for inherited layers; the fresh schema already defines live columns."""
         columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
         if column not in columns:
             conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
