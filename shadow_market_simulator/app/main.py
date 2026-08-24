@@ -14,6 +14,7 @@ from .config import load_settings
 from .courier_management import CourierManagementGameService, CourierManagementSimulationEngine
 from .courier_recruitment import CourierRecruitmentService
 from .db import Database
+from .gameplay_updates import apply_gameplay_updates
 from .inbox_lifecycle import install_inbox_lifecycle
 from .simulation import iso, utcnow
 from .ui_admin import build_admin_router
@@ -22,6 +23,9 @@ from .ui_common import normalize_text
 from .ui_disputes import build_dispute_router
 from .ui_navigation import build_navigation_router
 from .ui_staff_handlers import build_staff_router
+
+
+apply_gameplay_updates()
 
 
 def notification_markup(item) -> InlineKeyboardMarkup:
@@ -38,7 +42,7 @@ def notification_markup(item) -> InlineKeyboardMarkup:
         callback = f"inbox:item:{item_id}"
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=text, callback_data=callback)],
-        [InlineKeyboardButton(text="Меню", callback_data="menu:home")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:home")],
     ])
 
 
