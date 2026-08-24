@@ -15,12 +15,14 @@ jobs:
     defaults:
       run:
         working-directory: shadow_market_simulator
+    env:
+      PYTHONPATH: ${{ github.workspace }}/shadow_market_simulator
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: python -m pip install -r requirements.txt
       - name: Run tests
-        run: pytest -q
+        run: python -m pytest -q
