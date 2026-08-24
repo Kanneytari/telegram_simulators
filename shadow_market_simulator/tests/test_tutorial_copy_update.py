@@ -17,6 +17,21 @@ def test_tutorial_copy_uses_blocks_and_exact_button_labels() -> None:
 
         apply_tutorial_copy_update()
 
+        intro = tutorial._instruction(
+            {"stage": tutorial.STAGE_PROCUREMENT, "data": {}}
+        )
+        assert intro == (
+            "Привет, бро! Рад видеть.\n"
+            "Поздравляю, теперь у тебя свой шоп.\n\n"
+            "Самое время закупиться первой партией товара.\n"
+            "Нажми [📦 Товар] и выбери стафф, с которого хочешь начать.\n"
+            "Обрати внимание на цену, качество и надежность поставки.\n\n"
+            "Мы тут не конфеты продаем. Случиться может что угодно.\n"
+            "Смотри в оба.\n"
+            "Обнял."
+        )
+        assert "Привет, бро!\n\nРад видеть." not in tutorial_hint(intro)
+
         review = tutorial._instruction(
             {"stage": tutorial.STAGE_REVIEW, "data": {"order_id": 1}}
         )
@@ -47,9 +62,10 @@ def test_tutorial_copy_uses_blocks_and_exact_button_labels() -> None:
         assert continue_buttons[0].text == CONTINUE_LABEL
 
         formatted = tutorial_hint(
-            "Первая мысль. Вторая мысль. Нажми ⏩ Пропустить ожидание."
+            "Первая мысль. Вторая мысль.\n\nНажми ⏩ Пропустить ожидание."
         )
-        assert "Первая мысль.\n\nВторая мысль.\n\n" in formatted
+        assert "Первая мысль. Вторая мысль.\n\n" in formatted
+        assert "Первая мысль.\n\nВторая мысль." not in formatted
         assert "[⏩ Пропустить ожидание]" in formatted
 
         for stage in (
