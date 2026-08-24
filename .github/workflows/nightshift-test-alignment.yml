@@ -1,0 +1,33 @@
+name: NIGHTSHIFT current-test alignment
+
+on:
+  push:
+    branches:
+      - refactor/nightshift-clean-architecture
+    paths:
+      - "tools/align_nightshift_tests_current.py"
+      - ".github/workflows/nightshift-test-alignment.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  align:
+    if: ${{ !contains(github.event.head_commit.message, '[auto-test-align]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/nightshift-clean-architecture
+          fetch-depth: 0
+      - name: Apply current test contracts
+        run: python tools/align_nightshift_tests_current.py
+      - name: Commit aligned tests
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add shadow_market_simulator/tests
+          if ! git diff --cached --quiet; then
+            git commit -m "Align NIGHTSHIFT tests with current runtime [auto-test-align]"
+            git push origin HEAD:refactor/nightshift-clean-architecture
+          fi
