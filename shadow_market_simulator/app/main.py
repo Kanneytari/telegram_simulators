@@ -25,9 +25,6 @@ from .ui_navigation import build_navigation_router
 from .ui_staff_handlers import build_staff_router
 
 
-apply_gameplay_updates()
-
-
 def notification_markup(item) -> InlineKeyboardMarkup:
     kind = str(item["kind"])
     item_id = int(item["id"])
@@ -102,6 +99,7 @@ async def notification_loop(
 
 
 async def main() -> None:
+    apply_gameplay_updates()
     settings = load_settings()
     logging.basicConfig(
         level=logging.INFO,
