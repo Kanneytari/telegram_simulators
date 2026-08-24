@@ -155,9 +155,23 @@ class CourierCoreSimulationEngine(CustomerTrustSimulationEngine):
             value *= 0.55
         return value
 
+    @staticmethod
+    def _employee_id(employee) -> int:
+        if isinstance(employee, dict):
+            for key in ("id", "employee_id", "retail_employee_id"):
+                value = employee.get(key)
+                if value is not None:
+                    return int(value)
+            return 0
+        keys = set(employee.keys()) if hasattr(employee, "keys") else set()
+        for key in ("id", "employee_id", "retail_employee_id"):
+            if key in keys and employee[key] is not None:
+                return int(employee[key])
+        return 0
+
     def _courier_rating(self, employee) -> int:
-        employee_id = int(employee["id"])
-        profile = self._profile(employee_id)
+        employee_id = self._employee_id(employee)
+        profile = self._profile(employee_id) if employee_id else None
         if not profile:
             return super()._courier_rating(employee)
         precision = self._effective_precision(profile, float(employee["stress"]))
@@ -175,7 +189,7 @@ class CourierCoreSimulationEngine(CustomerTrustSimulationEngine):
         return 1
 
     def _dispute_probability(self, client, employee, quality: float, modifier: float) -> float:
-        employee_id = int(employee.get("id", 0)) if isinstance(employee, dict) else int(employee["id"])
+        employee_id = self._employee_id(employee)
         profile = self._profile(employee_id) if employee_id else None
         if not profile:
             return super()._dispute_probability(client, employee, quality, modifier)
@@ -189,7 +203,7 @@ class CourierCoreSimulationEngine(CustomerTrustSimulationEngine):
         return clamp((0.016 + employee_error + stress_error + quality_error + fraud) * float(modifier), 0.01, 0.42)
 
     def _open_dispute(self, conn, player_id: int, order_id: int, client, employee, quality: float, revenue: int, now) -> None:
-        employee_id = int(employee.get("id", 0)) if isinstance(employee, dict) else int(employee["id"])
+        employee_id = self._employee_id(employee)
         profile = self._profile_conn(conn, employee_id) if employee_id else None
         if not profile:
             super()._open_dispute(conn, player_id, order_id, client, employee, quality, revenue, now)
