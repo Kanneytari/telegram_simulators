@@ -10,9 +10,9 @@ from aiogram.enums import ParseMode
 from .action_handlers import build_action_router
 from .analytics_handlers import build_analytics_router
 from .analytics_log import AnalyticsLogger, AnalyticsLoggingMiddleware
+from .compensation_handlers import build_compensation_router
 from .config import load_settings
 from .db import Database
-from .deposit_share_handlers import build_deposit_share_router
 from .dispute_handlers import build_dispute_router
 from .employee_profile_handlers import build_employee_profile_router
 from .extended_handlers import build_extended_router
@@ -25,8 +25,8 @@ from .keyboards import notification_actions
 from .operations_handlers import build_operations_router
 from .procurement_handlers import build_procurement_router
 from .product_review_handlers import build_product_review_router
-from .recruitment_deposit_cap import RetailDepositCappedRecruitmentService
 from .recruitment_handlers import build_recruitment_router
+from .recruitment_runtime import NightshiftRecruitmentService
 from .simulation import iso, utcnow
 from .storefront_handlers import build_storefront_router
 from .time_handlers import build_time_router
@@ -41,7 +41,7 @@ async def notification_loop(
     db: Database,
     simulation: GlobalPackagingSimulationEngine,
     game: GlobalPackagingGameService,
-    recruitment: RetailDepositCappedRecruitmentService,
+    recruitment: NightshiftRecruitmentService,
     analytics: AnalyticsLogger,
     interval: int,
 ) -> None:
@@ -74,7 +74,10 @@ async def notification_loop(
                             )
                         except Exception:
                             logging.exception("Failed to log notification %s", item["id"])
-                        conn.execute("UPDATE inbox SET notified_at=? WHERE id=?", (iso(utcnow()), item["id"]))
+                        conn.execute(
+                            "UPDATE inbox SET notified_at=? WHERE id=?",
+                            (iso(utcnow()), item["id"]),
+                        )
                     except Exception:
                         logging.exception("Failed to deliver inbox item %s", item["id"])
         except Exception:
@@ -84,17 +87,19 @@ async def notification_loop(
 
 async def main() -> None:
     settings = load_settings()
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
 
     db = Database(settings.db_path)
     db.init()
     simulation = GlobalPackagingSimulationEngine(db, speed=settings.simulation_speed)
     simulation.seed_catalog()
     game = GlobalPackagingGameService(db, simulation)
-    recruitment = RetailDepositCappedRecruitmentService(db, speed=settings.simulation_speed)
+    recruitment = NightshiftRecruitmentService(db, speed=settings.simulation_speed)
     install_inbox_lifecycle(db)
 
-    # Install after all feature schemas so triggers can reference workflow/recruitment tables.
     analytics = AnalyticsLogger(db)
     analytics.install()
 
@@ -104,17 +109,14 @@ async def main() -> None:
     dispatcher.message.outer_middleware(AnalyticsLoggingMiddleware(analytics))
     dispatcher.callback_query.outer_middleware(AnalyticsLoggingMiddleware(analytics))
 
-    dispatcher.include_router(build_workflow_dashboard_router(db, game, simulation, settings.admin_ids))
-    # Team-wide packaging owns team:packrules before the legacy per-employee routes.
+    dispatcher.include_router(
+        build_workflow_dashboard_router(db, game, simulation, settings.admin_ids)
+    )
+    dispatcher.include_router(build_compensation_router(game))
     dispatcher.include_router(build_global_packaging_router(game))
-    # This router owns the live batch screen, including recipient markers and
-    # wholesale-responsibility reassignment.
     dispatcher.include_router(build_workflow_reassign_router(game))
     dispatcher.include_router(build_workflow_allocation_router(game))
-    # Own employee profiles before the older profile handlers so couriers no longer
-    # expose individual packaging controls.
     dispatcher.include_router(build_employee_profile_router(game))
-    dispatcher.include_router(build_deposit_share_router(game))
     dispatcher.include_router(build_workflow_router(game))
     dispatcher.include_router(build_procurement_router(game))
     dispatcher.include_router(build_product_review_router(game))
@@ -122,11 +124,21 @@ async def main() -> None:
     dispatcher.include_router(build_dispute_router(game))
     dispatcher.include_router(build_storefront_router(db, game, simulation))
     dispatcher.include_router(build_analytics_router(db, game, simulation))
-    dispatcher.include_router(build_time_router(db, simulation, recruitment, game, settings.admin_ids))
-    dispatcher.include_router(build_inbox_close_router(db, game, simulation, settings.admin_ids))
+    dispatcher.include_router(
+        build_time_router(db, simulation, recruitment, game, settings.admin_ids)
+    )
+    dispatcher.include_router(
+        build_inbox_close_router(db, game, simulation, settings.admin_ids)
+    )
     dispatcher.include_router(build_action_router(game))
-    dispatcher.include_router(build_extended_router(db, game, simulation, recruitment, settings.admin_ids))
-    dispatcher.include_router(build_recruitment_router(db, game, simulation, recruitment, settings.admin_ids))
+    dispatcher.include_router(
+        build_extended_router(db, game, simulation, recruitment, settings.admin_ids)
+    )
+    dispatcher.include_router(
+        build_recruitment_router(
+            db, game, simulation, recruitment, settings.admin_ids
+        )
+    )
     dispatcher.include_router(build_router(db, game, simulation, settings.admin_ids))
 
     await bot.delete_webhook(drop_pending_updates=True)
