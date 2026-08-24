@@ -3,7 +3,8 @@ from __future__ import annotations
 import math
 
 from .compensation import _deposit_part, _money_from_bps, _policy_conn
-from .global_packaging import GlobalPackagingGameService, GlobalPackagingSimulationEngine
+from .catalog_extension import ExpandedCatalogSimulationEngine
+from .global_packaging import GlobalPackagingGameService
 from .simulation import clamp, iso
 from .staff_relationships import SALES_ACTIVITY_MULTIPLIER
 
@@ -86,7 +87,7 @@ def premium_allowance(score: float, regular_share: float = 0.0) -> float:
     return clamp(base + max(0.0, float(regular_share)) * 0.05, 0.0, 0.30)
 
 
-class CustomerTrustSimulationEngine(GlobalPackagingSimulationEngine):
+class CustomerTrustSimulationEngine(ExpandedCatalogSimulationEngine):
     """Final live economy: structured ratings, repeat buyers and long-term trust."""
 
     def __init__(self, *args, **kwargs) -> None:

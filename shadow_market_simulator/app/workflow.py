@@ -4,7 +4,7 @@ import json
 import math
 from datetime import timedelta
 
-from .operations_final import FinalOperationsGameService, FinalOperationsSimulationEngine
+from .operations import OperationsGameService, OperationsSimulationEngine
 from .runtime import ROLE_MARKET_PAY
 from .simulation import clamp, iso, parse_dt, utcnow
 
@@ -56,14 +56,12 @@ CREATE TABLE IF NOT EXISTS retail_positions (
     UNIQUE(allocation_id, pack_size)
 );
 
-CREATE TABLE IF NOT EXISTS packaging_rules (
-    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
-    employee_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
-    product_id INTEGER NOT NULL REFERENCES products(id),
+CREATE TABLE IF NOT EXISTS shop_packaging_rules (
+    player_id INTEGER PRIMARY KEY REFERENCES shops(player_id) ON DELETE CASCADE,
     pct_1 INTEGER NOT NULL DEFAULT 60,
     pct_2 INTEGER NOT NULL DEFAULT 30,
     pct_5 INTEGER NOT NULL DEFAULT 10,
-    PRIMARY KEY(player_id, employee_id, product_id)
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_tasks_player_active ON employee_tasks(player_id, status, completes_at);
@@ -81,7 +79,7 @@ TASK_LABELS = {
 }
 
 
-class WorkflowSimulationEngine(FinalOperationsSimulationEngine):
+class WorkflowSimulationEngine(OperationsSimulationEngine):
     """Stateful employee workflow with explicit inventory accountability."""
 
     def __init__(self, *args, **kwargs) -> None:
@@ -98,18 +96,10 @@ class WorkflowSimulationEngine(FinalOperationsSimulationEngine):
 
     def _ensure_packaging_rules(self, player_id: int) -> None:
         with self.db.connect() as conn:
-            couriers = conn.execute(
-                "SELECT id FROM employees WHERE player_id=? AND active=1 AND role='courier'",
+            conn.execute(
+                "INSERT OR IGNORE INTO shop_packaging_rules(player_id) VALUES (?)",
                 (player_id,),
-            ).fetchall()
-            products = conn.execute("SELECT id FROM products WHERE active=1 ORDER BY id").fetchall()
-            for courier in couriers:
-                for product in products:
-                    conn.execute(
-                        """INSERT OR IGNORE INTO packaging_rules(player_id, employee_id, product_id, pct_1, pct_2, pct_5)
-                           VALUES (?, ?, ?, 60, 30, 10)""",
-                        (player_id, courier["id"], product["id"]),
-                    )
+            )
 
     def _seed_retail_positions(self, player_id: int) -> None:
         with self.db.connect() as conn:
@@ -156,22 +146,15 @@ class WorkflowSimulationEngine(FinalOperationsSimulationEngine):
         ).fetchone()
         if not allocation or allocation["quantity"] <= 0:
             return
+
+        conn.execute(
+            "INSERT OR IGNORE INTO shop_packaging_rules(player_id) VALUES (?)",
+            (player_id,),
+        )
         rule = conn.execute(
-            """SELECT * FROM packaging_rules
-               WHERE player_id=? AND employee_id=? AND product_id=?""",
-            (player_id, allocation["retail_employee_id"], allocation["product_id"]),
+            "SELECT pct_1, pct_2, pct_5 FROM shop_packaging_rules WHERE player_id=?",
+            (player_id,),
         ).fetchone()
-        if not rule:
-            conn.execute(
-                """INSERT OR IGNORE INTO packaging_rules(player_id, employee_id, product_id)
-                   VALUES (?, ?, ?)""",
-                (player_id, allocation["retail_employee_id"], allocation["product_id"]),
-            )
-            rule = conn.execute(
-                """SELECT * FROM packaging_rules
-                   WHERE player_id=? AND employee_id=? AND product_id=?""",
-                (player_id, allocation["retail_employee_id"], allocation["product_id"]),
-            ).fetchone()
 
         qty = int(allocation["quantity"])
         units5 = int(qty * int(rule["pct_5"]) / 100)
@@ -189,7 +172,8 @@ class WorkflowSimulationEngine(FinalOperationsSimulationEngine):
                        player_id, allocation_id, batch_id, employee_id, product_id,
                        pack_size, position_count, unit_cost, quality
                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                   ON CONFLICT(allocation_id, pack_size) DO UPDATE SET position_count=excluded.position_count""",
+                   ON CONFLICT(allocation_id, pack_size)
+                   DO UPDATE SET position_count=excluded.position_count""",
                 (
                     player_id,
                     allocation_id,
@@ -627,7 +611,7 @@ class WorkflowSimulationEngine(FinalOperationsSimulationEngine):
                 )
 
 
-class WorkflowGameService(FinalOperationsGameService):
+class WorkflowGameService(OperationsGameService):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:

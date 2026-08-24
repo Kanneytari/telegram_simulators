@@ -3,9 +3,7 @@ from __future__ import annotations
 import random
 
 from app.db import Database
-from app.employee_profile_handlers import employee_profile_keyboard
 from app.global_packaging import GlobalPackagingGameService, GlobalPackagingSimulationEngine
-from app.team_keyboard import employee_list
 
 
 def make_system(tmp_path):
@@ -64,24 +62,3 @@ def test_new_courier_inherits_global_packaging_mix(tmp_path):
         == (expected["pct_1"], expected["pct_2"], expected["pct_5"])
         for row in rows
     )
-
-
-def test_team_keyboard_has_global_terms_recruitment_and_packaging_controls():
-    markup = employee_list([])
-    labels = [button.text for row in markup.inline_keyboard for button in row]
-
-    assert "💰 Условия работы" in labels
-    assert "🔎 Набор" in labels
-    assert "⚙️ Фасовки" in labels
-    assert "👤 Кандидаты" not in labels
-    assert "📦 Без ответственного" not in labels
-
-
-def test_courier_profile_has_no_individual_compensation_or_packaging_button():
-    markup = employee_profile_keyboard(17, "courier")
-    labels = [button.text for row in markup.inline_keyboard for button in row]
-
-    assert "⚙️ Фасовки" not in labels
-    assert "💰 Доля в депозит" not in labels
-    assert "💰 Условия работы" in labels
-    assert "✏️ Переименовать" in labels

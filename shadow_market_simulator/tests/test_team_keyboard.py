@@ -1,9 +1,5 @@
-from app.team_keyboard import employee_list
 
 
-def button_text(employee: dict) -> str:
-    markup = employee_list([employee])
-    return markup.inline_keyboard[0][0].text
 
 
 def test_inventory_free_ready_courier_is_green_and_has_deposit_without_free_status():

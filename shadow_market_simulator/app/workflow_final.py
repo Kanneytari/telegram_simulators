@@ -291,13 +291,6 @@ class FinalWorkflowGameService(WorkflowGameService):
             new_role = "warehouse" if employee["role"] == "courier" else "courier"
             new_pay = ROLE_MARKET_PAY[new_role]
             conn.execute("UPDATE employees SET role=?, pay_per_job=? WHERE id=?", (new_role, new_pay, employee_id))
-            if new_role == "courier":
-                products = conn.execute("SELECT id FROM products WHERE active=1").fetchall()
-                for product in products:
-                    conn.execute(
-                        "INSERT OR IGNORE INTO packaging_rules(player_id, employee_id, product_id) VALUES (?, ?, ?)",
-                        (player_id, employee_id, product["id"]),
-                    )
         role_title = "оптовый" if new_role == "warehouse" else "розничный"
         return f"{employee['alias']} переведён в роль «{role_title}». Новая базовая ставка: {new_pay:,} ₽ / операцию."
 

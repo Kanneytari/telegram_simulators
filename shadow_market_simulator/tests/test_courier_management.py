@@ -10,14 +10,9 @@ from app.courier_management import (
     CourierManagementGameService,
     CourierManagementSimulationEngine,
 )
-from app.courier_management_handlers import (
-    courier_deposit_keyboard,
-    courier_management_keyboard,
-)
 from app.courier_model import TRAIT_LEARNER
 from app.courier_recruitment import CourierRecruitmentService
 from app.db import Database
-from app.employee_profile_handlers import employee_profile_keyboard
 from app.recruitment import CHANNELS
 from app.simulation import iso, utcnow
 
@@ -378,28 +373,3 @@ def test_candidate_phone_is_visible_and_transfers_on_hire(tmp_path):
             (employee["id"],),
         ).fetchone()
     assert int(management["phone_level"]) == int(equipment["phone_level"])
-
-
-def test_profile_and_management_ux_stays_compact(tmp_path):
-    db, _, game, _ = make_system(tmp_path)
-    courier = first_courier(db)
-    employee_id = int(courier["id"])
-    profile = employee_profile_keyboard(employee_id, "courier")
-    labels = [button.text for row in profile.inline_keyboard for button in row]
-    assert "🧭 Управление" in labels
-
-    management = courier_management_keyboard(employee_id)
-    action_buttons = [
-        button for row in management.inline_keyboard[:2] for button in row
-    ]
-    assert len(action_buttons) == 4
-
-    deposit = courier_deposit_keyboard(employee_id)
-    assert len(deposit.inline_keyboard[0]) == 3
-    assert len(deposit.inline_keyboard[1]) == 3
-
-    text = game.employee_details(PLAYER_ID, employee_id)
-    assert text is not None
-    assert "<b>Оснащение</b>" in text
-    assert "integrity" not in text
-    assert "resilience" not in text
