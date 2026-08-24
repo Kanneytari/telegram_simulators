@@ -4,14 +4,10 @@ on:
   push:
     paths:
       - "shadow_market_simulator/**"
-      - "tools/nightshift_ux_*.py"
       - ".github/workflows/shadow-market-tests.yml"
   pull_request:
     paths:
       - "shadow_market_simulator/**"
-
-permissions:
-  contents: write
 
 jobs:
   test:
@@ -22,7 +18,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ux/nightshift-clearer-game-flow
-          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -31,10 +26,6 @@ jobs:
         run: |
           python -m pip install -r requirements.txt
           python -m pip install ruff
-      - name: Align tests and residual terminology
-        run: |
-          python tools/nightshift_ux_align_tests.py
-          python tools/nightshift_ux_last_alignment.py
       - name: Compile
         run: python -m compileall -q shadow_market_simulator/app
       - name: Run tests
@@ -43,13 +34,89 @@ jobs:
       - name: Check unused code
         working-directory: shadow_market_simulator
         run: ruff check app tests --select F401,F821,F841
-      - name: Commit validated alignment
-        if: success()
+      - name: Fresh database and UI smoke
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add shadow_market_simulator
-          if ! git diff --cached --quiet; then
-            git commit -m "Align NIGHTSHIFT tests with new UX [ux-tests]"
-            git push origin HEAD:ux/nightshift-clearer-game-flow
+          python - <<'PY'
+          import asyncio
+          import random
+          import tempfile
+          from pathlib import Path
+
+          from app.courier_management import CourierManagementGameService, CourierManagementSimulationEngine
+          from app.courier_recruitment import CourierRecruitmentService
+          from app.db import Database
+          from app.ui_commerce import render_procurement_root, render_sales_root
+          from app.ui_navigation import _home_snapshot
+          from app.ui_staff import render_batches, render_profile, render_recruitment_root, render_team
+          import app.main
+
+          class Target:
+              def __init__(self):
+                  self.text = None
+                  self.markup = None
+              async def edit_text(self, text, reply_markup=None):
+                  self.text = text
+                  self.markup = reply_markup
+              async def answer(self, text, reply_markup=None):
+                  self.text = text
+                  self.markup = reply_markup
+
+          with tempfile.TemporaryDirectory() as tmp:
+              db = Database(str(Path(tmp) / "fresh.db"))
+              db.init()
+              sim = CourierManagementSimulationEngine(db, speed=1.0, rng=random.Random(9001))
+              created = sim.ensure_player(424242, "fresh")
+              assert created
+              game = CourierManagementGameService(db, sim, rng=random.Random(9002))
+              recruitment = CourierRecruitmentService(db, speed=1.0, rng=random.Random(9003))
+
+              home, _, _ = _home_snapshot(db, game, sim, 424242)
+              assert "Баланс:" in home and "Свободно:" in home
+              assert "Передай товар закладчику" in home
+
+              target = Target()
+              asyncio.run(render_procurement_root(target, db, game, 424242))
+              assert "📦 Товар" in target.text
+              assert any("Склад" in b.text for row in target.markup.inline_keyboard for b in row)
+
+              asyncio.run(render_sales_root(target, db, game, sim, 424242))
+              assert "🏷 Витрина" in target.text
+
+              asyncio.run(render_team(target, game, sim, 424242))
+              assert "Команда" in target.text
+
+              with db.connect() as conn:
+                  courier = conn.execute("SELECT id FROM employees WHERE player_id=? AND role='courier' ORDER BY id LIMIT 1", (424242,)).fetchone()
+              asyncio.run(render_profile(target, game, 424242, int(courier["id"])))
+              assert "закладчик" in target.text
+              assert "Передвижение:" in target.text and "Телефон:" in target.text
+
+              asyncio.run(render_batches(target, game, 424242))
+              assert "📦 Склад" in target.text
+
+              asyncio.run(render_recruitment_root(target, recruitment, 424242))
+              assert "Найм" in target.text
+              draft = recruitment.ensure_draft(424242)
+              assert "transport_required" in draft.keys()
+
+              with db.connect() as conn:
+                  tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+              assert "player_tips" in tables
+              assert "courier_candidate_equipment" not in tables
+          PY
+      - name: Reject removed mechanics and stale player-facing terms
+        shell: bash
+        run: |
+          set -e
+          if grep -RInE 'car_required|courier_reply_pending|courier_reply_due_at|courier_candidate_equipment|самокат|Самокат' shadow_market_simulator/app shadow_market_simulator/tests; then
+            echo "Removed mechanic or transport term remains"
+            exit 1
+          fi
+          if grep -RInE 'Розничный сотрудник|Оптовый сотрудник' shadow_market_simulator/app; then
+            echo "Old player-facing role name remains"
+            exit 1
+          fi
+          if grep -RInE 'text="📦 Закупки"|text="🏷 Продажа"|<b>📦 Закупки</b>|<b>🏷 Продажа</b>' shadow_market_simulator/app; then
+            echo "Old main section name remains"
+            exit 1
           fi
