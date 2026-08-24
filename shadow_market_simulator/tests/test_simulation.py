@@ -26,6 +26,8 @@ def test_new_player_has_operational_state(tmp_path):
         assert conn.execute("SELECT SUM(remaining) FROM batches WHERE player_id=1001").fetchone()[0] > 0
         assert conn.execute("SELECT COUNT(*) FROM listings WHERE player_id=1001").fetchone()[0] == 18
     assert "Свободные деньги" in game.dashboard(1001)
+
+
 def test_time_advance_without_retail_stock_creates_no_orders(tmp_path):
     db, simulation, _ = make_game(tmp_path)
     before = utcnow() - timedelta(hours=4)
@@ -39,10 +41,10 @@ def test_time_advance_without_retail_stock_creates_no_orders(tmp_path):
     assert result.orders_created == 0
     assert orders == 0
     assert stock == initial_stock
+
+
 def test_procurement_spends_cash_and_creates_ledger_entry(tmp_path):
     db, _, game = make_game(tmp_path)
-    offer = game.offers(1001)[0]
-    total = int(offer["quantity"] * offer["unit_cost"])
     with db.connect() as conn:
         conn.execute("UPDATE shops SET balance=100000000 WHERE player_id=1001")
         warehouse = conn.execute(
@@ -52,7 +54,11 @@ def test_procurement_spends_cash_and_creates_ledger_entry(tmp_path):
         ledger_before = int(conn.execute(
             "SELECT COUNT(*) FROM ledger WHERE player_id=1001 AND kind='procurement'"
         ).fetchone()[0])
+
+    offer = game.offers(1001)[0]
+    total = int(offer["quantity"] * offer["unit_cost"])
     game.buy_offer_for_employee(1001, int(offer["id"]), int(warehouse["id"]))
+
     with db.connect() as conn:
         after = int(conn.execute("SELECT balance FROM shops WHERE player_id=1001").fetchone()[0])
         ledger_after = int(conn.execute(
