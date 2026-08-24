@@ -19,6 +19,7 @@ from .handoff_copy_update import apply_handoff_copy_update
 from .inbox_lifecycle import install_inbox_lifecycle
 from .product_ui_update import apply_product_ui_update
 from .simulation import iso, utcnow
+from .tutorial import apply_tutorial_updates, build_tutorial_router
 from .ui_admin import build_admin_router
 from .ui_commerce import build_commerce_router
 from .ui_common import normalize_text
@@ -112,6 +113,7 @@ async def main() -> None:
 
     db = Database(settings.db_path)
     db.init()
+    apply_tutorial_updates()
     simulation = CourierManagementSimulationEngine(db, speed=settings.simulation_speed)
     simulation.seed_catalog()
     game = CourierManagementGameService(db, simulation)
@@ -128,6 +130,7 @@ async def main() -> None:
 
     # Every player-facing entity has one screen tree and one navigation contract.
     dispatcher.include_router(build_navigation_router(db, game, simulation, settings.admin_ids))
+    dispatcher.include_router(build_tutorial_router(db, game, simulation))
     dispatcher.include_router(build_commerce_router(db, game, simulation))
     dispatcher.include_router(build_staff_router(game, simulation, recruitment))
     dispatcher.include_router(build_dispute_router(db, game, simulation, settings.admin_ids))
