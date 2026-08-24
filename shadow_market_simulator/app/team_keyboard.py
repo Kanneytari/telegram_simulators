@@ -21,13 +21,11 @@ def employee_list(employees) -> InlineKeyboardMarkup:
         status = _clean_status(employee.get("status_text") if is_mapping else None)
         exposure = int(employee.get("exposure", 0)) if is_mapping else 0
         deposit = int(employee["deposit"])
+        idle_ready = bool(employee.get("idle_ready", False)) if is_mapping else False
 
         if exposure > deposit:
             marker = " 🔴"
-        elif exposure == 0:
-            # Exposure for retail staff includes both product being prepared and
-            # active storefront positions. For wholesale staff it includes all
-            # batches and pending handoffs under their responsibility.
+        elif employee["role"] == "courier" and idle_ready:
             marker = " 🟢"
         else:
             marker = ""
