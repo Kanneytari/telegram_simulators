@@ -331,14 +331,11 @@ class ProcurementMarketGameService(StaffInsightGameService):
                 quantity: by_product[int(product["id"])].get(quantity, 0)
                 for quantity in PROCUREMENT_BATCH_SIZES
             }
-            total = sum(packs.values())
-            if total <= 0:
-                continue
             result.append({
                 "id": int(product["id"]),
                 "title": product["title"],
                 "counts": packs,
-                "total": total,
+                "total": sum(packs.values()),
             })
         return result
 
