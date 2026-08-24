@@ -3,8 +3,7 @@ from __future__ import annotations
 import math
 from datetime import timedelta
 
-from .customer_expectations import PriceExpectationSimulationEngine
-from .procurement_market import ProcurementMarketGameService
+from .procurement_market import ProcurementMarketGameService, ProcurementMarketSimulationEngine
 from .simulation import parse_dt, utcnow
 
 
@@ -13,14 +12,11 @@ def precise_iso(dt) -> str:
     return dt.isoformat(timespec="microseconds")
 
 
-class DelayedDisputeSimulationEngine(PriceExpectationSimulationEngine):
+class DelayedDisputeSimulationEngine(ProcurementMarketSimulationEngine):
     """Adds persistent game-time delays for employee dispute explanations."""
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        with self.db.connect() as conn:
-            self.db._ensure_column(conn, "disputes", "courier_reply_pending", "TEXT")
-            self.db._ensure_column(conn, "disputes", "courier_reply_due_at", "TEXT")
 
     def materialize_due_replies(self, player_id: int, now=None) -> int:
         now = now or utcnow()
