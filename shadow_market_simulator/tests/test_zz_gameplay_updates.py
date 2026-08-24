@@ -44,7 +44,7 @@ def _labels(markup):
 def test_updated_catalog_market_and_sales_pacing(tmp_path):
     from app import staff_relationships
 
-    db, simulation, game = make_system(tmp_path)
+    db, _, game = make_system(tmp_path)
 
     with db.connect() as conn:
         products = conn.execute(
