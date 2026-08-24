@@ -61,7 +61,8 @@ def test_main_menu_uses_product_and_storefront(tmp_path):
     assert "Баланс:" in text
     assert "Свободно:" in text
     assert "Передай товар закладчику" not in text
-    assert "<blockquote>Стафф уже на складе!\nНажми на кнопку [📦 Товар]</blockquote>" in text
+    assert "Стафф уже на складе!" not in text
+    assert "Нажми на кнопку [📦 Товар]" not in text
 
 
 def test_free_status_means_no_tasks_or_stock(tmp_path):
@@ -174,7 +175,7 @@ def test_first_handoff_tutorial_guides_product_warehouse_and_batch(tmp_path):
     allocation_rows = [[button.text for button in row] for row in target.reply_markup.inline_keyboard]
     assert allocation_rows[0] == ["−5", f"📦 {quantity} ед.", "+5"]
     assert allocation_rows[1] == [f"✅ Отправить {quantity} ед."]
-    assert allocation_rows[-1] == ["← Назад", "🏠 Меню"]
+    assert allocation_rows[-1] == ["Назад", "🏠 Меню"]
     assert not any("Всё" in label for row in allocation_rows for label in row)
 
 
