@@ -3,7 +3,7 @@ from __future__ import annotations
 from aiogram import F, Router
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, CommandStart
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message, ReplyKeyboardRemove
+from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message, ReplyKeyboardRemove
 
 from .keyboards import main_menu
 from .team_keyboard import employee_list
@@ -22,9 +22,10 @@ def build_workflow_dashboard_router(db, game, simulation, admin_ids: frozenset[i
             if "message is not modified" not in str(exc).lower():
                 raise
 
-    def dashboard_snapshot(player_id: int) -> tuple[str, int, int]:
+    def dashboard_snapshot(player_id: int) -> tuple[str, int, int, dict]:
         simulation.advance(player_id)
         game.process_payroll(player_id)
+        customer = game.customer_metrics(player_id)
         with db.connect() as conn:
             shop = conn.execute("SELECT * FROM shops WHERE player_id=?", (player_id,)).fetchone()
             deposits = int(conn.execute(
@@ -87,14 +88,22 @@ def build_workflow_dashboard_router(db, game, simulation, admin_ids: frozenset[i
         speed = float(settings["time_multiplier"] or 1.0)
         speed_line = f"\n⏩ Тестовая скорость: x{speed:g}" if speed != 1.0 else ""
         unassigned_line = f"\n🔴 Без ответственного: {unassigned} парт." if unassigned else ""
+        quality = f"{customer['product_rating']:.2f}/5" if customer["product_rating"] else "—"
+        service = f"{customer['courier_rating']:.2f}/5" if customer["courier_rating"] else "—"
         text = (
             f"<b>🌒 {shop['name']}</b>\n\n"
             f"<b>Финансы</b>\n"
             f"Баланс: <b>{shop['balance']:,} ₽</b>\n"
             f"Свободно: <b>{free_cash:,} ₽</b>\n"
             f"Начислено сотрудникам: {wages:,} ₽\n\n"
+            f"<b>Доверие и клиенты</b>\n"
+            f"🛡 Доверие: <b>{customer['trust_score']:.0f}/100</b>\n"
+            f"🧪 Качество товара: {quality}\n"
+            f"👤 Работа курьеров: {service}\n"
+            f"♻️ Постоянных клиентов: <b>{customer['regulars']}</b>\n"
+            f"📦 Стабильность наличия: {customer['availability'] * 100:.0f}%\n"
+            f"Допустимая премия к рынку: ~+{customer['premium_allowance'] * 100:.0f}%\n\n"
             f"<b>Операции</b>\n"
-            f"⭐ Рейтинг: {shop['rating']:.2f}\n"
             f"Товар в системе: {total_units} ед. · ~{total_cost:,} ₽\n"
             f"На витрине: {int(published['units'] or 0)} ед.\n"
             f"Активных задач: {tasks}\n"
@@ -103,14 +112,20 @@ def build_workflow_dashboard_router(db, game, simulation, admin_ids: frozenset[i
             f"{unassigned_line}"
             f"{speed_line}"
         )
-        return text, opened, urgent
+        return text, opened, urgent, customer
+
+    def dashboard_keyboard(opened: int, urgent: int, player_id: int) -> InlineKeyboardMarkup:
+        base = main_menu(opened, urgent, is_admin=player_id in admin_ids)
+        rows = [list(row) for row in base.inline_keyboard]
+        rows.insert(1, [InlineKeyboardButton(text="🤝 Клиенты и доверие", callback_data="menu:customers")])
+        return InlineKeyboardMarkup(inline_keyboard=rows)
 
     async def show_dashboard(target: Message, player_id: int, *, edit: bool) -> None:
-        text, opened, urgent = dashboard_snapshot(player_id)
+        text, opened, urgent, _ = dashboard_snapshot(player_id)
         await present(
             target,
             text,
-            main_menu(opened, urgent, is_admin=player_id in admin_ids),
+            dashboard_keyboard(opened, urgent, player_id),
             edit=edit,
         )
 
@@ -135,7 +150,10 @@ def build_workflow_dashboard_router(db, game, simulation, admin_ids: frozenset[i
         created = simulation.ensure_player(message.from_user.id, message.from_user.username)
         intro = (
             "<b>NIGHTSHIFT</b>\n\n"
-            "Управляй деньгами, командой, запасами и клиентскими кейсами. Товар проходит через сотрудников до появления на витрине."
+            "Главный двигатель роста — доверие покупателей. Держи качественный товар, аккуратных курьеров и постоянное наличие, "
+            "а честные клиентские проблемы решай разумно. Тогда покупатели будут возвращаться, спрос вырастет, "
+            "и магазин сможет продавать дороже рынка.\n\n"
+            "Следи за блоком «Доверие и клиенты» на главном экране — это основной индикатор долгосрочного прогресса."
             if created else
             "<b>NIGHTSHIFT</b>"
         )
