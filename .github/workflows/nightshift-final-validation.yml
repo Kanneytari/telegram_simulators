@@ -77,4 +77,4 @@ jobs:
             exit 1
           fi
 
-# rerun after removing duplicated schema analytics triggers
+# rerun after aligning all tests with current runtime contracts
