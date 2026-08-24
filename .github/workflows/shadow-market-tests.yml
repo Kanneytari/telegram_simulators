@@ -10,9 +10,6 @@ on:
       - "shadow_market_simulator/**"
       - ".github/workflows/shadow-market-tests.yml"
 
-permissions:
-  contents: write
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -20,9 +17,6 @@ jobs:
       PYTHONPATH: ${{ github.workspace }}/shadow_market_simulator
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ux/nightshift-clearer-game-flow
-          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -31,35 +25,6 @@ jobs:
         run: |
           python -m pip install -r requirements.txt
           python -m pip install ruff
-      - name: Remove residual stale wording
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          replacements = {
-              "shadow_market_simulator/app/simulation.py": [
-                  ("«Входящие», «Команда» и «Закупки»", "«Входящие», «Команда» и «Товар»"),
-              ],
-              "shadow_market_simulator/app/staff_insights.py": [
-                  ('return f"готовит товар · {preparing} ед."', 'return f"раскидывает клады · {preparing} ед."'),
-              ],
-              "shadow_market_simulator/app/ui_staff_handlers.py": [
-                  ('int(profile["transport_level"] if profile else (2 if row["has_car"] else 0))', 'int(profile["transport_level"] if profile else 0)'),
-              ],
-              "shadow_market_simulator/app/courier_management.py": [
-                  ('                    int(profile["transport_level"]) if profile else (2 if int(candidate["has_car"]) else 0),', '                    int(profile["transport_level"]) if profile else 0,'),
-                  ('        with self.db.connect() as conn:\n            pass\n            self.simulation._ensure_courier_management_conn(conn)\n', '        with self.db.connect() as conn:\n            self.simulation._ensure_courier_management_conn(conn)\n'),
-              ],
-          }
-          for filename, pairs in replacements.items():
-              path = Path(filename)
-              text = path.read_text(encoding="utf-8")
-              for old, new in pairs:
-                  if old not in text:
-                      raise SystemExit(f"expected stale fragment not found in {filename}: {old}")
-                  text = text.replace(old, new)
-              path.write_text(text, encoding="utf-8")
-          PY
       - name: Compile
         run: python -m compileall -q shadow_market_simulator/app
       - name: Run tests
@@ -88,9 +53,11 @@ jobs:
               def __init__(self):
                   self.text = None
                   self.reply_markup = None
+
               async def edit_text(self, text, **kwargs):
                   self.text = text
                   self.reply_markup = kwargs.get("reply_markup")
+
               async def answer(self, text, **kwargs):
                   self.text = text
                   self.reply_markup = kwargs.get("reply_markup")
@@ -102,8 +69,10 @@ jobs:
               simulation.ensure_player(1, "smoke")
               game = CourierManagementGameService(db, simulation, rng=random.Random(2))
               CourierRecruitmentService(db, speed=1.0, rng=random.Random(3))
+
               home, _, _ = _home_snapshot(db, game, simulation, 1)
               assert "NIGHTSHIFT" in home and "Баланс:" in home
+
               target = Target()
               asyncio.run(render_product_root(target, db, game, 1))
               assert "Товар" in target.text
@@ -116,38 +85,54 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+
           app = Path("shadow_market_simulator/app")
           tests = Path("shadow_market_simulator/tests")
-          text = "\n".join(path.read_text(encoding="utf-8") for root in (app, tests) for path in root.glob("*.py"))
+          text = "\n".join(
+              path.read_text(encoding="utf-8")
+              for root in (app, tests)
+              for path in root.glob("*.py")
+          )
           banned = [
-              "menu:procurement", "menu:sales", "render_procurement_root", "render_sales_root",
-              "DelayedDispute", "delayed_disputes", "prepare_positions", "готовит позиции",
-              "Розничный сотрудник", "Оптовый сотрудник", "розничный сотрудник", "оптовый сотрудник",
-              "car_required", "courier_reply_pending", "courier_reply_due_at", "«Закупки»",
+              "menu:procurement",
+              "menu:sales",
+              "render_procurement_root",
+              "render_sales_root",
+              "DelayedDispute",
+              "delayed_disputes",
+              "prepare_positions",
+              "готовит позиции",
+              "Розничный сотрудник",
+              "Оптовый сотрудник",
+              "розничный сотрудник",
+              "оптовый сотрудник",
+              "car_required",
+              "courier_reply_pending",
+              "courier_reply_due_at",
+              "«Закупки»",
           ]
           found = [value for value in banned if value in text]
           if found:
               raise SystemExit(f"stale NIGHTSHIFT contracts remain: {found}")
+
           removed_files = [
-              app / "delayed_disputes.py", app / "action_handlers.py", app / "procurement_handlers.py",
-              app / "storefront_handlers.py", app / "workflow_handlers.py", app / "workflow_allocation_handlers.py",
-              app / "workflow_dashboard_handlers.py", app / "workflow_reassign_handlers.py",
+              app / "delayed_disputes.py",
+              app / "action_handlers.py",
+              app / "procurement_handlers.py",
+              app / "storefront_handlers.py",
+              app / "workflow_handlers.py",
+              app / "workflow_allocation_handlers.py",
+              app / "workflow_dashboard_handlers.py",
+              app / "workflow_reassign_handlers.py",
           ]
           leftovers = [str(path) for path in removed_files if path.exists()]
           if leftovers:
               raise SystemExit(f"obsolete NIGHTSHIFT modules returned: {leftovers}")
-          batch_renderers = sum(path.read_text(encoding="utf-8").count("async def render_batch(") for path in (app / "ui_staff.py", app / "ui_staff_handlers.py"))
+
+          batch_renderers = sum(
+              path.read_text(encoding="utf-8").count("async def render_batch(")
+              for path in (app / "ui_staff.py", app / "ui_staff_handlers.py")
+          )
           if batch_renderers != 1:
               raise SystemExit(f"expected one canonical batch renderer, found {batch_renderers}")
           PY
-      - name: Commit validated residual cleanup
-        if: success()
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add shadow_market_simulator
-          if ! git diff --cached --quiet; then
-            git commit -m "Remove final stale NIGHTSHIFT wording [cleanup-ci]"
-            git pull --rebase origin ux/nightshift-clearer-game-flow
-            git push origin HEAD:ux/nightshift-clearer-game-flow
-          fi
