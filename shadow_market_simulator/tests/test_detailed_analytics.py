@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import random
 
+from app.compensation import CompensationSimulationEngine
 from app.db import Database
 from app.detailed_analytics import normalize_period, section_text
-from app.wholesale_compensation import WholesaleCompensationSimulationEngine
 
 
 def make_system(tmp_path):
     db = Database(str(tmp_path / "game.db"))
     db.init()
-    simulation = WholesaleCompensationSimulationEngine(db, speed=1.0, rng=random.Random(91))
+    simulation = CompensationSimulationEngine(db, speed=1.0, rng=random.Random(91))
     simulation.seed_catalog()
     simulation.ensure_player(1001, "tester")
     return db
@@ -40,7 +40,7 @@ def test_all_detailed_analytics_sections_render(tmp_path):
             """INSERT INTO orders(
                    player_id, client_id, employee_id, batch_id, product_id, quantity,
                    revenue, cost, employee_cost, quality, status
-               ) VALUES (1001, ?, ?, ?, ?, 1, 8000, 3000, 1500, 82, 'completed')""",
+               ) VALUES (1001, ?, ?, ?, ?, 1, 8000, 3000, 520, 82, 'completed')""",
             (client["id"], employee["id"], batch["id"], batch["product_id"]),
         )
         conn.execute(
