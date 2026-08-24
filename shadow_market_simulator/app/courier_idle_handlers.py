@@ -15,6 +15,23 @@ def _clean_status(value: str | None) -> str:
     return status
 
 
+def recipient_button_text(employee: dict) -> str:
+    """Build a retail-recipient label with the idle marker next to the courier name."""
+    unsecured_now = max(0, int(employee["exposure"]) - int(employee["deposit"]))
+    status = _clean_status(employee.get("status_text"))
+    idle_ready = bool(employee.get("idle_ready"))
+
+    prefix = "🟢 " if idle_ready else ""
+    label = f"{prefix}{employee['alias']} · депозит {int(employee['deposit']):,} ₽"
+
+    if status and not idle_ready:
+        label += f" · {status}"
+    if unsecured_now:
+        label += f" · 🔴 {unsecured_now:,} ₽"
+
+    return label
+
+
 def build_courier_idle_router(game) -> Router:
     """Render retail-recipient selection with the same idle marker as the Team screen."""
     router = Router(name="courier-idle-recipient-selection")
@@ -61,22 +78,9 @@ def build_courier_idle_router(game) -> Router:
                 "🟢 — курьер полностью простаивает и прямо сейчас готов принять новую партию."
             )
             for employee in staff:
-                unsecured_now = max(0, int(employee["exposure"]) - int(employee["deposit"]))
-                status = _clean_status(employee.get("status_text"))
-                if unsecured_now:
-                    marker = f" · 🔴 {unsecured_now:,} ₽"
-                elif employee.get("idle_ready"):
-                    marker = " · 🟢"
-                else:
-                    marker = ""
-
-                status_part = f" · {status}" if status and not employee.get("idle_ready") else ""
                 rows.append([
                     InlineKeyboardButton(
-                        text=(
-                            f"{employee['alias']} · депозит {int(employee['deposit']):,} ₽"
-                            f"{status_part}{marker}"
-                        ),
+                        text=recipient_button_text(employee),
                         callback_data=f"workflow:alloc:{batch_id}:{employee['id']}:10",
                     )
                 ])
