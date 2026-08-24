@@ -1,41 +1,13 @@
 from __future__ import annotations
 
-from datetime import timedelta
-
-from .simulation import iso, parse_dt, utcnow
-from .workflow_final import FinalWorkflowGameService, FinalWorkflowSimulationEngine
+from .simulation import parse_dt, utcnow
+from .workflow import WorkflowGameService, WorkflowSimulationEngine
 
 
-STAFF_INSIGHT_SCHEMA = """
-CREATE TABLE IF NOT EXISTS game_clock (
-    player_id INTEGER PRIMARY KEY REFERENCES shops(player_id) ON DELETE CASCADE,
-    game_hours REAL NOT NULL DEFAULT 0
-);
-
-CREATE TABLE IF NOT EXISTS publication_events (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
-    allocation_id INTEGER NOT NULL UNIQUE REFERENCES retail_allocations(id) ON DELETE CASCADE,
-    employee_id INTEGER NOT NULL REFERENCES employees(id),
-    product_id INTEGER NOT NULL REFERENCES products(id),
-    units INTEGER NOT NULL,
-    positions INTEGER NOT NULL,
-    game_hour REAL NOT NULL,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_publication_employee_game_hour
-    ON publication_events(player_id, employee_id, game_hour);
-"""
 
 
-class StaffInsightSimulationEngine(FinalWorkflowSimulationEngine):
+class StaffInsightSimulationEngine(WorkflowSimulationEngine):
     """Final simulation layer for starter safety and historical staff throughput."""
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        with self.db.connect() as conn:
-            conn.executescript(STAFF_INSIGHT_SCHEMA)
 
     def _seed_retail_positions(self, player_id: int) -> None:
         return None
@@ -144,13 +116,8 @@ class StaffInsightSimulationEngine(FinalWorkflowSimulationEngine):
         )
 
 
-class StaffInsightGameService(FinalWorkflowGameService):
+class StaffInsightGameService(WorkflowGameService):
     """Employee profile with explicit activity, inventory and throughput history."""
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        with self.db.connect() as conn:
-            conn.executescript(STAFF_INSIGHT_SCHEMA)
 
     def _task_status(self, player_id: int, employee_id: int) -> str:
         now = utcnow()
@@ -349,57 +316,3 @@ class StaffInsightGameService(FinalWorkflowGameService):
         else:
             lines.append("Динамика: нужно минимум двое игровых суток")
         return lines
-
-    def employee_details(self, player_id: int, employee_id: int) -> str | None:
-        with self.db.connect() as conn:
-            employee = conn.execute(
-                "SELECT * FROM employees WHERE id=? AND player_id=?",
-                (employee_id, player_id),
-            ).fetchone()
-            if not employee:
-                return None
-            service = conn.execute(
-                """SELECT COUNT(*) count, COALESCE(AVG(courier_rating),0) avg
-                   FROM order_ratings WHERE player_id=? AND employee_id=?""",
-                (player_id, employee_id),
-            ).fetchone()
-        exposure = self._employee_exposure(player_id, employee_id)
-        unsecured = max(0, exposure - int(employee["deposit"]))
-        dispute_rate = employee["disputes"] / employee["jobs_done"] * 100.0 if employee["jobs_done"] else 0.0
-        role_title = "Оптовый сотрудник" if employee["role"] == "warehouse" else "Розничный сотрудник"
-        role_icon = "🚚" if employee["role"] == "warehouse" else "👤"
-
-        activity = "\n".join(self._activity_details(player_id, employee_id))
-        inventory = self._inventory_lines(player_id, employee_id, employee["role"])
-        inventory_text = "\n".join(inventory) if inventory else "Нет товара под ответственностью."
-
-        text = (
-            f"<b>{role_icon} {employee['alias']} · {role_title}</b>\n\n"
-            f"<b>Сейчас</b>\n{activity}\n\n"
-            f"<b>Товар</b>\n{inventory_text}\n\n"
-            f"<b>Ответственность</b>\n"
-            f"Стоимость товара: {exposure:,} ₽\n"
-            f"Депозит: <b>{employee['deposit']:,} ₽</b>\n"
-            f"Не покрыто: <b>{unsecured:,} ₽</b>\n\n"
-            f"<b>Условия</b>\n"
-            f"Ставка: {employee['pay_per_job']:,} ₽ / операцию\n"
-            f"В депозит: {employee['deposit_contribution_pct']}%\n"
-            f"Начислено: {employee['wages_accrued']:,} ₽\n\n"
-        )
-        if employee["role"] == "courier":
-            text += "<b>Продуктивность</b>\n" + "\n".join(
-                self._productivity_lines(player_id, employee_id)
-            ) + "\n\n"
-        text += (
-            f"<b>Статистика</b>\n"
-            f"Операций: {employee['jobs_done']}\n"
-            f"Диспутов: {employee['disputes']} ({dispute_rate:.1f}%)\n"
-            f"Потери: {employee['losses']:,} ₽"
-        )
-        if employee["role"] == "courier":
-            text += f"\nОценок работы: {service['count']}"
-            if service["count"]:
-                text += f" · ⭐ {float(service['avg']):.2f}/5"
-        if unsecured > 0:
-            text += "\n\n🔴 Часть товара не покрыта депозитом. Это осознанный дополнительный риск."
-        return text

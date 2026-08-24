@@ -10,14 +10,6 @@ from .staff_insights import StaffInsightGameService, StaffInsightSimulationEngin
 PROCUREMENT_BATCH_SIZES = (50, 100, 200, 400)
 ROTATION_MINUTES = 15
 
-PROCUREMENT_SCHEMA = """
-CREATE TABLE IF NOT EXISTS procurement_market_state (
-    player_id INTEGER PRIMARY KEY REFERENCES shops(player_id) ON DELETE CASCADE,
-    last_rotation_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_supplier_offers_market
-    ON supplier_offers(player_id, product_id, quantity, status);
-"""
 
 
 class ProcurementMarketSimulationEngine(StaffInsightSimulationEngine):
@@ -26,11 +18,6 @@ class ProcurementMarketSimulationEngine(StaffInsightSimulationEngine):
     Market rotation is intentionally tied to real time rather than game speed. The
     economic characteristics are game-balance values; physical logistics remain abstract.
     """
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        with self.db.connect() as conn:
-            conn.executescript(PROCUREMENT_SCHEMA)
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
         created = super().ensure_player(player_id, username)
@@ -384,9 +371,8 @@ class ProcurementMarketGameService(StaffInsightGameService):
                     ),
                 )
                 conn.execute(
-                    """UPDATE employees SET jobs_done=jobs_done+1, wages_accrued=wages_accrued+?,
-                           stress=MIN(100, stress+1.2), last_contact_at=? WHERE id=?""",
-                    (employee["pay_per_job"], iso(now), employee_id),
+                    "UPDATE employees SET stress=MIN(100, stress+1.2), last_contact_at=? WHERE id=?",
+                    (iso(now), employee_id),
                 )
                 note = f"Партия #{batch_id}: {offer['product_title']} · ответственный {employee['alias']}"
             else:
@@ -417,6 +403,6 @@ class ProcurementMarketGameService(StaffInsightGameService):
             f"Партия куплена за <b>{total:,} ₽</b>.\n\n"
             f"Ответственный: <b>{employee['alias']}</b>\n"
             "Статус: получает партию\n"
-            f"Начислено за операцию: {employee['pay_per_job']:,} ₽"
+            "Оплата будет начислена после успешной передачи товара рознице."
             f"{risk}"
         )

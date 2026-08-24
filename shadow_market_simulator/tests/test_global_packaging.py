@@ -2,86 +2,59 @@ from __future__ import annotations
 
 import random
 
+from app.courier_management import CourierManagementGameService, CourierManagementSimulationEngine
 from app.db import Database
-from app.employee_profile_handlers import employee_profile_keyboard
-from app.global_packaging import GlobalPackagingGameService, GlobalPackagingSimulationEngine
-from app.team_keyboard import employee_list
+
+
+PLAYER_ID = 1001
 
 
 def make_system(tmp_path):
     db = Database(str(tmp_path / "game.db"))
     db.init()
-    simulation = GlobalPackagingSimulationEngine(db, speed=1.0, rng=random.Random(81))
+    simulation = CourierManagementSimulationEngine(db, speed=1.0, rng=random.Random(81))
     simulation.seed_catalog()
-    simulation.ensure_player(1001, "tester")
-    game = GlobalPackagingGameService(db, simulation, rng=random.Random(82))
+    simulation.ensure_player(PLAYER_ID, "tester")
+    game = CourierManagementGameService(db, simulation, rng=random.Random(82))
     return db, simulation, game
 
 
-def test_global_packaging_adjustment_syncs_all_couriers_and_products(tmp_path):
+def test_packaging_rule_is_shop_wide(tmp_path):
     db, _, game = make_system(tmp_path)
 
-    assert game.global_packaging_rule(1001) == {"pct_1": 60, "pct_2": 30, "pct_5": 10}
-    result = game.adjust_global_packaging_rule(1001, 1, 10)
+    assert game.global_packaging_rule(PLAYER_ID) == {"pct_1": 60, "pct_2": 30, "pct_5": 10}
+    result = game.adjust_global_packaging_rule(PLAYER_ID, 1, 10)
     assert result == "×1 70% · ×2 20% · ×5 10%"
 
     with db.connect() as conn:
         rows = conn.execute(
-            """SELECT DISTINCT pct_1, pct_2, pct_5
-               FROM packaging_rules WHERE player_id=1001"""
+            "SELECT pct_1, pct_2, pct_5 FROM shop_packaging_rules WHERE player_id=?",
+            (PLAYER_ID,),
         ).fetchall()
     assert len(rows) == 1
     assert (int(rows[0]["pct_1"]), int(rows[0]["pct_2"]), int(rows[0]["pct_5"])) == (70, 20, 10)
 
 
-def test_new_courier_inherits_global_packaging_mix(tmp_path):
+def test_new_courier_uses_existing_shop_packaging_rule(tmp_path):
     db, simulation, game = make_system(tmp_path)
-    game.adjust_global_packaging_rule(1001, 5, 10)
+    game.adjust_global_packaging_rule(PLAYER_ID, 5, 10)
+    expected = game.global_packaging_rule(PLAYER_ID)
 
     with db.connect() as conn:
-        cur = conn.execute(
+        conn.execute(
             """INSERT INTO employees(
-                   player_id, alias, role, pay_per_job, deposit,
-                   deposit_contribution_pct, has_car,
+                   player_id, alias, role, deposit, has_car,
                    reliability, attention, honesty, loyalty, stress
-               ) VALUES (1001, 'Новый', 'courier', 0, 50000, 0, 0,
-                         0.8, 0.8, 0.8, 0.7, 10)"""
+               ) VALUES (?, 'Новый', 'courier', 50000, 0,
+                         0.8, 0.8, 0.8, 0.7, 10)""",
+            (PLAYER_ID,),
         )
-        employee_id = int(cur.lastrowid)
 
-    simulation._ensure_packaging_rules(1001)
+    simulation._ensure_packaging_rules(PLAYER_ID)
+    assert game.global_packaging_rule(PLAYER_ID) == expected
     with db.connect() as conn:
-        rows = conn.execute(
-            """SELECT pct_1, pct_2, pct_5 FROM packaging_rules
-               WHERE player_id=1001 AND employee_id=? ORDER BY product_id""",
-            (employee_id,),
-        ).fetchall()
-
-    assert rows
-    expected = game.global_packaging_rule(1001)
-    assert all(
-        (int(row["pct_1"]), int(row["pct_2"]), int(row["pct_5"]))
-        == (expected["pct_1"], expected["pct_2"], expected["pct_5"])
-        for row in rows
-    )
-
-
-def test_team_keyboard_has_global_terms_recruitment_and_packaging_controls():
-    markup = employee_list([])
-    labels = [button.text for row in markup.inline_keyboard for button in row]
-
-    assert "💰 Условия работы" in labels
-    assert "🔎 Набор" in labels
-    assert "⚙️ Фасовки" in labels
-    assert "👤 Кандидаты" not in labels
-    assert "📦 Без ответственного" not in labels
-
-
-def test_courier_profile_has_no_individual_compensation_or_packaging_button():
-    markup = employee_profile_keyboard(17, "courier")
-    labels = [button.text for row in markup.inline_keyboard for button in row]
-
-    assert "⚙️ Фасовки" not in labels
-    assert "💰 Доля в депозит" not in labels
-    assert "💰 Условия работы" in labels
-    assert "✏️ Переименовать" in labels
+        count = conn.execute(
+            "SELECT COUNT(*) FROM shop_packaging_rules WHERE player_id=?",
+            (PLAYER_ID,),
+        ).fetchone()[0]
+    assert int(count) == 1

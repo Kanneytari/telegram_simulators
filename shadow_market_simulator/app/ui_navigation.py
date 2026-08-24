@@ -197,13 +197,7 @@ def inbox_item_keyboard(item, page: int = 0) -> InlineKeyboardMarkup:
     elif kind == "recruitment_result":
         rows.append([InlineKeyboardButton(text="Кандидаты", callback_data="team:candidates")])
         rows.append([InlineKeyboardButton(text="Закрыть", callback_data=f"inbox:action:{item_id}:close:{page}")])
-    elif kind == "raise_request":
-        rows.append([
-            InlineKeyboardButton(text="Согласиться", callback_data=f"staff:raiseaccept:{item_id}:{page}"),
-            InlineKeyboardButton(text="Торговаться", callback_data=f"staff:raise:{item_id}:{page}"),
-        ])
-        rows.append([InlineKeyboardButton(text="Отказать", callback_data=f"staff:deny:{item_id}:{page}")])
-    elif kind in {"leave_request", "advance_request", "discount_request"}:
+    elif kind == "discount_request":
         rows.append([
             InlineKeyboardButton(text="Согласиться", callback_data=f"inbox:action:{item_id}:approve:{page}"),
             InlineKeyboardButton(text="Отказать", callback_data=f"inbox:action:{item_id}:deny:{page}"),
@@ -223,22 +217,6 @@ def inbox_item_keyboard(item, page: int = 0) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-def negotiation_keyboard(item_id: int, page: int = 0) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="−500", callback_data=f"staff:raiseadj:{item_id}:-500:{page}"),
-            InlineKeyboardButton(text="−100", callback_data=f"staff:raiseadj:{item_id}:-100:{page}"),
-        ],
-        [
-            InlineKeyboardButton(text="+100", callback_data=f"staff:raiseadj:{item_id}:100:{page}"),
-            InlineKeyboardButton(text="+500", callback_data=f"staff:raiseadj:{item_id}:500:{page}"),
-        ],
-        [InlineKeyboardButton(text="Отправить предложение", callback_data=f"staff:raisesend:{item_id}:{page}")],
-        [
-            InlineKeyboardButton(text="← Сообщение", callback_data=f"inbox:item:{item_id}:{page}"),
-            InlineKeyboardButton(text="Меню", callback_data="menu:home"),
-        ],
-    ])
 
 
 def build_navigation_router(db, game, simulation, admin_ids: frozenset[int]) -> Router:
@@ -310,62 +288,5 @@ def build_navigation_router(db, game, simulation, admin_ids: frozenset[int]) -> 
             result = game.handle_inbox_action(callback.from_user.id, item_id, action)
         await render_after_inbox_action(callback.message, db, game, simulation, admin_ids, callback.from_user.id, flash=result, page=page)
 
-    async def show_negotiation(callback: CallbackQuery, item_id: int, page: int = 0, flash: str | None = None) -> None:
-        state = game.start_raise_negotiation(callback.from_user.id, item_id)
-        if not state:
-            await render_after_inbox_action(callback.message, db, game, simulation, admin_ids, callback.from_user.id, flash="Запрос уже неактуален.", page=page)
-            return
-        employee = state["employee"]
-        payload = state["payload"]
-        text = (
-            f"<b>Переговоры · {clean(employee['alias'])}</b>\n\n"
-            f"Сейчас: {money(employee['pay_per_job'])}\n"
-            f"Запрос: {money(payload['requested_pay'])}\n"
-            f"Предложение: <b>{money(payload['offer_pay'])}</b>"
-        )
-        await present(callback.message, notice(flash, text), negotiation_keyboard(item_id, page))
-
-    @router.callback_query(F.data.startswith("staff:raise:") & ~F.data.startswith("staff:raiseadj:"))
-    async def negotiate(callback: CallbackQuery) -> None:
-        await callback.answer()
-        parts = (callback.data or "").split(":")
-        await show_negotiation(callback, int(parts[2]), int(parts[3]) if len(parts) > 3 else 0)
-
-    @router.callback_query(F.data.startswith("staff:raiseadj:"))
-    async def adjust_raise(callback: CallbackQuery) -> None:
-        await callback.answer()
-        parts = (callback.data or "").split(":")
-        item_id = int(parts[2])
-        game.adjust_raise_offer(callback.from_user.id, item_id, int(parts[3]))
-        await show_negotiation(callback, item_id, int(parts[4]) if len(parts) > 4 else 0)
-
-    @router.callback_query(F.data.startswith("staff:raisesend:"))
-    async def send_raise(callback: CallbackQuery) -> None:
-        await callback.answer()
-        parts = (callback.data or "").split(":")
-        item_id = int(parts[2])
-        page = int(parts[3]) if len(parts) > 3 else 0
-        result = game.submit_raise_offer(callback.from_user.id, item_id)
-        item = game.inbox_item(callback.from_user.id, item_id)
-        if item and item["status"] == "open":
-            await show_negotiation(callback, item_id, page, result)
-        else:
-            await render_after_inbox_action(callback.message, db, game, simulation, admin_ids, callback.from_user.id, flash=result, page=page)
-
-    @router.callback_query(F.data.startswith("staff:raiseaccept:"))
-    async def accept_raise(callback: CallbackQuery) -> None:
-        await callback.answer()
-        parts = (callback.data or "").split(":")
-        item_id = int(parts[2])
-        result = game.accept_raise_request(callback.from_user.id, item_id)
-        await render_after_inbox_action(callback.message, db, game, simulation, admin_ids, callback.from_user.id, flash=result, page=int(parts[3]) if len(parts) > 3 else 0)
-
-    @router.callback_query(F.data.startswith("staff:deny:"))
-    async def deny_raise(callback: CallbackQuery) -> None:
-        await callback.answer()
-        parts = (callback.data or "").split(":")
-        item_id = int(parts[2])
-        result = game.handle_inbox_action(callback.from_user.id, item_id, "deny")
-        await render_after_inbox_action(callback.message, db, game, simulation, admin_ids, callback.from_user.id, flash=result, page=int(parts[3]) if len(parts) > 3 else 0)
 
     return router

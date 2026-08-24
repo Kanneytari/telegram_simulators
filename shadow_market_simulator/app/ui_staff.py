@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import json
-
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup

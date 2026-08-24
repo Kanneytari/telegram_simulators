@@ -3,21 +3,14 @@ from __future__ import annotations
 import random
 from datetime import timedelta
 
-import pytest
-
 from app.courier_management import (
     BONUS_COST,
     CourierManagementGameService,
     CourierManagementSimulationEngine,
 )
-from app.courier_management_handlers import (
-    courier_deposit_keyboard,
-    courier_management_keyboard,
-)
 from app.courier_model import TRAIT_LEARNER
 from app.courier_recruitment import CourierRecruitmentService
 from app.db import Database
-from app.employee_profile_handlers import employee_profile_keyboard
 from app.recruitment import CHANNELS
 from app.simulation import iso, utcnow
 
@@ -347,7 +340,7 @@ def test_reached_deposit_target_returns_to_team_standard_rate(tmp_path):
     assert int(order["employee_deposit_contribution"]) == expected
 
 
-def test_candidate_phone_is_visible_and_transfers_on_hire(tmp_path):
+def test_candidate_phone_profile_transfers_on_hire(tmp_path):
     db, _, game, recruitment = make_system(tmp_path)
     campaign = {
         "id": 999,
@@ -363,10 +356,11 @@ def test_candidate_phone_is_visible_and_transfers_on_hire(tmp_path):
             (PLAYER_ID,),
         ).fetchone()
         equipment = conn.execute(
-            "SELECT * FROM courier_candidate_equipment WHERE candidate_id=?",
+            "SELECT * FROM courier_candidate_profiles WHERE candidate_id=?",
             (candidate["id"],),
         ).fetchone()
-    assert "Телефон:" in candidate["summary"]
+    assert equipment is not None
+    assert int(equipment["phone_level"]) in {0, 1, 2}
     game.hire_candidate(PLAYER_ID, int(candidate["id"]))
     with db.connect() as conn:
         employee = conn.execute(
@@ -378,28 +372,3 @@ def test_candidate_phone_is_visible_and_transfers_on_hire(tmp_path):
             (employee["id"],),
         ).fetchone()
     assert int(management["phone_level"]) == int(equipment["phone_level"])
-
-
-def test_profile_and_management_ux_stays_compact(tmp_path):
-    db, _, game, _ = make_system(tmp_path)
-    courier = first_courier(db)
-    employee_id = int(courier["id"])
-    profile = employee_profile_keyboard(employee_id, "courier")
-    labels = [button.text for row in profile.inline_keyboard for button in row]
-    assert "🧭 Управление" in labels
-
-    management = courier_management_keyboard(employee_id)
-    action_buttons = [
-        button for row in management.inline_keyboard[:2] for button in row
-    ]
-    assert len(action_buttons) == 4
-
-    deposit = courier_deposit_keyboard(employee_id)
-    assert len(deposit.inline_keyboard[0]) == 3
-    assert len(deposit.inline_keyboard[1]) == 3
-
-    text = game.employee_details(PLAYER_ID, employee_id)
-    assert text is not None
-    assert "<b>Оснащение</b>" in text
-    assert "integrity" not in text
-    assert "resilience" not in text

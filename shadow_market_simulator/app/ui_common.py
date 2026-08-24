@@ -43,7 +43,6 @@ def clean(value: object) -> str:
 
 
 def normalize_text(text: str) -> str:
-    """Keep legacy service messages visually consistent with the new Russian UI."""
     return _THOUSANDS_COMMA.sub(" ", text)
 
 

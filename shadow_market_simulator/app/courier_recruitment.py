@@ -2,20 +2,14 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from .courier_management import COURIER_MANAGEMENT_SCHEMA
-from .courier_model import COURIER_SCHEMA, generate_courier_blueprint
-from .recruitment_runtime import NightshiftRecruitmentService, ROLE_TITLES
+from .courier_model import generate_courier_blueprint
+from .recruitment import RecruitmentService
 from .simulation import clamp, iso
 
 
-class CourierRecruitmentService(NightshiftRecruitmentService):
+class CourierRecruitmentService(RecruitmentService):
     """Recruitment with deliberately distinct hidden courier personalities."""
 
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        with self.db.connect() as conn:
-            conn.executescript(COURIER_SCHEMA)
-            conn.executescript(COURIER_MANAGEMENT_SCHEMA)
 
     def _create_candidate(self, conn, player_id: int, campaign, channel, now) -> None:
         if campaign["role"] != "courier":
@@ -57,7 +51,6 @@ class CourierRecruitmentService(NightshiftRecruitmentService):
             phone_level = 0 if phone_roll < 0.35 else 1 if phone_roll < 0.90 else 2
         else:
             phone_level = 0 if phone_roll < 0.55 else 1 if phone_roll < 0.95 else 2
-        phone_text = {0: "старый", 1: "нормальный", 2: "хороший"}[phone_level]
 
         # Low-deposit candidates are intentional: they create a meaningful choice
         # between immediate financial safety and long-term employee potential.
@@ -70,27 +63,12 @@ class CourierRecruitmentService(NightshiftRecruitmentService):
             0.38,
             0.78,
         )
-        experience_text = {
-            0: "без подтверждённого опыта",
-            1: "есть опыт",
-            2: "опыт выглядит сильным",
-        }[experience_level]
-        summary = (
-            f"Источник: {channel.title}\n"
-            f"Роль: {ROLE_TITLES['courier']}\n"
-            f"Опыт: {experience_text}\n"
-            f"Автомобиль: {'есть' if has_car else 'нет'}\n"
-            f"Телефон: {phone_text}\n"
-            f"Готовый депозит: {deposit:,} ₽"
-        )
 
         cur = conn.execute(
             """INSERT INTO candidates(
-                   player_id, alias, role, desired_pay, deposit, has_car,
-                   reliability, attention, honesty, loyalty, summary, expires_at,
-                   campaign_id, source_channel, offered_pay, min_deposit,
-                   deposit_contribution_pct, experience_level
-               ) VALUES (?, ?, 'courier', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 0, ?)""",
+                   player_id, alias, role, deposit, has_car, reliability, attention, honesty,
+                   loyalty, expires_at, campaign_id, source_channel, min_deposit, experience_level
+               ) VALUES (?, ?, 'courier', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 player_id,
                 alias,
@@ -100,7 +78,6 @@ class CourierRecruitmentService(NightshiftRecruitmentService):
                 blueprint.precision,
                 blueprint.integrity,
                 starting_loyalty,
-                summary,
                 iso(now + timedelta(hours=10 / self.effective_speed(player_id))),
                 campaign["id"],
                 channel.code,
@@ -111,8 +88,8 @@ class CourierRecruitmentService(NightshiftRecruitmentService):
         candidate_id = int(cur.lastrowid)
         conn.execute(
             """INSERT INTO courier_candidate_profiles(
-                   candidate_id, pace, precision, resilience, integrity, trait
-               ) VALUES (?, ?, ?, ?, ?, ?)""",
+                   candidate_id, pace, precision, resilience, integrity, trait, phone_level
+               ) VALUES (?, ?, ?, ?, ?, ?, ?)""",
             (
                 candidate_id,
                 blueprint.pace,
@@ -120,9 +97,6 @@ class CourierRecruitmentService(NightshiftRecruitmentService):
                 blueprint.resilience,
                 blueprint.integrity,
                 blueprint.trait,
+                phone_level,
             ),
-        )
-        conn.execute(
-            "INSERT INTO courier_candidate_equipment(candidate_id, phone_level) VALUES (?, ?)",
-            (candidate_id, phone_level),
         )

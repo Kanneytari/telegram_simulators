@@ -4,7 +4,7 @@ import random
 
 from app.compensation import CompensationSimulationEngine
 from app.db import Database
-from app.recruitment_runtime import NightshiftRecruitmentService
+from app.recruitment import RecruitmentService
 
 
 def make_recruitment(tmp_path):
@@ -12,7 +12,7 @@ def make_recruitment(tmp_path):
     db.init()
     simulation = CompensationSimulationEngine(db, speed=1.0, rng=random.Random(11))
     simulation.ensure_player(1001, "tester")
-    service = NightshiftRecruitmentService(db, speed=1.0, rng=random.Random(42))
+    service = RecruitmentService(db, speed=1.0, rng=random.Random(42))
     return db, simulation, service
 
 

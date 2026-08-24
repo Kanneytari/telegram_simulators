@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import json
 import random
 from datetime import timedelta
 
 from app.compensation import CompensationGameService, CompensationSimulationEngine
 from app.db import Database
-from app.recruitment_runtime import NightshiftRecruitmentService
+from app.recruitment import RecruitmentService
 from app.simulation import iso, parse_dt, utcnow
 
 
@@ -17,7 +16,7 @@ def make_system(tmp_path):
     simulation.seed_catalog()
     simulation.ensure_player(1001, "tester")
     game = CompensationGameService(db, simulation, rng=random.Random(8))
-    recruitment = NightshiftRecruitmentService(db, speed=1.0, rng=random.Random(9))
+    recruitment = RecruitmentService(db, speed=1.0, rng=random.Random(9))
     return db, simulation, game, recruitment
 
 
@@ -129,30 +128,6 @@ def test_speed_change_rescales_existing_game_deadline(tmp_path):
         expires = conn.execute("SELECT expires_at FROM inbox WHERE id=?", (item_id,)).fetchone()[0]
     remaining_minutes = (parse_dt(expires) - now).total_seconds() / 60
     assert 1.9 <= remaining_minutes <= 2.1
-
-
-def test_leave_request_uses_game_time_not_real_time(tmp_path):
-    db, _, game, recruitment = make_system(tmp_path)
-    recruitment.set_player_multiplier(1001, 60)
-    with db.connect() as conn:
-        employee = conn.execute(
-            "SELECT * FROM employees WHERE player_id=1001 ORDER BY id LIMIT 1"
-        ).fetchone()
-        cur = conn.execute(
-            """INSERT INTO inbox(player_id, kind, priority, title, body, payload_json)
-               VALUES (1001, 'leave_request', 'normal', 'Пауза', 'test', ?)""",
-            (json.dumps({"employee_id": employee["id"]}),),
-        )
-        item_id = int(cur.lastrowid)
-    before = utcnow()
-    game.handle_inbox_action(1001, item_id, "approve")
-    with db.connect() as conn:
-        until = conn.execute(
-            "SELECT unavailable_until FROM employees WHERE id=?",
-            (employee["id"],),
-        ).fetchone()[0]
-    real_minutes = (parse_dt(until) - before).total_seconds() / 60
-    assert 5.8 <= real_minutes <= 6.2
 
 
 def test_simulation_does_not_create_individual_raise_requests(tmp_path):

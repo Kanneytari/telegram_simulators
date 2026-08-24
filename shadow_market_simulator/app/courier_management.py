@@ -3,52 +3,12 @@ from __future__ import annotations
 import json
 from datetime import timedelta
 
-from .compensation import _deposit_part, _policy_conn
+from .compensation import _deposit_part
 from .courier_core import CourierCoreGameService, CourierCoreSimulationEngine
 from .courier_model import TRAIT_SENSITIVE
 from .simulation import clamp, iso, parse_dt, utcnow
 
 
-COURIER_MANAGEMENT_SCHEMA = r"""
-CREATE TABLE IF NOT EXISTS courier_management (
-    employee_id INTEGER PRIMARY KEY REFERENCES employees(id) ON DELETE CASCADE,
-    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
-    deposit_target INTEGER NOT NULL DEFAULT 60000,
-    deposit_contribution_pct INTEGER NOT NULL DEFAULT 50,
-    transport_level INTEGER NOT NULL DEFAULT 0 CHECK(transport_level BETWEEN 0 AND 2),
-    phone_level INTEGER NOT NULL DEFAULT 0 CHECK(phone_level BETWEEN 0 AND 2),
-    invested_total INTEGER NOT NULL DEFAULT 0,
-    bonuses_given INTEGER NOT NULL DEFAULT 0,
-    rests_taken INTEGER NOT NULL DEFAULT 0,
-    last_bonus_at TEXT,
-    last_rest_at TEXT,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_courier_management_player
-    ON courier_management(player_id, employee_id);
-
-CREATE TABLE IF NOT EXISTS courier_candidate_equipment (
-    candidate_id INTEGER PRIMARY KEY REFERENCES candidates(id) ON DELETE CASCADE,
-    phone_level INTEGER NOT NULL DEFAULT 0 CHECK(phone_level BETWEEN 0 AND 2)
-);
-
-CREATE TABLE IF NOT EXISTS courier_management_events (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
-    employee_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
-    kind TEXT NOT NULL,
-    amount INTEGER NOT NULL DEFAULT 0,
-    loyalty_delta REAL NOT NULL DEFAULT 0,
-    stress_delta REAL NOT NULL DEFAULT 0,
-    details_json TEXT NOT NULL DEFAULT '{}',
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_courier_management_events_employee
-    ON courier_management_events(player_id, employee_id, created_at);
-"""
 
 BONUS_COST = 5_000
 BONUS_COOLDOWN_HOURS = 24.0
@@ -78,13 +38,11 @@ class CourierManagementSimulationEngine(CourierCoreSimulationEngine):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            conn.executescript(COURIER_MANAGEMENT_SCHEMA)
             self._ensure_courier_management_conn(conn)
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
         created = super().ensure_player(player_id, username)
         with self.db.connect() as conn:
-            conn.executescript(COURIER_MANAGEMENT_SCHEMA)
             self._ensure_courier_management_conn(conn, player_id)
         return created
 
@@ -124,6 +82,27 @@ class CourierManagementSimulationEngine(CourierCoreSimulationEngine):
         with self.db.connect() as conn:
             return self._management_conn(conn, employee_id)
 
+    def _employee_deposit_contribution(
+        self, conn, player_id: int, employee_id: int, employee_cost: int, default_pct: int
+    ) -> int:
+        management = self._management_conn(conn, employee_id)
+        employee = conn.execute(
+            "SELECT deposit, deposit_accrued FROM employees WHERE id=?",
+            (employee_id,),
+        ).fetchone()
+        if not management or not employee:
+            return _deposit_part(employee_cost, default_pct)
+
+        deposit = int(employee["deposit"])
+        pending = int(employee["deposit_accrued"])
+        target = int(management["deposit_target"])
+        if deposit + pending >= target:
+            return _deposit_part(employee_cost, default_pct)
+
+        pct = int(management["deposit_contribution_pct"])
+        desired = _deposit_part(employee_cost, pct)
+        return min(desired, max(0, target - deposit - pending))
+
     def _effective_pace(self, profile, stress: float) -> float:
         value = super()._effective_pace(profile, stress)
         management = self._management(int(profile["employee_id"]))
@@ -140,94 +119,7 @@ class CourierManagementSimulationEngine(CourierCoreSimulationEngine):
         bonus = PHONE[int(management["phone_level"])][2]
         return clamp(value + bonus, 0.32, 0.995)
 
-    def _create_retail_order(self, conn, player_id: int, listing, now) -> bool | None:
-        before = int(
-            conn.execute(
-                "SELECT COALESCE(MAX(id),0) FROM orders WHERE player_id=?",
-                (player_id,),
-            ).fetchone()[0]
-        )
-        result = super()._create_retail_order(conn, player_id, listing, now)
-        if result is None:
-            return result
 
-        order = conn.execute(
-            """SELECT * FROM orders
-               WHERE player_id=? AND id>?
-               ORDER BY id DESC LIMIT 1""",
-            (player_id, before),
-        ).fetchone()
-        if not order:
-            return result
-        employee_id = int(order["employee_id"])
-        management = self._management_conn(conn, employee_id)
-        employee = conn.execute(
-            "SELECT deposit, deposit_accrued FROM employees WHERE id=?",
-            (employee_id,),
-        ).fetchone()
-        if not management or not employee:
-            return result
-
-        current = int(order["employee_deposit_contribution"])
-        pending_before = max(0, int(employee["deposit_accrued"]) - current)
-        deposit = int(employee["deposit"])
-        target = int(management["deposit_target"])
-        policy = _policy_conn(conn, player_id, "courier")
-        plan_active = deposit + pending_before < target
-        pct = (
-            int(management["deposit_contribution_pct"])
-            if plan_active
-            else int(policy["deposit_contribution_pct"])
-        )
-        desired = _deposit_part(int(order["employee_cost"]), pct)
-        if plan_active:
-            desired = min(desired, max(0, target - deposit - pending_before))
-
-        delta = desired - current
-        if delta:
-            conn.execute(
-                "UPDATE orders SET employee_deposit_contribution=? WHERE id=?",
-                (desired, int(order["id"])),
-            )
-            conn.execute(
-                "UPDATE employees SET deposit_accrued=MAX(0, deposit_accrued+?) WHERE id=?",
-                (delta, employee_id),
-            )
-        return result
-
-    def _simulate_management_events(self, conn, player_id: int, sim_hours: float, now) -> int:
-        before = int(
-            conn.execute(
-                "SELECT COALESCE(MAX(id),0) FROM inbox WHERE player_id=?",
-                (player_id,),
-            ).fetchone()[0]
-        )
-        created = super()._simulate_management_events(conn, player_id, sim_hours, now)
-
-        # The previous random courier HR requests are intentionally removed.
-        # Courier management is now initiated by the player from the profile.
-        rows = conn.execute(
-            """SELECT i.id, i.kind, i.payload_json
-               FROM inbox i
-               WHERE i.player_id=? AND i.id>? AND i.kind IN (
-                   'raise_request','leave_request','advance_request'
-               )""",
-            (player_id, before),
-        ).fetchall()
-        removed = 0
-        for row in rows:
-            try:
-                employee_id = int(json.loads(row["payload_json"] or "{}").get("employee_id", 0))
-            except (TypeError, ValueError):
-                employee_id = 0
-            employee = (
-                conn.execute("SELECT role FROM employees WHERE id=?", (employee_id,)).fetchone()
-                if employee_id else None
-            )
-            if employee and employee["role"] == "courier":
-                conn.execute("DELETE FROM inbox WHERE id=?", (int(row["id"]),))
-                removed += 1
-        return max(0, int(created) - removed)
 
 
 class CourierManagementGameService(CourierCoreGameService):
@@ -236,7 +128,7 @@ class CourierManagementGameService(CourierCoreGameService):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            conn.executescript(COURIER_MANAGEMENT_SCHEMA)
+            pass
             self.simulation._ensure_courier_management_conn(conn)
 
     def hire_candidate(self, player_id: int, candidate_id: int) -> str:
@@ -245,8 +137,8 @@ class CourierManagementGameService(CourierCoreGameService):
                 "SELECT * FROM candidates WHERE id=? AND player_id=? AND status='open'",
                 (candidate_id, player_id),
             ).fetchone()
-            equipment = conn.execute(
-                "SELECT * FROM courier_candidate_equipment WHERE candidate_id=?",
+            profile = conn.execute(
+                "SELECT phone_level FROM courier_candidate_profiles WHERE candidate_id=?",
                 (candidate_id,),
             ).fetchone()
         result = super().hire_candidate(player_id, candidate_id)
@@ -270,7 +162,7 @@ class CourierManagementGameService(CourierCoreGameService):
                 (
                     max(60_000, int(employee["deposit"])),
                     2 if int(candidate["has_car"]) else 0,
-                    int(equipment["phone_level"]) if equipment else 0,
+                    int(profile["phone_level"]) if profile else 0,
                     int(employee["id"]),
                 ),
             )

@@ -21,46 +21,6 @@ DEFAULT_POLICIES = {
     },
 }
 
-COMPENSATION_SCHEMA = """
-CREATE TABLE IF NOT EXISTS staff_compensation_policies (
-    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
-    role TEXT NOT NULL CHECK(role IN ('courier','warehouse')),
-    fixed_fee INTEGER NOT NULL DEFAULT 0,
-    base_rate_bps INTEGER NOT NULL DEFAULT 0,
-    risk_rate_bps INTEGER NOT NULL DEFAULT 0,
-    deposit_contribution_pct INTEGER NOT NULL DEFAULT 0,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY(player_id, role)
-);
-
-CREATE TABLE IF NOT EXISTS wholesale_delivery_payments (
-    allocation_id INTEGER PRIMARY KEY REFERENCES retail_allocations(id) ON DELETE CASCADE,
-    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
-    employee_id INTEGER NOT NULL REFERENCES employees(id),
-    goods_value INTEGER NOT NULL,
-    uncovered_value INTEGER NOT NULL DEFAULT 0,
-    base_amount INTEGER NOT NULL,
-    risk_amount INTEGER NOT NULL DEFAULT 0,
-    amount INTEGER NOT NULL,
-    deposit_contribution INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_wholesale_delivery_payments_employee
-    ON wholesale_delivery_payments(player_id, employee_id, created_at);
-
-CREATE TABLE IF NOT EXISTS compensation_policy_changes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
-    role TEXT NOT NULL,
-    field TEXT NOT NULL,
-    old_value INTEGER NOT NULL,
-    new_value INTEGER NOT NULL,
-    loyalty_delta REAL NOT NULL DEFAULT 0,
-    stress_delta REAL NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-"""
 
 
 def _ensure_policy_conn(conn, player_id: int, role: str) -> None:
@@ -103,7 +63,7 @@ class CompensationSimulationEngine(DelayedDisputeSimulationEngine):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            conn.executescript(COMPENSATION_SCHEMA)
+            pass
             for row in conn.execute("SELECT player_id FROM shops").fetchall():
                 for role in DEFAULT_POLICIES:
                     _ensure_policy_conn(conn, int(row["player_id"]), role)
@@ -111,143 +71,13 @@ class CompensationSimulationEngine(DelayedDisputeSimulationEngine):
     def ensure_player(self, player_id: int, username: str | None) -> bool:
         created = super().ensure_player(player_id, username)
         with self.db.connect() as conn:
-            conn.executescript(COMPENSATION_SCHEMA)
+            pass
             for role in DEFAULT_POLICIES:
                 _ensure_policy_conn(conn, player_id, role)
             # Live compensation is defined by the shop-wide policy. Per-employee
             # operation rates stay zero at this layer so they cannot be charged twice.
-            conn.execute(
-                "UPDATE employees SET pay_per_job=0, deposit_contribution_pct=0 WHERE player_id=?",
-                (player_id,),
-            )
         return created
 
-    def _create_retail_order(self, conn, player_id: int, listing, now) -> bool | None:
-        position = conn.execute(
-            """SELECT rp.id position_id, rp.allocation_id, rp.batch_id,
-                      rp.employee_id retail_employee_id, rp.product_id,
-                      rp.pack_size, rp.position_count,
-                      rp.unit_cost position_unit_cost, rp.quality position_quality,
-                      e.id employee_id, e.attention, e.stress, e.honesty, e.loyalty
-               FROM retail_positions rp
-               JOIN employees e ON e.id=rp.employee_id
-               WHERE rp.player_id=? AND rp.product_id=? AND rp.pack_size=?
-                 AND rp.position_count>0 AND e.active=1 AND e.available=1 AND e.role='courier'
-               ORDER BY rp.created_at, rp.id LIMIT 1""",
-            (player_id, listing["product_id"], listing["pack_size"]),
-        ).fetchone()
-        client = conn.execute(
-            "SELECT * FROM clients WHERE player_id=? ORDER BY RANDOM() LIMIT 1",
-            (player_id,),
-        ).fetchone()
-        if not position or not client:
-            return None
-
-        policy = _policy_conn(conn, player_id, "courier")
-        qty = int(listing["pack_size"])
-        revenue = int(listing["price"])
-        cost = int(position["position_unit_cost"] * qty)
-        employee_cost = int(policy["fixed_fee"]) + _money_from_bps(
-            revenue, int(policy["base_rate_bps"])
-        )
-        deposit_part = _deposit_part(
-            employee_cost, int(policy["deposit_contribution_pct"])
-        )
-        quality = float(position["position_quality"])
-
-        conn.execute(
-            "UPDATE retail_positions SET position_count=position_count-1 WHERE id=?",
-            (position["position_id"],),
-        )
-        conn.execute(
-            """UPDATE employees
-               SET jobs_done=jobs_done+1,
-                   wages_accrued=wages_accrued+?,
-                   deposit_accrued=deposit_accrued+?,
-                   stress=MIN(100, stress+?),
-                   last_contact_at=?
-               WHERE id=?""",
-            (
-                employee_cost,
-                deposit_part,
-                self.rng.uniform(0.05, 0.35),
-                iso(now),
-                position["employee_id"],
-            ),
-        )
-        conn.execute(
-            """UPDATE clients
-               SET shop_orders=shop_orders+1,
-                   marketplace_orders=marketplace_orders+1,
-                   total_spend=total_spend+?
-               WHERE id=?""",
-            (revenue, client["id"]),
-        )
-        cur = conn.execute(
-            """INSERT INTO orders(
-                   player_id, client_id, employee_id, batch_id, product_id, quantity,
-                   revenue, cost, employee_cost, employee_deposit_contribution, quality
-               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (
-                player_id,
-                client["id"],
-                position["employee_id"],
-                position["batch_id"],
-                listing["product_id"],
-                qty,
-                revenue,
-                cost,
-                employee_cost,
-                deposit_part,
-                quality,
-            ),
-        )
-        order_id = int(cur.lastrowid)
-        profit = revenue - cost - employee_cost
-        conn.execute(
-            """UPDATE shops
-               SET balance=balance+?, total_revenue=total_revenue+?,
-                   total_profit=total_profit+?, total_orders=total_orders+1
-               WHERE player_id=?""",
-            (revenue, revenue, profit, player_id),
-        )
-        conn.execute(
-            """INSERT INTO ledger(player_id, amount, kind, reference_type, reference_id, note)
-               VALUES (?, ?, 'sale', 'order', ?, ?)""",
-            (
-                player_id,
-                revenue,
-                order_id,
-                f"Заказ #{order_id} · комиссия розницы {employee_cost:,} ₽ начислена",
-            ),
-        )
-
-        employee_view = {
-            "id": int(position["employee_id"]),
-            "attention": float(position["attention"]),
-            "stress": float(position["stress"]),
-            "honesty": float(position["honesty"]),
-            "loyalty": float(position["loyalty"]),
-        }
-        probability = self._dispute_probability(
-            client,
-            employee_view,
-            quality,
-            float(listing["complaint_modifier"]),
-        )
-        if self.rng.random() < probability:
-            self._open_dispute(
-                conn,
-                player_id,
-                order_id,
-                client,
-                employee_view,
-                quality,
-                revenue,
-                now,
-            )
-            return True
-        return False
 
     def _process_tasks(self, conn, player_id: int, now) -> int:
         due_handoffs = conn.execute(
@@ -355,24 +185,7 @@ class CompensationSimulationEngine(DelayedDisputeSimulationEngine):
         return completed
 
     def _simulate_management_events(self, conn, player_id: int, sim_hours: float, now) -> int:
-        """Use existing staff events but discard individual raise requests."""
-        before_id = int(
-            conn.execute(
-                "SELECT COALESCE(MAX(id),0) FROM inbox WHERE player_id=?",
-                (player_id,),
-            ).fetchone()[0]
-        )
         created = super()._simulate_management_events(conn, player_id, sim_hours, now)
-        obsolete = conn.execute(
-            "SELECT id FROM inbox WHERE player_id=? AND id>? AND kind='raise_request'",
-            (player_id, before_id),
-        ).fetchall()
-        if obsolete:
-            conn.executemany(
-                "DELETE FROM inbox WHERE id=?",
-                [(int(row["id"]),) for row in obsolete],
-            )
-            created = max(0, int(created) - len(obsolete))
         conn.execute(
             """UPDATE employees SET deposit_accrued=0
                WHERE player_id=? AND wages_accrued=0 AND deposit_accrued<>0""",
@@ -387,7 +200,7 @@ class CompensationGameService(DelayedDisputeGameService):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            conn.executescript(COMPENSATION_SCHEMA)
+            pass
             for row in conn.execute("SELECT player_id FROM shops").fetchall():
                 for role in DEFAULT_POLICIES:
                     _ensure_policy_conn(conn, int(row["player_id"]), role)
@@ -503,59 +316,6 @@ class CompensationGameService(DelayedDisputeGameService):
             "reaction": reaction,
         }
 
-    def buy_offer_for_employee(self, player_id: int, offer_id: int, employee_id: int) -> str:
-        with self.db.connect() as conn:
-            before = conn.execute(
-                """SELECT jobs_done, wages_accrued, deposit_accrued, pay_per_job
-                   FROM employees
-                   WHERE id=? AND player_id=? AND active=1 AND role='warehouse'""",
-                (employee_id, player_id),
-            ).fetchone()
-            max_task_id = int(
-                conn.execute(
-                    "SELECT COALESCE(MAX(id),0) FROM employee_tasks WHERE player_id=?",
-                    (player_id,),
-                ).fetchone()[0]
-            )
-        result = super().buy_offer_for_employee(player_id, offer_id, employee_id)
-        if not before:
-            return result
-        with self.db.connect() as conn:
-            receive_task = conn.execute(
-                """SELECT id FROM employee_tasks
-                   WHERE player_id=? AND employee_id=? AND kind='receive_batch' AND id>?
-                   ORDER BY id LIMIT 1""",
-                (player_id, employee_id, max_task_id),
-            ).fetchone()
-            if receive_task:
-                after = conn.execute(
-                    "SELECT jobs_done, wages_accrued, deposit_accrued FROM employees WHERE id=?",
-                    (employee_id,),
-                ).fetchone()
-                receive_time_amount = int(before["pay_per_job"] or 0)
-                if (
-                    int(after["jobs_done"]) > int(before["jobs_done"])
-                    and int(after["wages_accrued"]) >= int(before["wages_accrued"]) + receive_time_amount
-                ):
-                    conn.execute(
-                        """UPDATE employees
-                           SET jobs_done=?, wages_accrued=?, deposit_accrued=?
-                           WHERE id=? AND player_id=?""",
-                        (
-                            int(before["jobs_done"]),
-                            int(before["wages_accrued"]),
-                            int(before["deposit_accrued"]),
-                            employee_id,
-                            player_id,
-                        ),
-                    )
-        marker = f"Начислено за операцию: {int(before['pay_per_job'] or 0):,} ₽"
-        if marker in result:
-            result = result.replace(
-                marker,
-                "Оплата будет начислена после успешной передачи товара рознице.",
-            )
-        return result
 
     def wholesale_handoff_quote(
         self, player_id: int, batch_id: int, quantity: int
@@ -859,18 +619,6 @@ class CompensationGameService(DelayedDisputeGameService):
             text += "\n\n🔴 Часть товара не покрыта депозитом. Это осознанный дополнительный риск."
         return text
 
-    def change_employee_role(self, player_id: int, employee_id: int) -> str:
-        result = super().change_employee_role(player_id, employee_id)
-        with self.db.connect() as conn:
-            if conn.execute(
-                "SELECT 1 FROM employees WHERE id=? AND player_id=? AND active=1",
-                (employee_id, player_id),
-            ).fetchone():
-                conn.execute(
-                    "UPDATE employees SET pay_per_job=0, deposit_contribution_pct=0 WHERE id=?",
-                    (employee_id,),
-                )
-        return result
 
     def hire_candidate(self, player_id: int, candidate_id: int) -> str:
         with self.db.connect() as conn:
@@ -883,20 +631,13 @@ class CompensationGameService(DelayedDisputeGameService):
             deposit = int(candidate["deposit"])
             cur = conn.execute(
                 """INSERT INTO employees(
-                       player_id, alias, role, pay_per_job, deposit,
-                       deposit_contribution_pct, deposit_accrued, has_car,
+                       player_id, alias, role, deposit, has_car,
                        reliability, attention, honesty, loyalty
-                   ) VALUES (?, ?, ?, 0, ?, 0, 0, ?, ?, ?, ?, ?)""",
+                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
-                    player_id,
-                    candidate["alias"],
-                    candidate["role"],
-                    deposit,
-                    candidate["has_car"],
-                    candidate["reliability"],
-                    candidate["attention"],
-                    candidate["honesty"],
-                    candidate["loyalty"],
+                    player_id, candidate["alias"], candidate["role"], deposit,
+                    candidate["has_car"], candidate["reliability"], candidate["attention"],
+                    candidate["honesty"], candidate["loyalty"],
                 ),
             )
             employee_id = int(cur.lastrowid)
@@ -907,12 +648,7 @@ class CompensationGameService(DelayedDisputeGameService):
             conn.execute(
                 """INSERT INTO ledger(player_id, amount, kind, reference_type, reference_id, note)
                    VALUES (?, ?, 'deposit_in', 'employee', ?, ?)""",
-                (
-                    player_id,
-                    deposit,
-                    employee_id,
-                    f"Стартовый депозит сотрудника {candidate['alias']}",
-                ),
+                (player_id, deposit, employee_id, f"Стартовый депозит сотрудника {candidate['alias']}"),
             )
             conn.execute("UPDATE candidates SET status='hired' WHERE id=?", (candidate_id,))
         self.simulation._ensure_packaging_rules(player_id)

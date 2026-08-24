@@ -7,22 +7,6 @@ from .simulation import iso
 SALES_ACTIVITY_MULTIPLIER = 5.0
 
 
-STAFF_RELATIONSHIP_SCHEMA = """
-CREATE TABLE IF NOT EXISTS staff_relationship_events (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
-    employee_id INTEGER NOT NULL REFERENCES employees(id),
-    kind TEXT NOT NULL,
-    reference_type TEXT,
-    reference_id INTEGER,
-    loyalty_delta REAL NOT NULL DEFAULT 0,
-    stress_delta REAL NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_staff_relationship_events_employee
-    ON staff_relationship_events(player_id, employee_id, created_at);
-"""
 
 
 def _apply_relationship_delta(
@@ -108,19 +92,6 @@ def _apply_overexposure_effect(
 class StaffRelationshipSimulationEngine(CompensationSimulationEngine):
     """Hidden staff reactions plus the live sales pacing multiplier."""
 
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        with self.db.connect() as conn:
-            conn.executescript(STAFF_RELATIONSHIP_SCHEMA)
-
-    def _simulate_sales(self, conn, player_id: int, shop, sim_hours: float, now):
-        return super()._simulate_sales(
-            conn,
-            player_id,
-            shop,
-            max(0.0, float(sim_hours)) * SALES_ACTIVITY_MULTIPLIER,
-            now,
-        )
 
     def _process_tasks(self, conn, player_id: int, now) -> int:
         due_handoffs = conn.execute(
@@ -165,11 +136,6 @@ class StaffRelationshipSimulationEngine(CompensationSimulationEngine):
 
 class StaffRelationshipGameService(CompensationGameService):
     """Hidden trust, pressure and employer-support effects."""
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        with self.db.connect() as conn:
-            conn.executescript(STAFF_RELATIONSHIP_SCHEMA)
 
     def buy_offer_for_employee(self, player_id: int, offer_id: int, employee_id: int) -> str:
         exposure_before = self._employee_exposure(player_id, employee_id)

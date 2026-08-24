@@ -10,7 +10,6 @@ from .recruitment import CHANNELS
 from .ui_common import clean, money, nav_row, notice, pct, present
 from .ui_staff import (
     RenameEmployeeState,
-    development_keyboard,
     render_allocation,
     render_batches,
     render_channels,
@@ -89,8 +88,8 @@ async def render_candidate(target: Message, game, player_id: int, candidate_id: 
                WHERE c.id=? AND c.player_id=? AND c.status='open'""",
             (candidate_id, player_id),
         ).fetchone()
-        equipment = conn.execute(
-            "SELECT phone_level FROM courier_candidate_equipment WHERE candidate_id=?",
+        profile = conn.execute(
+            "SELECT phone_level FROM courier_candidate_profiles WHERE candidate_id=?",
             (candidate_id,),
         ).fetchone()
     if not row:
@@ -113,7 +112,7 @@ async def render_candidate(target: Message, game, player_id: int, candidate_id: 
     ]
     policy = game.compensation_policy(player_id, role)
     if role == "courier":
-        phone = PHONE[int(equipment["phone_level"] if equipment else 0)][0]
+        phone = PHONE[int(profile["phone_level"] if profile else 0)][0]
         lines.append(f"Телефон: {phone}")
         fixed = int(row["terms_fixed_fee"] if row["terms_fixed_fee"] is not None else policy["fixed_fee"])
         rate = int(row["terms_base_rate_bps"] if row["terms_base_rate_bps"] is not None else policy["base_rate_bps"])
