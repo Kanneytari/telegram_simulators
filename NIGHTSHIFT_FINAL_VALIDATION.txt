@@ -1,0 +1,320 @@
+=== PYTEST ===
+
+==================================== ERRORS ====================================
+_________________ ERROR collecting tests/test_analytics_log.py _________________
+ImportError while importing test module '/home/runner/work/telegram_simulators/telegram_simulators/shadow_market_simulator/tests/test_analytics_log.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_analytics_log.py:8: in <module>
+    from app.workflow_final import FinalWorkflowGameService, FinalWorkflowSimulationEngine
+E   ModuleNotFoundError: No module named 'app.workflow_final'
+_________________ ERROR collecting tests/test_payroll_clock.py _________________
+ImportError while importing test module '/home/runner/work/telegram_simulators/telegram_simulators/shadow_market_simulator/tests/test_payroll_clock.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_payroll_clock.py:5: in <module>
+    from app.services import FinalGameService
+E   ModuleNotFoundError: No module named 'app.services'
+________________ ERROR collecting tests/test_staff_turnover.py _________________
+ImportError while importing test module '/home/runner/work/telegram_simulators/telegram_simulators/shadow_market_simulator/tests/test_staff_turnover.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_staff_turnover.py:7: in <module>
+    from app.workflow_final import FinalWorkflowGameService, FinalWorkflowSimulationEngine
+E   ModuleNotFoundError: No module named 'app.workflow_final'
+______________ ERROR collecting tests/test_storefront_disputes.py ______________
+ImportError while importing test module '/home/runner/work/telegram_simulators/telegram_simulators/shadow_market_simulator/tests/test_storefront_disputes.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_storefront_disputes.py:9: in <module>
+    from app.workflow_final import FinalWorkflowGameService, FinalWorkflowSimulationEngine
+E   ModuleNotFoundError: No module named 'app.workflow_final'
+=========================== short test summary info ============================
+ERROR tests/test_analytics_log.py
+ERROR tests/test_payroll_clock.py
+ERROR tests/test_staff_turnover.py
+ERROR tests/test_storefront_disputes.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 4 errors during collection !!!!!!!!!!!!!!!!!!!!
+4 errors in 5.34s
+PYTEST_EXIT=2
+
+=== CURRENT ARCHITECTURE VALIDATOR ===
+Traceback (most recent call last):
+  File "/home/runner/work/telegram_simulators/telegram_simulators/tools/validate_nightshift_current.py", line 196, in <module>
+    main()
+  File "/home/runner/work/telegram_simulators/telegram_simulators/tools/validate_nightshift_current.py", line 187, in main
+    assert_static_cleanup()
+  File "/home/runner/work/telegram_simulators/telegram_simulators/tools/validate_nightshift_current.py", line 41, in assert_static_cleanup
+    raise AssertionError("Legacy references remain:\n" + "\n".join(hits))
+AssertionError: Legacy references remain:
+main.py: legacy/compatibility wording
+VALIDATOR_EXIT=1
+
+=== COMPILEALL ===
+COMPILE_EXIT=0
+
+=== RUFF UNUSED ===
+F401 [*] `.simulation.utcnow` imported but unused
+ --> app/courier_core.py:9:37
+  |
+7 | from .courier_model import TRAIT_CONCEALS, TRAIT_LEARNER, TRAIT_METICULOUS, TRAIT_OVERHEATS, TRAIT_PRESSURE_PROOF, TRAIT_SENSITIVE, TRA…
+8 | from .customer_trust import CustomerTrustGameService, CustomerTrustSimulationEngine
+9 | from .simulation import clamp, iso, utcnow
+  |                                     ^^^^^^
+help: Remove unused import: `.simulation.utcnow`
+   |
+8  | from .customer_trust import CustomerTrustGameService, CustomerTrustSimulationEngine
+   - from .simulation import clamp, iso, utcnow
+9  + from .simulation import clamp, iso
+10 |
+   |
+
+F401 [*] `.compensation._policy_conn` imported but unused
+ --> app/courier_management.py:6:42
+  |
+4 | from datetime import timedelta
+5 |
+6 | from .compensation import _deposit_part, _policy_conn
+  |                                          ^^^^^^^^^^^^
+7 | from .courier_core import CourierCoreGameService, CourierCoreSimulationEngine
+8 | from .courier_model import TRAIT_SENSITIVE
+  |
+help: Remove unused import: `.compensation._policy_conn`
+  |
+5 |
+  - from .compensation import _deposit_part, _policy_conn
+6 + from .compensation import _deposit_part
+7 | from .courier_core import CourierCoreGameService, CourierCoreSimulationEngine
+  |
+
+F401 [*] `.recruitment.ROLE_TITLES` imported but unused
+ --> app/courier_recruitment.py:6:46
+  |
+5 | from .courier_model import generate_courier_blueprint
+6 | from .recruitment import RecruitmentService, ROLE_TITLES
+  |                                              ^^^^^^^^^^^
+7 | from .simulation import clamp, iso
+  |
+help: Remove unused import: `.recruitment.ROLE_TITLES`
+  |
+5 | from .courier_model import generate_courier_blueprint
+  - from .recruitment import RecruitmentService, ROLE_TITLES
+6 + from .recruitment import RecruitmentService
+7 | from .simulation import clamp, iso
+  |
+
+F841 Local variable `phone_text` is assigned to but never used
+  --> app/courier_recruitment.py:54:9
+   |
+52 |         else:
+53 |             phone_level = 0 if phone_roll < 0.55 else 1 if phone_roll < 0.95 else 2
+54 |         phone_text = {0: "старый", 1: "нормальный", 2: "хороший"}[phone_level]
+   |         ^^^^^^^^^^
+55 |
+56 |         # Low-deposit candidates are intentional: they create a meaningful choice
+   |
+help: Remove assignment to unused variable `phone_text`
+
+F841 Local variable `experience_text` is assigned to but never used
+  --> app/courier_recruitment.py:67:9
+   |
+65 |             0.78,
+66 |         )
+67 |         experience_text = {
+   |         ^^^^^^^^^^^^^^^
+68 |             0: "без подтверждённого опыта",
+69 |             1: "есть опыт",
+   |
+help: Remove assignment to unused variable `experience_text`
+
+F841 Local variable `relationship` is assigned to but never used
+   --> app/customer_trust.py:257:9
+    |
+255 |             ),
+256 |         )
+257 |         relationship = self._relationship_conn(
+    |         ^^^^^^^^^^^^
+258 |             conn, int(order["player_id"]), int(order["client_id"])
+259 |         )
+    |
+help: Remove assignment to unused variable `relationship`
+
+F841 Local variable `conn` is assigned to but never used
+  --> app/procurement_market.py:24:35
+   |
+22 |     def __init__(self, *args, **kwargs) -> None:
+23 |         super().__init__(*args, **kwargs)
+24 |         with self.db.connect() as conn:
+   |                                   ^^^^
+25 |             pass
+   |
+help: Remove assignment to unused variable `conn`
+
+F401 [*] `datetime.timedelta` imported but unused
+ --> app/staff_insights.py:3:22
+  |
+1 | from __future__ import annotations
+2 |
+3 | from datetime import timedelta
+  |                      ^^^^^^^^^
+4 |
+5 | from .simulation import iso, parse_dt, utcnow
+  |
+help: Remove unused import: `datetime.timedelta`
+  |
+2 |
+  - from datetime import timedelta
+3 |
+  |
+
+F401 [*] `.simulation.iso` imported but unused
+ --> app/staff_insights.py:5:25
+  |
+3 | from datetime import timedelta
+4 |
+5 | from .simulation import iso, parse_dt, utcnow
+  |                         ^^^
+6 | from .workflow import WorkflowGameService, WorkflowSimulationEngine
+  |
+help: Remove unused import: `.simulation.iso`
+  |
+4 |
+  - from .simulation import iso, parse_dt, utcnow
+5 + from .simulation import parse_dt, utcnow
+6 | from .workflow import WorkflowGameService, WorkflowSimulationEngine
+  |
+
+F841 Local variable `conn` is assigned to but never used
+  --> app/staff_insights.py:16:35
+   |
+14 |     def __init__(self, *args, **kwargs) -> None:
+15 |         super().__init__(*args, **kwargs)
+16 |         with self.db.connect() as conn:
+   |                                   ^^^^
+17 |             pass
+   |
+help: Remove assignment to unused variable `conn`
+
+F841 Local variable `conn` is assigned to but never used
+   --> app/staff_insights.py:131:35
+    |
+129 |     def __init__(self, *args, **kwargs) -> None:
+130 |         super().__init__(*args, **kwargs)
+131 |         with self.db.connect() as conn:
+    |                                   ^^^^
+132 |             pass
+    |
+help: Remove assignment to unused variable `conn`
+
+F841 Local variable `conn` is assigned to but never used
+  --> app/staff_relationships.py:97:35
+   |
+95 |     def __init__(self, *args, **kwargs) -> None:
+96 |         super().__init__(*args, **kwargs)
+97 |         with self.db.connect() as conn:
+   |                                   ^^^^
+98 |             pass
+   |
+help: Remove assignment to unused variable `conn`
+
+F841 Local variable `conn` is assigned to but never used
+   --> app/staff_relationships.py:147:35
+    |
+145 |     def __init__(self, *args, **kwargs) -> None:
+146 |         super().__init__(*args, **kwargs)
+147 |         with self.db.connect() as conn:
+    |                                   ^^^^
+148 |             pass
+    |
+help: Remove assignment to unused variable `conn`
+
+F401 [*] `json` imported but unused
+ --> app/ui_staff.py:3:8
+  |
+1 | from __future__ import annotations
+2 |
+3 | import json
+  |        ^^^^
+4 |
+5 | from aiogram import F, Router
+  |
+help: Remove unused import: `json`
+  |
+2 |
+  - import json
+3 |
+  |
+
+F401 [*] `.ui_staff.development_keyboard` imported but unused
+  --> app/ui_staff_handlers.py:13:5
+   |
+11 | from .ui_staff import (
+12 |     RenameEmployeeState,
+13 |     development_keyboard,
+   |     ^^^^^^^^^^^^^^^^^^^^
+14 |     render_allocation,
+15 |     render_batches,
+   |
+help: Remove unused import: `.ui_staff.development_keyboard`
+   |
+12 |     RenameEmployeeState,
+   -     development_keyboard,
+13 |     render_allocation,
+   |
+
+F841 Local variable `conn` is assigned to but never used
+  --> app/workflow.py:25:35
+   |
+23 |     def __init__(self, *args, **kwargs) -> None:
+24 |         super().__init__(*args, **kwargs)
+25 |         with self.db.connect() as conn:
+   |                                   ^^^^
+26 |             pass
+   |
+help: Remove assignment to unused variable `conn`
+
+F841 Local variable `conn` is assigned to but never used
+   --> app/workflow.py:449:35
+    |
+447 |     def __init__(self, *args, **kwargs) -> None:
+448 |         super().__init__(*args, **kwargs)
+449 |         with self.db.connect() as conn:
+    |                                   ^^^^
+450 |             pass
+    |
+help: Remove assignment to unused variable `conn`
+
+F401 [*] `pytest` imported but unused
+ --> tests/test_courier_management.py:6:8
+  |
+4 | from datetime import timedelta
+5 |
+6 | import pytest
+  |        ^^^^^^
+7 |
+8 | from app.courier_management import (
+  |
+help: Remove unused import: `pytest`
+  |
+5 |
+  - import pytest
+6 |
+  |
+
+Found 18 errors.
+[*] 8 fixable with the `--fix` option (10 hidden fixes can be enabled with the `--unsafe-fixes` option).
+RUFF_EXIT=1
+
+SUMMARY pytest=2 validator=1 compile=0 ruff=1
