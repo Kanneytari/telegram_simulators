@@ -1,0 +1,48 @@
+name: NIGHTSHIFT staged refactor
+
+on:
+  push:
+    branches:
+      - refactor/nightshift-clean-architecture
+    paths:
+      - "tools/refactor_nightshift.py"
+      - ".github/workflows/nightshift-refactor.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    if: ${{ !contains(github.event.head_commit.message, '[auto-refactor]') }}
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}/shadow_market_simulator
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/nightshift-clean-architecture
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        working-directory: shadow_market_simulator
+        run: python -m pip install -r requirements.txt
+      - name: Apply refactor
+        run: python tools/refactor_nightshift.py
+      - name: Run NIGHTSHIFT tests
+        working-directory: shadow_market_simulator
+        run: python -m pytest -q
+      - name: Check imports compile
+        run: python -m compileall -q shadow_market_simulator/app
+      - name: Commit refactor
+        run: |
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Apply current-version NIGHTSHIFT cleanup [auto-refactor]"
+          git push origin HEAD:refactor/nightshift-clean-architecture
