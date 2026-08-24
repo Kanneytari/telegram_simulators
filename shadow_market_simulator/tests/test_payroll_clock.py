@@ -1,16 +1,15 @@
 import random
 
+from app.courier_management import CourierManagementGameService, CourierManagementSimulationEngine
 from app.db import Database
-from app.nightshift import NightshiftSimulationEngine
-from app.services import FinalGameService
 
 
 def test_new_player_initializes_payroll_clock_on_creation(tmp_path):
     db = Database(str(tmp_path / "game.db"))
     db.init()
-    simulation = NightshiftSimulationEngine(db, speed=1.0, rng=random.Random(1))
+    simulation = CourierManagementSimulationEngine(db, speed=1.0, rng=random.Random(1))
     simulation.ensure_player(1001, "tester")
-    game = FinalGameService(db, simulation, rng=random.Random(2))
+    game = CourierManagementGameService(db, simulation, rng=random.Random(2))
 
     with db.connect() as conn:
         before = conn.execute(
