@@ -378,13 +378,36 @@ class ProcurementMarketGameService(StaffInsightGameService):
                     f"Свободно {free_cash:,} ₽."
                 )
 
+            exposure_before = self._employee_exposure(player_id, employee_id)
+            claim = conn.execute(
+                """UPDATE supplier_offers
+                   SET status='processing'
+                   WHERE id=? AND player_id=? AND status='open'""",
+                (offer_id, player_id),
+            )
+            if claim.rowcount != 1:
+                return "Предложение уже недоступно."
+
+            # A competing purchase may have changed the balance while this call waited
+            # for SQLite's write lock. Re-check cash only after this offer is claimed.
+            free_cash = self._free_cash_conn(conn, player_id)
+            if free_cash < total:
+                conn.execute(
+                    """UPDATE supplier_offers SET status='open'
+                       WHERE id=? AND player_id=? AND status='processing'""",
+                    (offer_id, player_id),
+                )
+                return (
+                    f"Недостаточно свободных денег. Нужно {total:,} ₽. "
+                    f"Свободно {free_cash:,} ₽."
+                )
+
             delivered = self.rng.random() < float(offer["resolved_reliability"])
             quality = clamp(
                 self.rng.gauss(float(offer["resolved_quality_mean"]), float(offer["resolved_quality_sigma"])),
                 35.0,
                 99.0,
             )
-            exposure_before = self._employee_exposure(player_id, employee_id)
             conn.execute("UPDATE shops SET balance=balance-? WHERE player_id=?", (total, player_id))
             if delivered:
                 cur = conn.execute(
@@ -435,7 +458,11 @@ class ProcurementMarketGameService(StaffInsightGameService):
                    VALUES (?, ?, 'procurement', 'offer', ?, ?)""",
                 (player_id, -total, offer_id, note),
             )
-            conn.execute("UPDATE supplier_offers SET status='bought' WHERE id=?", (offer_id,))
+            conn.execute(
+                """UPDATE supplier_offers SET status='bought'
+                   WHERE id=? AND player_id=? AND status='processing'""",
+                (offer_id, player_id),
+            )
 
         self.simulation.ensure_procurement_bounds(player_id, now)
 
