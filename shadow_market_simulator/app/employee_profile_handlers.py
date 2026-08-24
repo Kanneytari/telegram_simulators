@@ -15,7 +15,6 @@ class RenameEmployeeState(StatesGroup):
 
 def employee_profile_keyboard(employee_id: int, role: str) -> InlineKeyboardMarkup:
     rows = [
-        [InlineKeyboardButton(text="⭐ Отзывы о работе", callback_data=f"employee:reviews:{employee_id}")],
         [InlineKeyboardButton(text="✏️ Переименовать", callback_data=f"employee:rename:{employee_id}")],
         [InlineKeyboardButton(text="💰 Условия работы", callback_data=f"team:terms:{role}")],
     ]
