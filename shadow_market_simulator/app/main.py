@@ -12,7 +12,8 @@ from .analytics_handlers import build_analytics_router
 from .analytics_log import AnalyticsLogger, AnalyticsLoggingMiddleware
 from .compensation_handlers import build_compensation_router
 from .config import load_settings
-from .customer_trust import CustomerTrustGameService, CustomerTrustSimulationEngine
+from .courier_core import CourierCoreGameService, CourierCoreSimulationEngine
+from .courier_recruitment import CourierRecruitmentService
 from .customer_trust_handlers import build_customer_trust_router
 from .db import Database
 from .dispute_handlers import build_dispute_router
@@ -25,7 +26,6 @@ from .inbox_lifecycle import install_inbox_lifecycle
 from .keyboards import notification_actions
 from .procurement_handlers import build_procurement_router
 from .recruitment_handlers import build_recruitment_router
-from .recruitment_runtime import NightshiftRecruitmentService
 from .simulation import iso, utcnow
 from .storefront_handlers import build_storefront_router
 from .time_handlers import build_time_router
@@ -38,9 +38,9 @@ from .workflow_reassign_handlers import build_workflow_reassign_router
 async def notification_loop(
     bot: Bot,
     db: Database,
-    simulation: CustomerTrustSimulationEngine,
-    game: CustomerTrustGameService,
-    recruitment: NightshiftRecruitmentService,
+    simulation: CourierCoreSimulationEngine,
+    game: CourierCoreGameService,
+    recruitment: CourierRecruitmentService,
     analytics: AnalyticsLogger,
     interval: int,
 ) -> None:
@@ -93,10 +93,10 @@ async def main() -> None:
 
     db = Database(settings.db_path)
     db.init()
-    simulation = CustomerTrustSimulationEngine(db, speed=settings.simulation_speed)
+    simulation = CourierCoreSimulationEngine(db, speed=settings.simulation_speed)
     simulation.seed_catalog()
-    game = CustomerTrustGameService(db, simulation)
-    recruitment = NightshiftRecruitmentService(db, speed=settings.simulation_speed)
+    game = CourierCoreGameService(db, simulation)
+    recruitment = CourierRecruitmentService(db, speed=settings.simulation_speed)
     install_inbox_lifecycle(db)
 
     analytics = AnalyticsLogger(db)
