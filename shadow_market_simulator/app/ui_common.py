@@ -47,6 +47,10 @@ def clean(value: object) -> str:
     return escape(str(value or ""))
 
 
+def tutorial_hint(text: str) -> str:
+    return f"<blockquote>{clean(text)}</blockquote>"
+
+
 def normalize_text(text: str) -> str:
     return _THOUSANDS_COMMA.sub(" ", text)
 

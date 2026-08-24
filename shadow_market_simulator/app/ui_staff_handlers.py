@@ -7,7 +7,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 from .courier_management import PHONE, TRANSPORT
 from .employee_rename import rename_employee
 from .recruitment import CHANNELS
-from .ui_common import clean, money, nav_row, notice, pct, present
+from .ui_common import clean, money, nav_row, notice, pct, present, tutorial_hint
 from .ui_staff import (
     RenameEmployeeState,
     render_allocation,
@@ -43,14 +43,19 @@ async def render_batch(target: Message, game, player_id: int, batch_id: int, *, 
         f"Складмен: {clean(responsible['alias']) if responsible else 'не назначен'} · {state}"
     )
     rows: list[list[InlineKeyboardButton]] = []
+    tutorial = game.needs_first_handoff_tutorial(player_id)
     if not responsible:
         text += "\n\n🔴 Сначала назначь складмена."
+        if tutorial:
+            text += "\n\n" + tutorial_hint("Назначь складмена на эту партию.")
         if warehouse_count:
             rows.append([InlineKeyboardButton(text="Назначить складмена", callback_data=f"team:reassign:{batch_id}")])
         else:
             rows.append([InlineKeyboardButton(text="Нанять сотрудника", callback_data="team:recruit")])
     elif batch["status"] == "warehouse":
         text += "\n\nКому передать?"
+        if tutorial:
+            text += "\n\n" + tutorial_hint("Выбери закладчика, которому передашь стафф.")
         employees = {int(row["id"]): row for row in game.employees(player_id)}
         for employee in staff:
             live = employees.get(int(employee["id"]), {})
@@ -61,6 +66,8 @@ async def render_batch(target: Message, game, player_id: int, batch_id: int, *, 
             rows.append([InlineKeyboardButton(text=f"{employee['alias']} · {status}{risk}", callback_data=f"team:alloc:{batch_id}:{employee['id']}:{int(employee.get('recommended_quantity', 0))}")])
         if warehouse_count > 1:
             rows.append([InlineKeyboardButton(text="Сменить складмена", callback_data=f"team:reassign:{batch_id}")])
+    if tutorial and responsible and batch["status"] == "receiving":
+        text += "\n\n" + tutorial_hint("Складмен ещё получает партию. Вернись сюда, когда она будет готова.")
     rows.append(nav_row("team:batches", "← Склад"))
     await present(target, notice(flash, text), InlineKeyboardMarkup(inline_keyboard=rows))
 

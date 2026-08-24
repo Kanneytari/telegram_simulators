@@ -3,7 +3,7 @@ from __future__ import annotations
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-from .ui_common import claim_tip, clean, money, nav_row, notice, present, rating
+from .ui_common import claim_tip, clean, money, nav_row, notice, present, rating, tutorial_hint
 
 
 def _quality_label(value: float) -> str:
@@ -63,7 +63,7 @@ def _procurement_products_keyboard(db, player_id: int, products) -> InlineKeyboa
                WHERE player_id=? AND status IN ('receiving','warehouse') AND remaining>0""",
             (player_id,),
         ).fetchone()[0])
-    rows.append([InlineKeyboardButton(text=f"Склад · {batch_count}", callback_data="team:batches")])
+    rows.append([InlineKeyboardButton(text=f"🚚 Склад · {batch_count}", callback_data="team:batches")])
     rows.append([
         InlineKeyboardButton(text="Обновить", callback_data="menu:product"),
         InlineKeyboardButton(text="Меню", callback_data="menu:home"),
@@ -77,6 +77,8 @@ async def render_product_root(target: Message, db, game, player_id: int, *, flas
             conn.execute("SELECT balance FROM shops WHERE player_id=?", (player_id,)).fetchone()[0]
         )
     body = f"<b>📦 Товар</b>\n\nСвободно: <b>{money(free_cash)}</b>"
+    if game.needs_first_handoff_tutorial(player_id):
+        body += "\n\n" + tutorial_hint("Нажми на кнопку 🚚 Склад")
     await present(target, notice(flash, body), _procurement_products_keyboard(db, player_id, products))
 
 
