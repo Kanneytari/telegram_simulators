@@ -103,7 +103,6 @@ class CompensationSimulationEngine(DelayedDisputeSimulationEngine):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            self.db._ensure_column(conn, "employees", "deposit_accrued", "INTEGER NOT NULL DEFAULT 0")
             conn.executescript(COMPENSATION_SCHEMA)
             for row in conn.execute("SELECT player_id FROM shops").fetchall():
                 for role in DEFAULT_POLICIES:
@@ -115,8 +114,8 @@ class CompensationSimulationEngine(DelayedDisputeSimulationEngine):
             conn.executescript(COMPENSATION_SCHEMA)
             for role in DEFAULT_POLICIES:
                 _ensure_policy_conn(conn, player_id, role)
-            # These old per-employee fields remain only because lower workflow layers
-            # still declare them. They are deliberately inert in the live economy.
+            # Live compensation is defined by the shop-wide policy. Per-employee
+            # operation rates stay zero at this layer so they cannot be charged twice.
             conn.execute(
                 "UPDATE employees SET pay_per_job=0, deposit_contribution_pct=0 WHERE player_id=?",
                 (player_id,),
@@ -248,7 +247,6 @@ class CompensationSimulationEngine(DelayedDisputeSimulationEngine):
                 now,
             )
             return True
-        self._create_review(conn, player_id, order_id, force=False)
         return False
 
     def _process_tasks(self, conn, player_id: int, now) -> int:
@@ -357,7 +355,7 @@ class CompensationSimulationEngine(DelayedDisputeSimulationEngine):
         return completed
 
     def _simulate_management_events(self, conn, player_id: int, sim_hours: float, now) -> int:
-        """Use existing staff events but discard obsolete individual raise requests."""
+        """Use existing staff events but discard individual raise requests."""
         before_id = int(
             conn.execute(
                 "SELECT COALESCE(MAX(id),0) FROM inbox WHERE player_id=?",
@@ -389,7 +387,6 @@ class CompensationGameService(DelayedDisputeGameService):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            self.db._ensure_column(conn, "employees", "deposit_accrued", "INTEGER NOT NULL DEFAULT 0")
             conn.executescript(COMPENSATION_SCHEMA)
             for row in conn.execute("SELECT player_id FROM shops").fetchall():
                 for role in DEFAULT_POLICIES:
@@ -535,10 +532,10 @@ class CompensationGameService(DelayedDisputeGameService):
                     "SELECT jobs_done, wages_accrued, deposit_accrued FROM employees WHERE id=?",
                     (employee_id,),
                 ).fetchone()
-                legacy_amount = int(before["pay_per_job"] or 0)
+                receive_time_amount = int(before["pay_per_job"] or 0)
                 if (
                     int(after["jobs_done"]) > int(before["jobs_done"])
-                    and int(after["wages_accrued"]) >= int(before["wages_accrued"]) + legacy_amount
+                    and int(after["wages_accrued"]) >= int(before["wages_accrued"]) + receive_time_amount
                 ):
                     conn.execute(
                         """UPDATE employees
@@ -801,8 +798,9 @@ class CompensationGameService(DelayedDisputeGameService):
             ).fetchone()
             if not employee:
                 return None
-            reviews = conn.execute(
-                "SELECT COUNT(*) count, COALESCE(AVG(rating),0) avg FROM reviews WHERE player_id=? AND employee_id=?",
+            service = conn.execute(
+                """SELECT COUNT(*) count, COALESCE(AVG(courier_rating),0) avg
+                   FROM order_ratings WHERE player_id=? AND employee_id=?""",
                 (player_id, employee_id),
             ).fetchone()
         exposure = self._employee_exposure(player_id, employee_id)
@@ -851,11 +849,12 @@ class CompensationGameService(DelayedDisputeGameService):
             f"Диспутов: {employee['disputes']} ({dispute_rate:.1f}%)\n"
             f"Потери: {employee['losses']:,} ₽\n"
             f"Всего заработано: {employee['total_wages_paid'] + employee['wages_accrued']:,} ₽\n"
-            f"Из заработка в депозит: {employee['deposit_from_wages']:,} ₽\n"
-            f"Отзывы: {reviews['count']}"
+            f"Из заработка в депозит: {employee['deposit_from_wages']:,} ₽"
         )
-        if reviews["count"]:
-            text += f" · ⭐ {float(reviews['avg']):.2f}"
+        if role == "courier":
+            text += f"\nОценок работы: {service['count']}"
+            if service["count"]:
+                text += f" · ⭐ {float(service['avg']):.2f}/5"
         if unsecured > 0:
             text += "\n\n🔴 Часть товара не покрыта депозитом. Это осознанный дополнительный риск."
         return text

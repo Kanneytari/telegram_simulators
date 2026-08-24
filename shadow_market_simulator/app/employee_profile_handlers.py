@@ -15,7 +15,6 @@ class RenameEmployeeState(StatesGroup):
 
 def employee_profile_keyboard(employee_id: int, role: str) -> InlineKeyboardMarkup:
     rows = [
-        [InlineKeyboardButton(text="⭐ Отзывы о работе", callback_data=f"employee:reviews:{employee_id}")],
         [InlineKeyboardButton(text="✏️ Переименовать", callback_data=f"employee:rename:{employee_id}")],
         [InlineKeyboardButton(text="💰 Условия работы", callback_data=f"team:terms:{role}")],
     ]
@@ -133,6 +132,70 @@ def build_employee_profile_router(game) -> Router:
                     InlineKeyboardButton(text="← Команда", callback_data="menu:team"),
                     InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home"),
                 ],
+            ]),
+        )
+
+    @router.callback_query(
+        F.data.startswith("employee:fire:")
+        & ~F.data.startswith("employee:fireconfirm:")
+    )
+    async def fire_prompt(callback: CallbackQuery) -> None:
+        await callback.answer()
+        try:
+            employee_id = int((callback.data or "").split(":")[2])
+        except (IndexError, ValueError):
+            return
+        with game.db.connect() as conn:
+            employee = conn.execute(
+                "SELECT * FROM employees WHERE id=? AND player_id=? AND active=1",
+                (employee_id, callback.from_user.id),
+            ).fetchone()
+        if not employee:
+            await present(
+                callback.message,
+                "Сотрудник уже не работает.",
+                InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="← Команда", callback_data="menu:team")],
+                    [InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home")],
+                ]),
+            )
+            return
+        payout = int(employee["deposit"]) + int(employee["wages_accrued"])
+        await present(
+            callback.message,
+            f"<b>Уволить {employee['alias']}?</b>\n\n"
+            f"Депозит к возврату: {employee['deposit']:,} ₽\n"
+            f"Начисленная зарплата: {employee['wages_accrued']:,} ₽\n"
+            f"Итоговый расчёт: <b>{payout:,} ₽</b>\n\n"
+            "Уволить сотрудника можно только после завершения его задач и освобождения от ответственности за товар.",
+            InlineKeyboardMarkup(inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="✅ Подтвердить увольнение",
+                        callback_data=f"employee:fireconfirm:{employee_id}",
+                    )
+                ],
+                [InlineKeyboardButton(text="← Профиль", callback_data=f"employee:{employee_id}")],
+            ]),
+        )
+
+    @router.callback_query(F.data.startswith("employee:fireconfirm:"))
+    async def fire_confirm(callback: CallbackQuery) -> None:
+        await callback.answer()
+        try:
+            employee_id = int((callback.data or "").split(":")[2])
+        except (IndexError, ValueError):
+            return
+        result = game.fire_employee(callback.from_user.id, employee_id)
+        blocked = result["status"] == "inventory"
+        back = f"employee:{employee_id}" if blocked else "menu:team"
+        label = "← Профиль" if blocked else "← Команда"
+        await present(
+            callback.message,
+            f"<b>👥 Команда</b>\n\n{result['message']}",
+            InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text=label, callback_data=back)],
+                [InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home")],
             ]),
         )
 

@@ -74,6 +74,7 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS recruitment_campaigns (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
+    role TEXT NOT NULL DEFAULT 'courier',
     channel TEXT NOT NULL,
     cost INTEGER NOT NULL,
     resolves_at TEXT NOT NULL,
@@ -88,6 +89,10 @@ CREATE TABLE IF NOT EXISTS recruitment_campaigns (
     experience_required INTEGER NOT NULL DEFAULT 0,
     expected_min INTEGER NOT NULL DEFAULT 0,
     expected_max INTEGER NOT NULL DEFAULT 0,
+    terms_fixed_fee INTEGER NOT NULL DEFAULT 0,
+    terms_base_rate_bps INTEGER NOT NULL DEFAULT 0,
+    terms_risk_rate_bps INTEGER NOT NULL DEFAULT 0,
+    terms_deposit_pct INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     completed_at TEXT
 );
@@ -97,6 +102,7 @@ CREATE INDEX IF NOT EXISTS idx_recruitment_player_status
 
 CREATE TABLE IF NOT EXISTS recruitment_drafts (
     player_id INTEGER PRIMARY KEY REFERENCES shops(player_id) ON DELETE CASCADE,
+    role TEXT NOT NULL DEFAULT 'courier',
     channel TEXT NOT NULL DEFAULT 'stickers',
     traffic_multiplier INTEGER NOT NULL DEFAULT 1,
     duration_hours INTEGER NOT NULL DEFAULT 4,
@@ -127,21 +133,6 @@ class RecruitmentService:
     def init_schema(self) -> None:
         with self.db.connect() as conn:
             conn.executescript(SCHEMA)
-            self._ensure_campaign_column(conn, "traffic_multiplier", "INTEGER NOT NULL DEFAULT 1")
-            self._ensure_campaign_column(conn, "duration_hours", "INTEGER NOT NULL DEFAULT 4")
-            self._ensure_campaign_column(conn, "pay_per_job", "INTEGER NOT NULL DEFAULT 220")
-            self._ensure_campaign_column(conn, "min_deposit", "INTEGER NOT NULL DEFAULT 25000")
-            self._ensure_campaign_column(conn, "deposit_contribution_pct", "INTEGER NOT NULL DEFAULT 10")
-            self._ensure_campaign_column(conn, "car_required", "INTEGER NOT NULL DEFAULT 0")
-            self._ensure_campaign_column(conn, "experience_required", "INTEGER NOT NULL DEFAULT 0")
-            self._ensure_campaign_column(conn, "expected_min", "INTEGER NOT NULL DEFAULT 0")
-            self._ensure_campaign_column(conn, "expected_max", "INTEGER NOT NULL DEFAULT 0")
-
-    @staticmethod
-    def _ensure_campaign_column(conn, column: str, definition: str) -> None:
-        columns = {row[1] for row in conn.execute("PRAGMA table_info(recruitment_campaigns)").fetchall()}
-        if column not in columns:
-            conn.execute(f"ALTER TABLE recruitment_campaigns ADD COLUMN {column} {definition}")
 
     def get_channel(self, code: str) -> RecruitmentChannel | None:
         return CHANNELS.get(code)

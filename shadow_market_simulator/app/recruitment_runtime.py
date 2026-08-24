@@ -30,18 +30,6 @@ class NightshiftRecruitmentService(RecruitmentService):
             for row in conn.execute("SELECT player_id FROM shops").fetchall():
                 for role in DEFAULT_POLICIES:
                     _ensure_policy_conn(conn, int(row["player_id"]), role)
-            self._ensure_column(conn, "recruitment_drafts", "role", "TEXT NOT NULL DEFAULT 'courier'")
-            self._ensure_column(conn, "recruitment_campaigns", "role", "TEXT NOT NULL DEFAULT 'courier'")
-            self._ensure_column(conn, "recruitment_campaigns", "terms_fixed_fee", "INTEGER NOT NULL DEFAULT 0")
-            self._ensure_column(conn, "recruitment_campaigns", "terms_base_rate_bps", "INTEGER NOT NULL DEFAULT 0")
-            self._ensure_column(conn, "recruitment_campaigns", "terms_risk_rate_bps", "INTEGER NOT NULL DEFAULT 0")
-            self._ensure_column(conn, "recruitment_campaigns", "terms_deposit_pct", "INTEGER NOT NULL DEFAULT 0")
-
-    @staticmethod
-    def _ensure_column(conn, table: str, column: str, definition: str) -> None:
-        columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
-        if column not in columns:
-            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
     def effective_speed(self, player_id: int) -> float:
         return self.player_multiplier(player_id)
@@ -104,7 +92,7 @@ class NightshiftRecruitmentService(RecruitmentService):
 
     def ensure_draft(self, player_id: int, channel: str | None = None):
         draft = super().ensure_draft(player_id, channel)
-        role = draft["role"] if "role" in draft.keys() else "courier"
+        role = draft["role"]
         min_deposit = int(draft["min_deposit"])
         if role == "courier":
             min_deposit = min(RETAIL_STARTING_DEPOSIT_CAP, min_deposit)

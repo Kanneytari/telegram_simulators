@@ -99,31 +99,6 @@ def test_wholesale_employee_cannot_be_fired_with_inventory(tmp_path):
     assert result["status"] == "inventory"
 
 
-def test_review_links_product_pack_and_retail_employee(tmp_path):
-    db, simulation, game, _ = make_system(tmp_path)
-    with db.connect() as conn:
-        client = conn.execute("SELECT * FROM clients WHERE player_id=1001 LIMIT 1").fetchone()
-        courier = conn.execute(
-            "SELECT * FROM employees WHERE player_id=1001 AND role='courier' LIMIT 1"
-        ).fetchone()
-        batch = conn.execute("SELECT * FROM batches WHERE player_id=1001 LIMIT 1").fetchone()
-        cur = conn.execute(
-            """INSERT INTO orders(
-                   player_id, client_id, employee_id, batch_id, product_id,
-                   quantity, revenue, cost, employee_cost, quality
-               ) VALUES (1001, ?, ?, ?, ?, 2, 12000, 6000, 680, 91)""",
-            (client["id"], courier["id"], batch["id"], batch["product_id"]),
-        )
-        order_id = cur.lastrowid
-
-    review_id = simulation.create_review_for_order(1001, order_id, force=True)
-    assert review_id is not None
-    product_reviews = game.product_reviews(1001, int(batch["product_id"]))
-    employee_reviews = game.employee_reviews(1001, int(courier["id"]))
-    assert any(row["order_id"] == order_id and row["quantity"] == 2 for row in product_reviews)
-    assert any(row["order_id"] == order_id for row in employee_reviews)
-
-
 def test_recruitment_can_target_wholesale_role_with_global_terms(tmp_path):
     db, _, _, recruitment = make_system(tmp_path)
     recruitment.update_draft(1001, "role", "warehouse")

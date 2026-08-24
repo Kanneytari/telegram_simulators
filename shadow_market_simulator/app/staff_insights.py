@@ -38,9 +38,6 @@ class StaffInsightSimulationEngine(FinalWorkflowSimulationEngine):
             conn.executescript(STAFF_INSIGHT_SCHEMA)
 
     def _seed_retail_positions(self, player_id: int) -> None:
-        # A fresh game must not silently expose starter couriers to inventory risk.
-        # Starter stock remains with the wholesale employee until the player deliberately
-        # assigns an amount to retail.
         return None
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -339,7 +336,10 @@ class StaffInsightGameService(FinalWorkflowGameService):
         first_hour = float(total["first_hour"] or current_hour)
         active_days = max(1.0, (current_hour - first_hour) / 24.0)
         average = int(total["positions"] or 0) / active_days
-        lines = [f"Средняя: <b>{average:.1f} поз. / игровые сутки</b>", f"Последние 24 игровых ч: {last} поз."]
+        lines = [
+            f"Средняя: <b>{average:.1f} поз. / игровые сутки</b>",
+            f"Последние 24 игровых ч: {last} поз.",
+        ]
         if previous > 0:
             delta = (last / previous - 1.0) * 100.0
             arrow = "↑" if delta > 2 else "↓" if delta < -2 else "→"
@@ -358,8 +358,9 @@ class StaffInsightGameService(FinalWorkflowGameService):
             ).fetchone()
             if not employee:
                 return None
-            reviews = conn.execute(
-                "SELECT COUNT(*) count, COALESCE(AVG(rating),0) avg FROM reviews WHERE player_id=? AND employee_id=?",
+            service = conn.execute(
+                """SELECT COUNT(*) count, COALESCE(AVG(courier_rating),0) avg
+                   FROM order_ratings WHERE player_id=? AND employee_id=?""",
                 (player_id, employee_id),
             ).fetchone()
         exposure = self._employee_exposure(player_id, employee_id)
@@ -386,16 +387,19 @@ class StaffInsightGameService(FinalWorkflowGameService):
             f"Начислено: {employee['wages_accrued']:,} ₽\n\n"
         )
         if employee["role"] == "courier":
-            text += "<b>Продуктивность</b>\n" + "\n".join(self._productivity_lines(player_id, employee_id)) + "\n\n"
+            text += "<b>Продуктивность</b>\n" + "\n".join(
+                self._productivity_lines(player_id, employee_id)
+            ) + "\n\n"
         text += (
             f"<b>Статистика</b>\n"
             f"Операций: {employee['jobs_done']}\n"
             f"Диспутов: {employee['disputes']} ({dispute_rate:.1f}%)\n"
-            f"Потери: {employee['losses']:,} ₽\n"
-            f"Отзывы: {reviews['count']}"
+            f"Потери: {employee['losses']:,} ₽"
         )
-        if reviews["count"]:
-            text += f" · ⭐ {float(reviews['avg']):.2f}"
+        if employee["role"] == "courier":
+            text += f"\nОценок работы: {service['count']}"
+            if service["count"]:
+                text += f" · ⭐ {float(service['avg']):.2f}/5"
         if unsecured > 0:
             text += "\n\n🔴 Часть товара не покрыта депозитом. Это осознанный дополнительный риск."
         return text

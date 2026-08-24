@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 
-from app.compensation import CompensationSimulationEngine
+from app.customer_trust import CustomerTrustSimulationEngine
 from app.db import Database
 from app.detailed_analytics import normalize_period, section_text
 
@@ -10,7 +10,7 @@ from app.detailed_analytics import normalize_period, section_text
 def make_system(tmp_path):
     db = Database(str(tmp_path / "game.db"))
     db.init()
-    simulation = CompensationSimulationEngine(db, speed=1.0, rng=random.Random(91))
+    simulation = CustomerTrustSimulationEngine(db, speed=1.0, rng=random.Random(91))
     simulation.seed_catalog()
     simulation.ensure_player(1001, "tester")
     return db
@@ -44,10 +44,10 @@ def test_all_detailed_analytics_sections_render(tmp_path):
             (client["id"], employee["id"], batch["id"], batch["product_id"]),
         )
         conn.execute(
-            """INSERT INTO reviews(
-                   player_id, order_id, client_id, product_id, employee_id,
-                   rating, text, quality_sentiment, delivery_sentiment
-               ) VALUES (1001, ?, ?, ?, ?, 5, 'ok', 'good', 'good')""",
+            """INSERT INTO order_ratings(
+                   order_id, player_id, client_id, product_id, employee_id,
+                   product_rating, courier_rating
+               ) VALUES (?, 1001, ?, ?, ?, 5, 4)""",
             (order.lastrowid, client["id"], batch["product_id"], employee["id"]),
         )
         conn.execute(
@@ -57,12 +57,13 @@ def test_all_detailed_analytics_sections_render(tmp_path):
         )
 
     expected = {
-        "overview": "Детальная статистика",
-        "daily": "Динамика по дням",
-        "products": "Товары",
+        "overview": "Сводка",
+        "daily": "По дням",
+        "products": "По товарам",
         "finance": "Финансы",
         "staff": "Сотрудники",
-        "quality": "Качество и диспуты",
+        "quality": "Качество",
+        "customers": "Клиенты",
     }
     for section, heading in expected.items():
         rendered = section_text(db, 1001, section, "30")
@@ -77,5 +78,5 @@ def test_all_detailed_analytics_sections_render(tmp_path):
 def test_unknown_section_falls_back_to_overview(tmp_path):
     db = make_system(tmp_path)
     rendered = section_text(db, 1001, "missing", "7")
-    assert "Детальная статистика" in rendered
+    assert "Сводка" in rendered
     assert "7 дней" in rendered
