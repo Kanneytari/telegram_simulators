@@ -16,8 +16,9 @@ from .courier_recruitment import CourierRecruitmentService
 from .db import Database
 from .inbox_lifecycle import install_inbox_lifecycle
 from .simulation import iso, utcnow
-from .time_handlers import build_time_router
+from .ui_admin import build_admin_router
 from .ui_commerce import build_commerce_router
+from .ui_common import normalize_text
 from .ui_disputes import build_dispute_router
 from .ui_navigation import build_navigation_router
 from .ui_staff import build_staff_router
@@ -73,7 +74,7 @@ async def notification_loop(
                     try:
                         await bot.send_message(
                             item["player_id"],
-                            text,
+                            normalize_text(text),
                             reply_markup=notification_markup(item),
                         )
                         try:
@@ -119,14 +120,14 @@ async def main() -> None:
     dispatcher.message.outer_middleware(AnalyticsLoggingMiddleware(analytics))
     dispatcher.callback_query.outer_middleware(AnalyticsLoggingMiddleware(analytics))
 
-    # One canonical player-facing presentation layer. Legacy UI routers are no longer
-    # registered, so identical entities cannot render through competing screen trees.
+    # One canonical presentation layer. Legacy UI routers are intentionally not
+    # registered, so every entity has one screen tree and one navigation contract.
     dispatcher.include_router(build_navigation_router(db, game, simulation, settings.admin_ids))
     dispatcher.include_router(build_commerce_router(db, game, simulation))
     dispatcher.include_router(build_staff_router(game, simulation, recruitment))
     dispatcher.include_router(build_dispute_router(game))
     dispatcher.include_router(build_analytics_router(db, game, simulation))
-    dispatcher.include_router(build_time_router(db, simulation, recruitment, game, settings.admin_ids))
+    dispatcher.include_router(build_admin_router(db, simulation, recruitment, game, settings.admin_ids))
 
     await bot.delete_webhook(drop_pending_updates=True)
     notifier = asyncio.create_task(
