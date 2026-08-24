@@ -34,7 +34,6 @@ def employee_list(employees) -> InlineKeyboardMarkup:
         if status:
             label += f" · {status}"
         label += marker
-
         rows.append([
             InlineKeyboardButton(
                 text=label,
@@ -43,6 +42,7 @@ def employee_list(employees) -> InlineKeyboardMarkup:
         ])
 
     rows.extend([
+        [InlineKeyboardButton(text="💰 Условия работы", callback_data="team:terms")],
         [
             InlineKeyboardButton(text="🔎 Набор", callback_data="recruit:menu"),
             InlineKeyboardButton(text="⚙️ Фасовки", callback_data="team:packrules"),

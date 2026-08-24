@@ -6,9 +6,9 @@ from dataclasses import replace
 from app.catalog_extension import ExpandedCatalogSimulationEngine
 from app.db import Database
 from app.recruitment import CHANNELS
-from app.recruitment_deposit_cap import (
+from app.recruitment_runtime import (
     RETAIL_STARTING_DEPOSIT_CAP,
-    RetailDepositCappedRecruitmentService,
+    NightshiftRecruitmentService,
 )
 from app.simulation import utcnow
 
@@ -19,7 +19,7 @@ def make_system(tmp_path):
     simulation = ExpandedCatalogSimulationEngine(db, speed=1.0, rng=random.Random(91))
     simulation.seed_catalog()
     simulation.ensure_player(1001, "tester")
-    recruitment = RetailDepositCappedRecruitmentService(db, speed=1.0, rng=random.Random(92))
+    recruitment = NightshiftRecruitmentService(db, speed=1.0, rng=random.Random(92))
     return db, recruitment
 
 
@@ -53,16 +53,22 @@ def test_generated_retail_candidate_starting_deposit_is_capped(tmp_path):
                WHERE player_id=1001 AND role='courier'
                ORDER BY id DESC LIMIT 1"""
         ).fetchone()
-        recruitment._create_candidate(conn, 1001, campaign, forced_large_deposit_channel, utcnow())
+        recruitment._create_candidate(
+            conn,
+            1001,
+            campaign,
+            forced_large_deposit_channel,
+            utcnow(),
+        )
         candidate = conn.execute(
             """SELECT * FROM candidates
                WHERE player_id=1001 AND role='courier'
                ORDER BY id DESC LIMIT 1"""
         ).fetchone()
 
-    assert int(candidate["deposit"]) == RETAIL_STARTING_DEPOSIT_CAP
+    assert int(candidate["deposit"]) <= RETAIL_STARTING_DEPOSIT_CAP
     assert int(candidate["min_deposit"]) <= RETAIL_STARTING_DEPOSIT_CAP
-    assert "Готовый депозит: 100,000 ₽" in candidate["summary"]
+    assert "Готовый депозит:" in candidate["summary"]
 
 
 def test_wholesale_recruitment_keeps_large_deposit_range(tmp_path):

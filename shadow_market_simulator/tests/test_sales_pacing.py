@@ -1,8 +1,8 @@
+from app.compensation import CompensationSimulationEngine
 from app.staff_relationships import (
     SALES_ACTIVITY_MULTIPLIER,
     StaffRelationshipSimulationEngine,
 )
-from app.wholesale_compensation import WholesaleCompensationSimulationEngine
 
 
 def test_live_sales_window_is_quintupled_without_changing_parent_formula(monkeypatch):
@@ -13,7 +13,7 @@ def test_live_sales_window_is_quintupled_without_changing_parent_formula(monkeyp
         return 7, 2
 
     monkeypatch.setattr(
-        WholesaleCompensationSimulationEngine,
+        CompensationSimulationEngine,
         "_simulate_sales",
         fake_parent_sales,
         raising=False,
@@ -35,7 +35,7 @@ def test_sales_multiplier_never_turns_negative_time_into_sales(monkeypatch):
         return 0, 0
 
     monkeypatch.setattr(
-        WholesaleCompensationSimulationEngine,
+        CompensationSimulationEngine,
         "_simulate_sales",
         fake_parent_sales,
         raising=False,

@@ -44,7 +44,7 @@ def test_new_courier_inherits_global_packaging_mix(tmp_path):
                    player_id, alias, role, pay_per_job, deposit,
                    deposit_contribution_pct, has_car,
                    reliability, attention, honesty, loyalty, stress
-               ) VALUES (1001, 'Новый', 'courier', 1500, 50000, 10, 0,
+               ) VALUES (1001, 'Новый', 'courier', 0, 50000, 0, 0,
                          0.8, 0.8, 0.8, 0.7, 10)"""
         )
         employee_id = int(cur.lastrowid)
@@ -66,20 +66,22 @@ def test_new_courier_inherits_global_packaging_mix(tmp_path):
     )
 
 
-def test_team_keyboard_has_only_recruitment_and_global_packaging_controls():
+def test_team_keyboard_has_global_terms_recruitment_and_packaging_controls():
     markup = employee_list([])
     labels = [button.text for row in markup.inline_keyboard for button in row]
 
+    assert "💰 Условия работы" in labels
     assert "🔎 Набор" in labels
     assert "⚙️ Фасовки" in labels
     assert "👤 Кандидаты" not in labels
     assert "📦 Без ответственного" not in labels
 
 
-def test_courier_profile_has_no_individual_packaging_button():
+def test_courier_profile_has_no_individual_compensation_or_packaging_button():
     markup = employee_profile_keyboard(17, "courier")
     labels = [button.text for row in markup.inline_keyboard for button in row]
 
     assert "⚙️ Фасовки" not in labels
+    assert "💰 Доля в депозит" not in labels
+    assert "💰 Условия работы" in labels
     assert "✏️ Переименовать" in labels
-    assert "💰 Доля в депозит" in labels

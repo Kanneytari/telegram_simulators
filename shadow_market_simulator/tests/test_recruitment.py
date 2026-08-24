@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import random
 
+from app.compensation import CompensationSimulationEngine
 from app.db import Database
-from app.nightshift import NightshiftSimulationEngine
 from app.recruitment_runtime import NightshiftRecruitmentService
 
 
 def make_recruitment(tmp_path):
     db = Database(str(tmp_path / "game.db"))
     db.init()
-    simulation = NightshiftSimulationEngine(db, speed=1.0, rng=random.Random(11))
+    simulation = CompensationSimulationEngine(db, speed=1.0, rng=random.Random(11))
     simulation.ensure_player(1001, "tester")
     service = NightshiftRecruitmentService(db, speed=1.0, rng=random.Random(42))
     return db, simulation, service
@@ -52,12 +52,24 @@ def test_more_volume_and_duration_reduce_unit_ad_cost(tmp_path):
     assert large["discount_pct"] > base["discount_pct"]
 
 
-def test_low_pay_reduces_expected_applicants(tmp_path):
-    _, _, service = make_recruitment(tmp_path)
-    service.update_draft(1001, "pay_per_job", 1000)
+def test_better_global_retail_terms_increase_expected_applicants(tmp_path):
+    db, _, service = make_recruitment(tmp_path)
+    with db.connect() as conn:
+        conn.execute(
+            """UPDATE staff_compensation_policies
+               SET fixed_fee=100, base_rate_bps=200, deposit_contribution_pct=30
+               WHERE player_id=1001 AND role='courier'"""
+        )
     low = service.quote(1001)
-    service.update_draft(1001, "pay_per_job", 1900)
+
+    with db.connect() as conn:
+        conn.execute(
+            """UPDATE staff_compensation_policies
+               SET fixed_fee=300, base_rate_bps=600, deposit_contribution_pct=10
+               WHERE player_id=1001 AND role='courier'"""
+        )
     high = service.quote(1001)
+
     assert high["expected"] > low["expected"]
 
 
@@ -69,7 +81,6 @@ def test_large_deposit_reduces_applicants_but_improves_generated_quality(tmp_pat
     high_requirement = service.quote(1001)
     assert high_requirement["expected"] < low_requirement["expected"]
 
-    # Generate two deterministic campaigns and compare average hidden reliability.
     service.update_draft(1001, "min_deposit", 10000)
     service.start_campaign(1001)
     service.fast_forward(1001, 30)
