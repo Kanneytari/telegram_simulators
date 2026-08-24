@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import random
 
+from app.compensation import CompensationGameService, CompensationSimulationEngine
 from app.db import Database
 from app.recruitment_runtime import NightshiftRecruitmentService
-from app.workflow_final import FinalWorkflowGameService, FinalWorkflowSimulationEngine
 
 
 def make_system(tmp_path):
     db = Database(str(tmp_path / "game.db"))
     db.init()
-    simulation = FinalWorkflowSimulationEngine(db, rng=random.Random(12))
+    simulation = CompensationSimulationEngine(db, rng=random.Random(12))
     simulation.ensure_player(1001, "tester")
-    game = FinalWorkflowGameService(db, simulation, rng=random.Random(13))
+    game = CompensationGameService(db, simulation, rng=random.Random(13))
     recruitment = NightshiftRecruitmentService(db, rng=random.Random(14))
     return db, simulation, game, recruitment
 
@@ -52,7 +52,7 @@ def test_offer_can_exceed_deposit_and_reports_unsecured_exposure(tmp_path):
     assert selected["unsecured_after"] > 0
 
 
-def test_purchase_is_assigned_and_wholesale_wage_accrues(tmp_path):
+def test_procurement_assigns_batch_but_does_not_pay_wholesale_employee(tmp_path):
     db, _, game, _ = make_system(tmp_path)
     with db.connect() as conn:
         employee = conn.execute(
@@ -64,8 +64,9 @@ def test_purchase_is_assigned_and_wholesale_wage_accrues(tmp_path):
         cur = conn.execute(
             """INSERT INTO supplier_offers(
                    player_id, supplier_id, product_id, quantity, unit_cost,
-                   quality_hint, expires_at
-               ) VALUES (1001, 1, 1, 50, 3000, 'стабильное', datetime('now','+1 day'))"""
+                   quality_hint, offer_quality_mean, offer_quality_sigma,
+                   offer_reliability, market_profile, expires_at
+               ) VALUES (1001, 1, 1, 50, 3000, 'стабильное', 82, 2, 1.0, 'normal', datetime('now','+1 day'))"""
         )
         offer_id = cur.lastrowid
 
@@ -81,10 +82,11 @@ def test_purchase_is_assigned_and_wholesale_wage_accrues(tmp_path):
             (batch["id"],),
         ).fetchone()
     assert "Ответственный" in result
+    assert "Оплата будет начислена после успешной передачи" in result
     assert batch["responsible_employee_id"] == employee["id"]
     assert batch["status"] == "receiving"
     assert task is not None
-    assert updated["wages_accrued"] == employee["pay_per_job"]
+    assert int(updated["wages_accrued"]) == 0
 
 
 def test_wholesale_employee_cannot_be_fired_with_inventory(tmp_path):
@@ -109,7 +111,7 @@ def test_review_links_product_pack_and_retail_employee(tmp_path):
             """INSERT INTO orders(
                    player_id, client_id, employee_id, batch_id, product_id,
                    quantity, revenue, cost, employee_cost, quality
-               ) VALUES (1001, ?, ?, ?, ?, 2, 12000, 6000, 1500, 91)""",
+               ) VALUES (1001, ?, ?, ?, ?, 2, 12000, 6000, 680, 91)""",
             (client["id"], courier["id"], batch["id"], batch["product_id"]),
         )
         order_id = cur.lastrowid
@@ -122,15 +124,16 @@ def test_review_links_product_pack_and_retail_employee(tmp_path):
     assert any(row["order_id"] == order_id for row in employee_reviews)
 
 
-def test_recruitment_can_target_wholesale_role(tmp_path):
+def test_recruitment_can_target_wholesale_role_with_global_terms(tmp_path):
     db, _, _, recruitment = make_system(tmp_path)
     recruitment.update_draft(1001, "role", "warehouse")
     draft = recruitment.ensure_draft(1001)
     quote = recruitment.quote(1001, draft)
     assert draft["role"] == "warehouse"
-    assert draft["pay_per_job"] == 5000
     assert draft["min_deposit"] == 300000
-    assert quote["market_pay"] == 5000
+    assert quote["policy"]["base_rate_bps"] == 200
+    assert quote["policy"]["risk_rate_bps"] == 100
+    assert quote["policy"]["deposit_contribution_pct"] == 25
 
     recruitment.update_draft(1001, "traffic_multiplier", 4)
     recruitment.update_draft(1001, "duration_hours", 24)
