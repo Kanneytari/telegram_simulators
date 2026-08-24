@@ -4,7 +4,15 @@ import math
 
 from aiogram import F, Router
 from aiogram.exceptions import TelegramBadRequest
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
+
+from .employee_rename import rename_employee
+
+
+class RenameEmployeeState(StatesGroup):
+    waiting_for_name = State()
 
 
 def build_deposit_share_router(game) -> Router:
@@ -20,6 +28,7 @@ def build_deposit_share_router(game) -> Router:
     def employee_keyboard(employee_id: int, role: str) -> InlineKeyboardMarkup:
         rows = [
             [InlineKeyboardButton(text="⭐ Отзывы о работе", callback_data=f"employee:reviews:{employee_id}")],
+            [InlineKeyboardButton(text="✏️ Переименовать", callback_data=f"employee:rename:{employee_id}")],
             [InlineKeyboardButton(text="💰 Доля в депозит", callback_data=f"employee:depositshare:{employee_id}:current")],
         ]
         if role == "warehouse":
@@ -37,8 +46,9 @@ def build_deposit_share_router(game) -> Router:
         return InlineKeyboardMarkup(inline_keyboard=rows)
 
     @router.callback_query(F.data.regexp(r"^employee:\d+$"))
-    async def employee_profile(callback: CallbackQuery) -> None:
+    async def employee_profile(callback: CallbackQuery, state: FSMContext) -> None:
         await callback.answer()
+        await state.clear()
         employee_id = int((callback.data or "").split(":")[1])
         text = game.employee_details(callback.from_user.id, employee_id)
         with game.db.connect() as conn:
@@ -57,6 +67,59 @@ def build_deposit_share_router(game) -> Router:
             )
             return
         await present(callback.message, text, employee_keyboard(employee_id, employee["role"]))
+
+    @router.callback_query(F.data.startswith("employee:rename:"))
+    async def start_rename(callback: CallbackQuery, state: FSMContext) -> None:
+        await callback.answer()
+        try:
+            employee_id = int((callback.data or "").split(":")[2])
+        except (IndexError, ValueError):
+            return
+        with game.db.connect() as conn:
+            employee = conn.execute(
+                "SELECT alias FROM employees WHERE id=? AND player_id=? AND active=1",
+                (employee_id, callback.from_user.id),
+            ).fetchone()
+        if not employee:
+            await present(callback.message, "Сотрудник больше недоступен.")
+            return
+        await state.set_state(RenameEmployeeState.waiting_for_name)
+        await state.update_data(employee_id=employee_id)
+        await present(
+            callback.message,
+            f"<b>✏️ Переименовать сотрудника</b>\n\n"
+            f"Текущее имя: <b>{employee['alias']}</b>\n\n"
+            "Отправь новое имя следующим сообщением. Максимум 24 символа.",
+            InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="Отмена", callback_data=f"employee:{employee_id}")],
+            ]),
+        )
+
+    @router.message(RenameEmployeeState.waiting_for_name)
+    async def finish_rename(message: Message, state: FSMContext) -> None:
+        data = await state.get_data()
+        employee_id = int(data.get("employee_id", 0))
+        result = rename_employee(game, message.from_user.id, employee_id, message.text or "")
+        if result["status"] in {"invalid", "duplicate"}:
+            await message.answer(
+                f"{result['text']}\n\nОтправь другое имя.",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="Отмена", callback_data=f"employee:{employee_id}")],
+                ]),
+            )
+            return
+
+        await state.clear()
+        await message.answer(
+            result["text"],
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="← Профиль", callback_data=f"employee:{employee_id}")],
+                [
+                    InlineKeyboardButton(text="← Команда", callback_data="menu:team"),
+                    InlineKeyboardButton(text="⌂ Меню", callback_data="menu:home"),
+                ],
+            ]),
+        )
 
     @staticmethod
     def cooldown_text(hours: float) -> str:
