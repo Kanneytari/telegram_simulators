@@ -1,10 +1,7 @@
 from __future__ import annotations
 
+from .compensation import CompensationGameService, CompensationSimulationEngine
 from .simulation import iso
-from .wholesale_compensation import (
-    WholesaleCompensationGameService,
-    WholesaleCompensationSimulationEngine,
-)
 
 
 SALES_ACTIVITY_MULTIPLIER = 5.0
@@ -93,28 +90,23 @@ def _apply_overexposure_effect(
     if added_unsecured <= 0:
         return False
 
-    # Extra uncovered responsibility is read as trust, but also as pressure.
-    # Scaling is based on the newly uncovered amount, so splitting one large
-    # assignment into many small ones does not create a free loyalty farm.
     basis = max(deposit, 50_000)
     severity = min(1.0, added_unsecured / basis)
-    loyalty_delta = 0.025 * severity
-    stress_delta = 5.0 * severity
     _apply_relationship_delta(
         conn,
         player_id,
         employee_id,
         kind="overexposure_trust",
-        loyalty_delta=loyalty_delta,
-        stress_delta=stress_delta,
+        loyalty_delta=0.025 * severity,
+        stress_delta=5.0 * severity,
         reference_type=reference_type,
         reference_id=reference_id,
     )
     return True
 
 
-class StaffRelationshipSimulationEngine(WholesaleCompensationSimulationEngine):
-    """Adds hidden staff reactions and a faster sales pace to the live simulation."""
+class StaffRelationshipSimulationEngine(CompensationSimulationEngine):
+    """Hidden staff reactions plus the live sales pacing multiplier."""
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -122,12 +114,6 @@ class StaffRelationshipSimulationEngine(WholesaleCompensationSimulationEngine):
             conn.executescript(STAFF_RELATIONSHIP_SCHEMA)
 
     def _simulate_sales(self, conn, player_id: int, shop, sim_hours: float, now):
-        """Increase only market activity, leaving all other game clocks unchanged.
-
-        Price, rating, product demand and pack-size modifiers are still applied by the
-        inherited sales formula. Multiplying the effective sales window simply raises
-        the number of purchase attempts by the requested pacing factor.
-        """
         return super()._simulate_sales(
             conn,
             player_id,
@@ -141,9 +127,7 @@ class StaffRelationshipSimulationEngine(WholesaleCompensationSimulationEngine):
             """SELECT t.id task_id, t.allocation_id, a.retail_employee_id
                FROM employee_tasks t
                JOIN retail_allocations a ON a.id=t.allocation_id
-               WHERE t.player_id=?
-                 AND t.kind='handoff'
-                 AND t.status='active'
+               WHERE t.player_id=? AND t.kind='handoff' AND t.status='active'
                  AND t.completes_at<=?""",
             (player_id, iso(now)),
         ).fetchall()
@@ -179,8 +163,8 @@ class StaffRelationshipSimulationEngine(WholesaleCompensationSimulationEngine):
         return completed
 
 
-class StaffRelationshipGameService(WholesaleCompensationGameService):
-    """Final game service for hidden trust, pressure and employer-support effects."""
+class StaffRelationshipGameService(CompensationGameService):
+    """Hidden trust, pressure and employer-support effects."""
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -221,7 +205,13 @@ class StaffRelationshipGameService(WholesaleCompensationGameService):
                 )
         return result
 
-    def resolve_dispute_with_source(self, player_id: int, dispute_id: int, decision: str, source: str) -> str:
+    def resolve_dispute_with_source(
+        self,
+        player_id: int,
+        dispute_id: int,
+        decision: str,
+        source: str,
+    ) -> str:
         with self.db.connect() as conn:
             before = conn.execute(
                 """SELECT d.status, d.true_cause, o.employee_id
@@ -231,7 +221,9 @@ class StaffRelationshipGameService(WholesaleCompensationGameService):
                 (dispute_id, player_id),
             ).fetchone()
 
-        result = super().resolve_dispute_with_source(player_id, dispute_id, decision, source)
+        result = super().resolve_dispute_with_source(
+            player_id, dispute_id, decision, source
+        )
         if not before or before["status"] != "open" or decision == "reject":
             return result
 
@@ -264,15 +256,12 @@ class StaffRelationshipGameService(WholesaleCompensationGameService):
                     reference_id=dispute_id,
                 )
             elif after["refund_source"] == "employee":
-                # The base dispute implementation already adds stress when the
-                # employee deposit is charged. Add the relationship consequence here.
-                loyalty_delta = -0.035 if full else -0.020
                 _apply_relationship_delta(
                     conn,
                     player_id,
                     employee_id,
                     kind="employee_deposit_refund",
-                    loyalty_delta=loyalty_delta,
+                    loyalty_delta=-0.035 if full else -0.020,
                     stress_delta=0.0,
                     reference_type="dispute",
                     reference_id=dispute_id,
