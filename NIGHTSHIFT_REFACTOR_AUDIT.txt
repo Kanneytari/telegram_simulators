@@ -35,868 +35,252 @@ app.game.GameService :: game.py
 
 === MRO CourierRecruitmentService ===
 app.courier_recruitment.CourierRecruitmentService :: courier_recruitment.py
-app.recruitment_runtime.NightshiftRecruitmentService :: recruitment_runtime.py
 app.recruitment.RecruitmentService :: recruitment.py
 
-=== FIELD / LEGACY REFERENCES ===
+=== LEGACY REFERENCES ===
 
 -- pay_per_job --
-compensation.py 6
-  80: "UPDATE employees SET pay_per_job=0, deposit_contribution_pct=0 WHERE player_id=?",
-  469: """SELECT jobs_done, wages_accrued, deposit_accrued, pay_per_job
-  495: receive_time_amount = int(before["pay_per_job"] or 0)
-  512: marker = f"Начислено за операцию: {int(before['pay_per_job'] or 0):,} ₽"
-  830: "UPDATE employees SET pay_per_job=0, deposit_contribution_pct=0 WHERE id=?",
-  846: player_id, alias, role, pay_per_job, deposit,
-game.py 4
+game.py
   249: f"Ставка: {e['pay_per_job']:,} ₽ за заказ\n"
   306: """INSERT INTO employees(player_id, alias, role, pay_per_job, deposit, has_car,
   455: new_pay = int(round(e["pay_per_job"] * 1.10 / 5) * 5)
   456: conn.execute("UPDATE employees SET pay_per_job=?, loyalty=MIN(1.0, loyalty+0.08) WHERE id=?", (new_pay, employee_id))
-nightshift.py 3
+nightshift.py
   53: SET pay_per_job=?, deposit_contribution_pct=10
   185: """SELECT i.*, e.alias, e.pay_per_job, e.role
   195: current = int(item["pay_per_job"])
-operations.py 4
+operations.py
   25: player_id, alias, role, pay_per_job, deposit,
   141: (int(employee["pay_per_job"]), iso(utcnow()), employee_id),
   178: f"Начислено за операцию: {employee['pay_per_job']:,} ₽"
   263: f"Ставка: <b>{employee['pay_per_job']:,} ₽</b> / операцию\n"
-procurement_market.py 2
-  381: (employee["pay_per_job"], iso(now), employee_id),
-  412: f"Начислено за операцию: {employee['pay_per_job']:,} ₽"
-recruitment.py 6
-  128: "pay_per_job",
-  146: if field == "pay_per_job":
-  164: pay = int(draft["pay_per_job"])
-  253: traffic_multiplier, duration_hours, pay_per_job, min_deposit,
-  264: draft["pay_per_job"],
-  425: offered_pay = int(campaign["pay_per_job"])
-recruitment_runtime.py 1
-  259: traffic_multiplier, duration_hours, pay_per_job, min_deposit,
-runtime.py 15
-  88: employee_cost = int(employee["pay_per_job"])
-  319: """SELECT alias, role, pay_per_job, deposit_contribution_pct, deposit,
-  343: f"Ставка {row['pay_per_job']:,} ₽ · депозит {row['deposit_contribution_pct']}%\n"
-  372: per_order_deposit = int(round(employee["pay_per_job"] * contribution / 100.0))
-  373: take_home = employee["pay_per_job"] - per_order_deposit
-  375: delta = (employee["pay_per_job"] / market - 1.0) * 100.0 if market else 0.0
-  381: f"Ставка: <b>{employee['pay_per_job']:,} ₽</b> / заказ ({delta:+.0f}% к рынку)\n"
-  410: player_id, alias, role, pay_per_job, deposit,
-  461: requested = int(payload.get("requested_pay") or round(employee["pay_per_job"] * 1.15 / 50) * 50)
-  463: payload.setdefault("offer_pay", int(employee["pay_per_job"]))
-  465: payload.setdefault("floor_pay", max(int(employee["pay_per_job"]), int(requested * self.rng.uniform(0.88, 0.98))))
-  478: offer = int(payload.get("offer_pay", employee["pay_per_job"])) + delta
-  ...
-services.py 2
+runtime.py
+  216: """SELECT alias, role, pay_per_job, deposit_contribution_pct, deposit,
+  240: f"Ставка {row['pay_per_job']:,} ₽ · депозит {row['deposit_contribution_pct']}%\n"
+  269: per_order_deposit = int(round(employee["pay_per_job"] * contribution / 100.0))
+  270: take_home = employee["pay_per_job"] - per_order_deposit
+  272: delta = (employee["pay_per_job"] / market - 1.0) * 100.0 if market else 0.0
+  278: f"Ставка: <b>{employee['pay_per_job']:,} ₽</b> / заказ ({delta:+.0f}% к рынку)\n"
+  307: player_id, alias, role, pay_per_job, deposit,
+  358: requested = int(payload.get("requested_pay") or round(employee["pay_per_job"] * 1.15 / 50) * 50)
+  360: payload.setdefault("offer_pay", int(employee["pay_per_job"]))
+  362: payload.setdefault("floor_pay", max(int(employee["pay_per_job"]), int(requested * self.rng.uniform(0.88, 0.98))))
+  375: offer = int(payload.get("offer_pay", employee["pay_per_job"])) + delta
+  376: offer = max(int(employee["pay_per_job"]), min(10000, int(round(offer / 50) * 50)))
+  406: "UPDATE employees SET pay_per_job=?, loyalty=MIN(1.0, loyalty+0.04) WHERE id=?",
+  443: "UPDATE employees SET pay_per_job=?, loyalty=MIN(1.0, loyalty+0.07) WHERE id=?",
+services.py
   163: """SELECT alias, role, pay_per_job, deposit_contribution_pct, deposit,
   194: f"Ставка {row['pay_per_job']:,} ₽ · депозит {row['deposit_contribution_pct']}%\n"
-simulation.py 2
+simulation.py
   107: player_id, alias, role, pay_per_job, deposit, has_car,
-  265: employee_cost = int(employee["pay_per_job"])
-staff_insights.py 1
+staff_insights.py
   364: f"Ставка: {employee['pay_per_job']:,} ₽ / операцию\n"
-ui_navigation.py 1
+ui_navigation.py
   322: f"Сейчас: {money(employee['pay_per_job'])}\n"
-workflow.py 10
-  252: employee_cost = int(position["pay_per_job"])
-  360: int(employee["pay_per_job"]) + (250 if employee["role"] == "warehouse" else 100),
-  361: int(round(max(employee["pay_per_job"] * self.rng.uniform(1.08, 1.22), market * 0.95) / 50) * 50),
-  363: floor = max(int(employee["pay_per_job"]), int(target * self.rng.uniform(0.88, 0.97)))
-  364: payload.update({"requested_pay": target, "offer_pay": int(employee["pay_per_job"]), "floor_pay": floor, "round": 0})
-  368: f"Текущая ставка: {employee['pay_per_job']:,} ₽ / {operation}\n"
-  618: f"Ставка: {employee['pay_per_job']:,} ₽ / операцию\n"
-  722: (employee["pay_per_job"], iso(now), employee_id),
-  746: f"Начислено за операцию: {employee['pay_per_job']:,} ₽"
-  879: "UPDATE employees SET role=?, pay_per_job=? WHERE id=?",
-workflow_final.py 4
-  35: e.id employee_id, e.pay_per_job, e.deposit_contribution_pct,
-  54: employee_cost = int(position["pay_per_job"])
-  256: f"Ставка: {employee['pay_per_job']:,} ₽ / операцию\n"
-  293: conn.execute("UPDATE employees SET role=?, pay_per_job=? WHERE id=?", (new_role, new_pay, employee_id))
+workflow.py
+  471: f"Ставка: {employee['pay_per_job']:,} ₽ / операцию\n"
+  727: "UPDATE employees SET role=?, pay_per_job=? WHERE id=?",
 
 -- deposit_contribution_pct --
-compensation.py 16
+compensation.py
   14: "deposit_contribution_pct": 20,
   20: "deposit_contribution_pct": 25,
   31: deposit_contribution_pct
   39: defaults["deposit_contribution_pct"],
-  80: "UPDATE employees SET pay_per_job=0, deposit_contribution_pct=0 WHERE player_id=?",
-  114: employee_cost, int(policy["deposit_contribution_pct"])
-  282: amount, int(policy["deposit_contribution_pct"])
-  364: "deposit_contribution_pct": int(row["deposit_contribution_pct"]),
-  376: return gross * (1.0 - int(values["deposit_contribution_pct"]) / 200.0)
-  387: "deposit_contribution_pct": (0, 50, 5),
-  392: "deposit_contribution_pct": (0, 50, 5),
-  780: f"В депозит: {policy['deposit_contribution_pct']}%"
-  ...
-courier_core.py 1
-  585: f"В депозит: {policy['deposit_contribution_pct']}%\n"
-courier_management.py 8
-  66: employee_id, player_id, deposit_target, deposit_contribution_pct,
-  138: int(management["deposit_contribution_pct"])
-  140: else int(policy["deposit_contribution_pct"])
-  321: """SELECT e.*, cp.trait, cm.deposit_target, cm.deposit_contribution_pct,
-  353: "deposit_pct": int(row["deposit_contribution_pct"]),
-  355: "standard_pct": int(policy["deposit_contribution_pct"]),
-  529: old = int(row["deposit_contribution_pct"])
-  540: "UPDATE courier_management SET deposit_contribution_pct=?, updated_at=CURRENT_TIMESTAMP WHERE employee_id=?",
-courier_recruitment.py 1
-  91: deposit_contribution_pct, experience_level
-customer_trust.py 3
-  322: employee_cost, int(policy["deposit_contribution_pct"])
-  638: f"В депозит: {policy['deposit_contribution_pct']}%"
-  644: f"В депозит: {policy['deposit_contribution_pct']}%"
-nightshift.py 1
+  152: amount, int(policy["deposit_contribution_pct"])
+  217: "deposit_contribution_pct": int(row["deposit_contribution_pct"]),
+  229: return gross * (1.0 - int(values["deposit_contribution_pct"]) / 200.0)
+  240: "deposit_contribution_pct": (0, 50, 5),
+  245: "deposit_contribution_pct": (0, 50, 5),
+  580: f"В депозит: {policy['deposit_contribution_pct']}%"
+  586: f"В депозит: {policy['deposit_contribution_pct']}%"
+  666: f"В депозит из заработка: {policy['deposit_contribution_pct']}%\n"
+courier_core.py
+  583: f"В депозит: {policy['deposit_contribution_pct']}%\n"
+courier_management.py
+  64: employee_id, player_id, deposit_target, deposit_contribution_pct,
+  102: pct = int(management["deposit_contribution_pct"])
+  253: """SELECT e.*, cp.trait, cm.deposit_target, cm.deposit_contribution_pct,
+  285: "deposit_pct": int(row["deposit_contribution_pct"]),
+  287: "standard_pct": int(policy["deposit_contribution_pct"]),
+  461: old = int(row["deposit_contribution_pct"])
+  472: "UPDATE courier_management SET deposit_contribution_pct=?, updated_at=CURRENT_TIMESTAMP WHERE employee_id=?",
+customer_trust.py
+  327: int(policy["deposit_contribution_pct"]),
+  643: f"В депозит: {policy['deposit_contribution_pct']}%"
+  649: f"В депозит: {policy['deposit_contribution_pct']}%"
+nightshift.py
   53: SET pay_per_job=?, deposit_contribution_pct=10
-operations.py 1
+operations.py
   26: deposit_contribution_pct, has_car,
-recruitment.py 7
-  130: "deposit_contribution_pct",
-  152: elif field == "deposit_contribution_pct":
-  166: contribution = int(draft["deposit_contribution_pct"])
-  254: deposit_contribution_pct, car_required, experience_required,
-  266: draft["deposit_contribution_pct"],
-  426: contribution = int(campaign["deposit_contribution_pct"])
-  479: deposit_contribution_pct, experience_level
-recruitment_runtime.py 6
-  68: deposit_contribution_pct
-  79: "deposit_contribution_pct": int(row["deposit_contribution_pct"]),
-  91: return gross * (1.0 - int(policy["deposit_contribution_pct"]) / 200.0)
-  260: deposit_contribution_pct, car_required, experience_required,
-  280: policy["deposit_contribution_pct"],
-  409: deposit_contribution_pct, experience_level
-runtime.py 7
-  89: contribution_pct = int(employee["deposit_contribution_pct"] or 0)
-  209: pct = int(employee["deposit_contribution_pct"] or 0)
-  319: """SELECT alias, role, pay_per_job, deposit_contribution_pct, deposit,
-  343: f"Ставка {row['pay_per_job']:,} ₽ · депозит {row['deposit_contribution_pct']}%\n"
-  371: contribution = int(employee["deposit_contribution_pct"] or 0)
-  406: contribution_pct = int(candidate["deposit_contribution_pct"] or 10)
-  411: deposit_contribution_pct, has_car,
-services.py 3
+recruitment.py
+  131: """SELECT fixed_fee, base_rate_bps, risk_rate_bps, deposit_contribution_pct
+  148: return gross * (1.0 - int(policy["deposit_contribution_pct"]) / 200.0)
+  308: policy["risk_rate_bps"], policy["deposit_contribution_pct"],
+runtime.py
+  106: pct = int(employee["deposit_contribution_pct"] or 0)
+  216: """SELECT alias, role, pay_per_job, deposit_contribution_pct, deposit,
+  240: f"Ставка {row['pay_per_job']:,} ₽ · депозит {row['deposit_contribution_pct']}%\n"
+  268: contribution = int(employee["deposit_contribution_pct"] or 0)
+  303: contribution_pct = int(candidate["deposit_contribution_pct"] or 10)
+  308: deposit_contribution_pct, has_car,
+services.py
   58: pct = int(employee["deposit_contribution_pct"] or 0)
   163: """SELECT alias, role, pay_per_job, deposit_contribution_pct, deposit,
   194: f"Ставка {row['pay_per_job']:,} ₽ · депозит {row['deposit_contribution_pct']}%\n"
-staff_insights.py 1
+staff_insights.py
   365: f"В депозит: {employee['deposit_contribution_pct']}%\n"
-ui_staff.py 5
+ui_staff.py
   444: return f"{money(policy['fixed_fee'])} за заказ + {pct(policy['base_rate_bps']/100, 1)} с продажи · депозит {policy['deposit_contribution_pct']}%"
   445: return f"{pct(policy['base_rate_bps']/100, 1)} с передачи + доплата за риск · депозит {policy['deposit_contribution_pct']}%"
-  471: rows.append([InlineKeyboardButton(text="Депозит −5%", callback_data="team:termsdraft:deposit_contribution_pct:-5"), InlineKeyboardButton(text="Депозит +5%", callback_data="team:ter
+  471: rows.append([InlineKeyboardButton(text="Депозит −5%", callback_data="team:termsdraft:deposit_contribution_pct:-5"), InlineKeyboardButton(text="Депозит +5%", callback_data="team:termsdraft:deposit_contribution_pct:5")])
   856: if field == "deposit_contribution_pct":
   876: for field in ("fixed_fee", "base_rate_bps", "risk_rate_bps", "deposit_contribution_pct"):
-ui_staff_handlers.py 4
+ui_staff_handlers.py
   120: deposit_pct = int(row["terms_deposit_pct"] if row["terms_deposit_pct"] is not None else policy["deposit_contribution_pct"])
   124: deposit_pct = int(row["terms_deposit_pct"] if row["terms_deposit_pct"] is not None else policy["deposit_contribution_pct"])
   427: if field == "deposit_contribution_pct":
   443: for field in ("fixed_fee", "base_rate_bps", "risk_rate_bps", "deposit_contribution_pct"):
-workflow.py 2
-  253: contribution_pct = int(position["deposit_contribution_pct"] or 0)
-  620: f"Отчисление в депозит: {employee['deposit_contribution_pct']}%\n"
-workflow_final.py 3
-  35: e.id employee_id, e.pay_per_job, e.deposit_contribution_pct,
-  55: contribution_pct = int(position["deposit_contribution_pct"] or 0)
-  257: f"В депозит: {employee['deposit_contribution_pct']}% заработка\n"
+workflow.py
+  473: f"Отчисление в депозит: {employee['deposit_contribution_pct']}%\n"
 
 -- desired_pay --
-courier_recruitment.py 1
-  88: player_id, alias, role, desired_pay, deposit, has_car,
-game.py 4
+game.py
   261: "SELECT * FROM candidates WHERE player_id=? AND status='open' ORDER BY desired_pay", (player_id,)
   293: """INSERT INTO candidates(player_id, alias, role, desired_pay, deposit, has_car,
   309: (player_id, c["alias"], c["role"], c["desired_pay"], c["deposit"], c["has_car"], c["reliability"], c["attention"], c["honesty"], c["loyalty"]),
   317: return f"{c['alias']} принят в команду. Ставка: {c['desired_pay']:,} ₽."
-recruitment.py 1
-  476: player_id, alias, role, desired_pay, deposit, has_car,
-recruitment_runtime.py 1
-  406: player_id, alias, role, desired_pay, deposit, has_car,
-runtime.py 1
-  405: pay = int(candidate["offered_pay"] or candidate["desired_pay"])
-simulation.py 1
-  529: """INSERT INTO candidates(player_id, alias, role, desired_pay, deposit, has_car,
+runtime.py
+  302: pay = int(candidate["offered_pay"] or candidate["desired_pay"])
+simulation.py
+  440: """INSERT INTO candidates(player_id, alias, role, desired_pay, deposit, has_car,
 
 -- offered_pay --
-courier_recruitment.py 1
-  90: campaign_id, source_channel, offered_pay, min_deposit,
-recruitment.py 3
-  425: offered_pay = int(campaign["pay_per_job"])
-  478: campaign_id, source_channel, offered_pay, min_deposit,
-  495: offered_pay,
-recruitment_runtime.py 1
-  408: campaign_id, source_channel, offered_pay, min_deposit,
-runtime.py 1
-  405: pay = int(candidate["offered_pay"] or candidate["desired_pay"])
-
--- reliability --
-compensation.py 2
-  848: reliability, attention, honesty, loyalty
-  856: candidate["reliability"],
-courier_core.py 5
-  47: pace = clamp(float(row["reliability"]), 0.45, 0.97)
-  85: SET reliability=?, attention=?, honesty=?
-  473: def _reliability_label(employee, profile) -> str:
-  557: reliability = self._reliability_label(employee, profile)
-  575: f"🛡 Надёжность: <b>{reliability}</b>\n"
-courier_recruitment.py 1
-  89: reliability, attention, honesty, loyalty, summary, expires_at,
-customer_trust.py 2
-  221: + float(employee["reliability"]) * 0.30
-  298: e.id employee_id, e.attention, e.reliability, e.stress,
-game.py 8
-  284: reliability = clamp(self.rng.uniform(0.55, 0.91) + quality_bonus, 0.4, 0.99)
-  288: desired = int(140 + (reliability + attention) * 65 + self.rng.randint(-20, 25))
-  294: reliability, attention, honesty, loyalty, summary, expires_at)
-  296: (player_id, alias, desired, deposit, has_car, reliability, attention, honesty, loyalty, summary, iso(now + timedelta(hours=8))),
-  307: reliability, attention, honesty, loyalty)
-  309: (player_id, c["alias"], c["role"], c["desired_pay"], c["deposit"], c["has_car"], c["reliability"], c["attention"], c["honesty"], c["loyalty"]),
-  336: """SELECT o.*, s.quality_mean, s.quality_sigma, s.reliability, s.title supplier_title, p.title product_title
-  350: delivered = self.rng.random() < float(offer["reliability"])
-operations.py 3
-  27: reliability, attention, honesty, loyalty, stress
-  94: """SELECT o.*, s.quality_mean, s.quality_sigma, s.reliability,
-  130: delivered = self.rng.random() < float(offer["reliability"])
-procurement_market.py 10
-  203: reliability = float(supplier["reliability"]) + self.rng.uniform(-0.025, 0.025)
-  209: reliability = max(0.90, float(supplier["reliability"]) + self.rng.uniform(0.02, 0.08))
-  215: reliability = self.rng.uniform(0.55, 0.79)
-  221: reliability = self.rng.uniform(0.95, 0.995)
-  226: reliability = clamp(reliability, 0.50, 0.995)
-  234: offer_reliability, market_profile, expires_at
-  245: reliability,
-  267: COALESCE(o.offer_reliability, s.reliability) resolved_reliability
-  316: COALESCE(o.offer_reliability, s.reliability) resolved_reliability
-  337: delivered = self.rng.random() < float(offer["resolved_reliability"])
-recruitment.py 4
-  437: reliability = clamp(self.rng.uniform(0.52, 0.90) + quality_bonus, 0.38, 0.99)
-  459: (135 + (reliability + attention) * 65 + experience_level * 18 + self.rng.randint(-15, 25))
-  477: reliability, attention, honesty, loyalty, summary, expires_at,
-  487: reliability,
-recruitment_runtime.py 3
-  361: reliability = clamp(self.rng.uniform(0.52, 0.90) + quality_bonus, 0.38, 0.99)
-  407: reliability, attention, honesty, loyalty, summary, expires_at,
-  417: reliability,
-runtime.py 2
-  412: reliability, attention, honesty, loyalty
-  422: candidate["reliability"],
-simulation.py 6
-  77: "INSERT OR IGNORE INTO suppliers(id, code, title, price_modifier, quality_mean, quality_sigma, reliability) VALUES (?, ?, ?, ?, ?, ?, ?)",
-  108: reliability, attention, honesty, loyalty, stress
-  519: reliability = self.rng.uniform(0.60, 0.97)
-  523: desired = int(145 + (reliability + attention) * 55 + self.rng.randint(-20, 30))
-  530: reliability, attention, honesty, loyalty, summary, expires_at)
-  532: (player_id, alias, role, desired, deposit, has_car, reliability, attention, honesty, loyalty, summary, iso(now + timedelta(hours=10))),
-ui_commerce.py 2
-  138: reliability = float(offer["resolved_reliability"]) * 100.0
-  153: f"Надёжность поставки: {reliability:.0f}%"
-ui_staff.py 2
-  114: reliability = game._reliability_label(employee, profile)
-  124: f"Надёжность: <b>{reliability}</b>\n\n"
-workflow.py 3
-  170: game_hours = 0.8 + int(allocation["quantity"]) / 18.0 * 0.7 + (1.0 - float(retail["reliability"])) * 2.0
-  672: """SELECT o.*, s.quality_mean, s.quality_sigma, s.reliability,
-  692: delivered = self.rng.random() < float(offer["reliability"])
-
--- attention --
-compensation.py 4
-  91: e.id employee_id, e.attention, e.stress, e.honesty, e.loyalty
-  187: "attention": float(position["attention"]),
-  848: reliability, attention, honesty, loyalty
-  857: candidate["attention"],
-courier_core.py 3
-  48: precision = clamp(float(row["attention"]), 0.45, 0.99)
-  85: SET reliability=?, attention=?, honesty=?
-  202: "attention": self._effective_precision(profile, stress),
-courier_recruitment.py 1
-  89: reliability, attention, honesty, loyalty, summary, expires_at,
-customer_trust.py 3
-  220: float(employee["attention"]) * 0.55
-  298: e.id employee_id, e.attention, e.reliability, e.stress,
-  396: "attention": float(position["attention"]),
-delayed_disputes.py 2
-  117: accurate = self.rng.random() < (float(row["honesty"]) * 0.65 + float(row["attention"]) * 0.25)
-  138: """SELECT d.*, e.alias, e.honesty, e.attention
-game.py 8
-  136: """SELECT d.*, e.alias, e.honesty, e.attention
-  146: accurate = self.rng.random() < (float(row["honesty"]) * 0.65 + float(row["attention"]) * 0.25)
-  285: attention = clamp(self.rng.uniform(0.55, 0.92) + quality_bonus * 0.8, 0.4, 0.99)
-  288: desired = int(140 + (reliability + attention) * 65 + self.rng.randint(-20, 25))
-  294: reliability, attention, honesty, loyalty, summary, expires_at)
-  296: (player_id, alias, desired, deposit, has_car, reliability, attention, honesty, loyalty, summary, iso(now + timedelta(hours=8))),
-  307: reliability, attention, honesty, loyalty)
-  309: (player_id, c["alias"], c["role"], c["desired_pay"], c["deposit"], c["has_car"], c["reliability"], c["attention"], c["honesty"], c["loyalty"]),
-operations.py 1
-  27: reliability, attention, honesty, loyalty, stress
-recruitment.py 4
-  438: attention = clamp(self.rng.uniform(0.52, 0.92) + quality_bonus * 0.9, 0.38, 0.99)
-  459: (135 + (reliability + attention) * 65 + experience_level * 18 + self.rng.randint(-15, 25))
-  477: reliability, attention, honesty, loyalty, summary, expires_at,
-  488: attention,
-recruitment_runtime.py 3
-  362: attention = clamp(self.rng.uniform(0.52, 0.92) + quality_bonus * 0.9, 0.38, 0.99)
-  407: reliability, attention, honesty, loyalty, summary, expires_at,
-  418: attention,
-runtime.py 2
-  412: reliability, attention, honesty, loyalty
-  423: candidate["attention"],
-simulation.py 8
-  108: reliability, attention, honesty, loyalty, stress
-  302: employee_error = (1.0 - float(employee["attention"])) * 0.20
-  311: "EMPLOYEE_ERROR": (1.0 - float(employee["attention"])) * 2.0 + 0.05,
-  312: "DESCRIPTION_ERROR": (1.0 - float(employee["attention"])) * 1.1 + 0.03,
-  520: attention = self.rng.uniform(0.58, 0.98)
-  523: desired = int(145 + (reliability + attention) * 55 + self.rng.randint(-20, 30))
-  530: reliability, attention, honesty, loyalty, summary, expires_at)
-  532: (player_id, alias, role, desired, deposit, has_car, reliability, attention, honesty, loyalty, summary, iso(now + timedelta(hours=10))),
-ui_navigation.py 5
-  110: SUM(CASE WHEN priority IN ('important','urgent') THEN 1 ELSE 0 END) attention
-  125: return list(items), total, int(counts["attention"] or 0), page
-  156: items, total, attention, page = _inbox_page(game.db, player_id, page)
-  158: if attention:
-  159: body += f"\n\n{attention} требуют внимания."
-workflow_final.py 2
-  36: e.attention, e.stress, e.honesty, e.loyalty
-  104: "attention": float(position["attention"]),
-
--- honesty --
-compensation.py 4
-  91: e.id employee_id, e.attention, e.stress, e.honesty, e.loyalty
-  189: "honesty": float(position["honesty"]),
-  848: reliability, attention, honesty, loyalty
-  858: candidate["honesty"],
-courier_core.py 3
-  49: integrity = clamp(float(row["honesty"]), 0.30, 0.99)
-  85: SET reliability=?, attention=?, honesty=?
-  204: "honesty": float(profile["integrity"]),
-courier_recruitment.py 1
-  89: reliability, attention, honesty, loyalty, summary, expires_at,
-customer_trust.py 4
-  202: honesty_weight = clamp(1.08 - float(row["fraud_propensity"]) * 1.6, 0.48, 1.08)
-  203: weights.append(repeat_weight * honesty_weight)
-  299: e.honesty, e.loyalty
-  398: "honesty": float(position["honesty"]),
-delayed_disputes.py 2
-  117: accurate = self.rng.random() < (float(row["honesty"]) * 0.65 + float(row["attention"]) * 0.25)
-  138: """SELECT d.*, e.alias, e.honesty, e.attention
-game.py 7
-  136: """SELECT d.*, e.alias, e.honesty, e.attention
-  146: accurate = self.rng.random() < (float(row["honesty"]) * 0.65 + float(row["attention"]) * 0.25)
-  286: honesty = clamp(self.rng.uniform(0.50, 0.95) + quality_bonus * 0.35, 0.35, 0.99)
-  294: reliability, attention, honesty, loyalty, summary, expires_at)
-  296: (player_id, alias, desired, deposit, has_car, reliability, attention, honesty, loyalty, summary, iso(now + timedelta(hours=8))),
-  307: reliability, attention, honesty, loyalty)
-  309: (player_id, c["alias"], c["role"], c["desired_pay"], c["deposit"], c["has_car"], c["reliability"], c["attention"], c["honesty"], c["loyalty"]),
-operations.py 1
-  27: reliability, attention, honesty, loyalty, stress
-recruitment.py 3
-  439: honesty = clamp(self.rng.uniform(0.48, 0.94) + quality_bonus * 0.45, 0.35, 0.99)
-  477: reliability, attention, honesty, loyalty, summary, expires_at,
-  489: honesty,
-recruitment_runtime.py 3
-  363: honesty = clamp(self.rng.uniform(0.48, 0.94) + quality_bonus * 0.45, 0.35, 0.99)
-  407: reliability, attention, honesty, loyalty, summary, expires_at,
-  419: honesty,
-runtime.py 2
-  412: reliability, attention, honesty, loyalty
-  424: candidate["honesty"],
-simulation.py 5
-  108: reliability, attention, honesty, loyalty, stress
-  409: dishonest_exit = self.rng.random() > float(employee["honesty"])
-  521: honesty = self.rng.uniform(0.55, 0.99)
-  530: reliability, attention, honesty, loyalty, summary, expires_at)
-  532: (player_id, alias, role, desired, deposit, has_car, reliability, attention, honesty, loyalty, summary, iso(now + timedelta(hours=10))),
-workflow.py 3
-  421: dishonesty = 1.0 - float(employee["honesty"])
-  424: hourly = 0.0008 + unsecured_ratio * (dishonesty * 0.018 + low_loyalty * 0.010 + stress * 0.004)
-  428: fraction = 1.0 if dishonesty > 0.40 and self.rng.random() < 0.45 else self.rng.choice([0.25, 0.50, 0.75])
-workflow_final.py 2
-  36: e.attention, e.stress, e.honesty, e.loyalty
-  106: "honesty": float(position["honesty"]),
-
--- has_car --
-compensation.py 2
-  847: deposit_contribution_pct, deposit_accrued, has_car,
-  855: candidate["has_car"],
-courier_management.py 4
-  55: f"""SELECT e.id, e.player_id, e.deposit, e.has_car
-  73: 2 if int(row["has_car"]) else 0,
-  232: 2 if int(candidate["has_car"]) else 0,
-  630: conn.execute("UPDATE employees SET has_car=1 WHERE id=?", (employee_id,))
-courier_recruitment.py 4
-  49: has_car = 1 if car_required else int(self.rng.random() < channel.car_probability)
-  81: f"Автомобиль: {'есть' if has_car else 'нет'}\n"
-  88: player_id, alias, role, desired_pay, deposit, has_car,
-  97: has_car,
-game.py 7
-  251: f"Автомобиль: {'да' if e['has_car'] else 'нет'}\n"
-  290: has_car = int(self.rng.random() < 0.42)
-  291: summary = f"кандидат из канала «{title}»; {'есть автомобиль' if has_car else 'без автомобиля'}; обеспечение {deposit:,} ₽"
-  293: """INSERT INTO candidates(player_id, alias, role, desired_pay, deposit, has_car,
-  296: (player_id, alias, desired, deposit, has_car, reliability, attention, honesty, loyalty, summary, iso(now + timedelta(hours=8))),
-  306: """INSERT INTO employees(player_id, alias, role, pay_per_job, deposit, has_car,
-  309: (player_id, c["alias"], c["role"], c["desired_pay"], c["deposit"], c["has_car"], c["reliability"], c["attention"], c["honesty"], c["loyalty"]),
-operations.py 1
-  26: deposit_contribution_pct, has_car,
-recruitment.py 4
-  451: has_car = 1 if car_required else int(self.rng.random() < channel.car_probability)
-  471: f"Автомобиль: {'есть' if has_car else 'нет'}\n"
-  476: player_id, alias, role, desired_pay, deposit, has_car,
-  486: has_car,
-recruitment_runtime.py 4
-  375: has_car = 1 if car_required else int(self.rng.random() < channel.car_probability)
-  401: f"Автомобиль: {'есть' if has_car else 'нет'}\n"
-  406: player_id, alias, role, desired_pay, deposit, has_car,
-  416: has_car,
-runtime.py 3
-  386: f"Автомобиль: {'есть' if employee['has_car'] else 'нет'}\n\n"
-  411: deposit_contribution_pct, has_car,
-  421: candidate["has_car"],
-simulation.py 5
-  107: player_id, alias, role, pay_per_job, deposit, has_car,
-  525: has_car = int(self.rng.random() < 0.42)
-  527: summary = f"{experience}; {'есть автомобиль' if has_car else 'без автомобиля'}; готовое обеспечение {deposit:,} ₽"
-  529: """INSERT INTO candidates(player_id, alias, role, desired_pay, deposit, has_car,
-  532: (player_id, alias, role, desired, deposit, has_car, reliability, attention, honesty, loyalty, summary, iso(now + timedelta(hours=10))),
-ui_staff.py 1
-  590: lines = [f"<b>{'👤' if row['role']=='courier' else '🚚'} {clean(row['alias'])} · {role}</b>", "", f"Депозит: {money(row['deposit'])}", f"Автомобиль: {'есть' if row['has_car'] else 'н
-ui_staff_handlers.py 1
-  112: f"Автомобиль: {'есть' if row['has_car'] else 'нет'}",
-
--- shops.rating --
-
--- rating --
-analytics_log.py 38
-  22: entity_type, entity_id, balance, rating, time_multiplier, payload_json
-  25: 'shop', OLD.player_id, OLD.balance, OLD.rating,
-  34: INSERT INTO analytics_events(player_id, run_id, event_kind, event_name, source, entity_type, entity_id, balance, rating, time_multiplier, payload_json)
-  39: (SELECT rating FROM shops WHERE player_id=NEW.player_id),
-  49: INSERT INTO analytics_events(player_id, run_id, event_kind, event_name, source, entity_type, entity_id, balance, rating, time_multiplier, payload_json)
-  54: (SELECT rating FROM shops WHERE player_id=NEW.player_id),
-  63: INSERT INTO analytics_events(player_id, run_id, event_kind, event_name, source, entity_type, entity_id, balance, rating, time_multiplier, payload_json)
-  68: (SELECT rating FROM shops WHERE player_id=NEW.player_id),
-  77: INSERT INTO analytics_events(player_id, run_id, event_kind, event_name, source, entity_type, entity_id, balance, rating, time_multiplier, payload_json)
-  82: (SELECT rating FROM shops WHERE player_id=NEW.player_id),
-  91: INSERT INTO analytics_events(player_id, run_id, event_kind, event_name, source, entity_type, entity_id, balance, rating, time_multiplier, payload_json)
-  96: (SELECT rating FROM shops WHERE player_id=NEW.player_id),
-  ...
-business_analytics.py 27
-  99: def _rating_with_trend(current: float, current_count: int, previous: float, previous_count: int, ready: bool) -> str:
-  136: ratings = conn.execute(
-  138: COALESCE(AVG(product_rating),0) product_rating,
-  139: COALESCE(AVG(courier_rating),0) courier_rating
-  140: FROM order_ratings
-  191: "rating_count": int(ratings["n"] or 0),
-  192: "product_rating": float(ratings["product_rating"] or 0.0),
-  193: "courier_rating": float(ratings["courier_rating"] or 0.0),
-  206: COUNT(r.order_id) rating_count,
-  207: COALESCE(AVG(r.product_rating),0) rating
-  211: LEFT JOIN order_ratings r ON r.order_id=o.id
-  274: "rating_count": int(row["rating_count"] or 0),
-  ...
-compensation.py 2
-  762: """SELECT COUNT(*) count, COALESCE(AVG(courier_rating),0) avg
-  763: FROM order_ratings WHERE player_id=? AND employee_id=?""",
-courier_core.py 17
-  160: def _courier_rating(self, employee) -> int:
-  164: return super()._courier_rating(employee)
-  209: def _record_rating_conn(self, conn, order_id: int, employee) -> int:
-  210: existed = conn.execute("SELECT 1 FROM order_ratings WHERE order_id=?", (order_id,)).fetchone()
-  211: result = super()._record_rating_conn(conn, order_id, employee)
-  214: rating = conn.execute(
-  215: "SELECT courier_rating, employee_id FROM order_ratings WHERE order_id=?",
-  218: if not rating:
-  225: rating_sum=rating_sum+?,
-  227: high_stress_rating_sum=high_stress_rating_sum+?
-  230: int(rating["courier_rating"]),
-  232: int(rating["courier_rating"]) if high else 0,
-  ...
-customer_trust.py 49
-  13: def _bayesian_rating(conn, player_id: int, field: str, where: str = "", params=()) -> tuple[float, int]:
-  14: if field not in {"product_rating", "courier_rating"}:
-  15: raise ValueError("Unsupported rating field")
-  18: FROM order_ratings WHERE player_id=? {where}""",
-  25: prior_rating = 3.5
-  26: rating = (float(row["total"] or 0) + prior_count * prior_rating) / (count + prior_count)
-  27: return rating, count
-  48: """Final live economy: structured ratings, repeat buyers and long-term trust."""
-  129: product_rating, _ = _bayesian_rating(conn, player_id, "product_rating")
-  130: courier_rating, _ = _bayesian_rating(conn, player_id, "courier_rating")
-  133: 0.36 * (product_rating / 5.0)
-  134: + 0.24 * (courier_rating / 5.0)
-  ...
-game.py 6
-  52: f"Рейтинг: <b>{shop['rating']:.2f}</b>\n"
-  193: rating_delta = 0.0
-  195: rating_delta = self.rng.uniform(0.001, 0.008) * float(row["review_tendency"])
-  202: rating_delta = -self.rng.uniform(0.015, 0.055) * float(row["review_tendency"])
-  210: conn.execute("UPDATE shops SET rating=MAX(1.0, MIN(5.0, rating+?)) WHERE player_id=?", (rating_delta, player_id))
-  431: f"Рейтинг: {shop['rating']:.2f}\n\n"
-operations.py 2
-  247: """SELECT COUNT(*) count, COALESCE(AVG(courier_rating),0) avg
-  248: FROM order_ratings WHERE player_id=? AND employee_id=?""",
-services.py 5
-  354: rating_delta = 0.0
-  356: rating_delta = self.rng.uniform(0.001, 0.008) * float(row["review_tendency"])
-  360: rating_delta = -self.rng.uniform(0.015, 0.055) * float(row["review_tendency"])
-  364: "UPDATE shops SET rating=MAX(1.0, MIN(5.0, rating+?)) WHERE player_id=?",
-  365: (rating_delta, player_id),
-simulation.py 2
-  224: rating_effect = clamp(0.70 + (float(shop["rating"]) - 4.0) * 0.55, 0.55, 1.25)
-  239: expected = (listing["base_demand"] / 24.0) * sim_hours * rating_effect * price_effect * pack_effect
-staff_insights.py 2
-  341: """SELECT COUNT(*) count, COALESCE(AVG(courier_rating),0) avg
-  342: FROM order_ratings WHERE player_id=? AND employee_id=?""",
-ui_commerce.py 7
-  6: from .ui_common import clean, money, nav_row, notice, present, rating
-  194: COALESCE((SELECT COUNT(*) FROM order_ratings r
-  195: WHERE r.player_id=? AND r.product_id=p.id),0) rating_count,
-  196: COALESCE((SELECT AVG(product_rating) FROM order_ratings r
-  208: text=f"{row['title']} · {int(row['stock'])} ед. · {rating(float(row['quality_avg']), int(row['rating_count']))}",
-  241: "SELECT COUNT(*) n, COALESCE(AVG(product_rating),0) avg FROM order_ratings WHERE player_id=? AND product_id=?",
-  267: f"<b>{clean(product['title'])}</b>\n\n{published} ед. готовы к продаже · оценка {rating(avg, n)}",
-ui_common.py 1
-  25: def rating(value: float, count: int = 1) -> str:
-ui_disputes.py 7
-  8: from .ui_common import clean, money, nav_row, notice, present, rating
-  16: e.alias employee_alias, r.product_rating, r.courier_rating
-  21: LEFT JOIN order_ratings r ON r.order_id=o.id
-  44: product_rating = rating(float(row["product_rating"] or 0), 1 if row["product_rating"] else 0)
-  45: courier_rating = rating(float(row["courier_rating"] or 0), 1 if row["courier_rating"] else 0)
-  49: f"Товар: {clean(row['product_title'])} · оценка {product_rating}\n"
-  50: f"Курьер: {clean(row['employee_alias'])} · оценка {courier_rating}"
-ui_staff.py 2
-  21: from .ui_common import clean, money, nav_row, notice, pct, present, rating
-  123: f"Качество: <b>{rating(service['rating'], service['count'])}</b> · {service['count']} заказов\n"
-workflow.py 4
-  203: rating_effect = clamp(0.70 + (float(shop["rating"]) - 4.0) * 0.55, 0.55, 1.25)
-  221: expected = (listing["base_demand"] / 24.0) * sim_hours * rating_effect * price_effect * pack_effect
-  605: """SELECT COUNT(*) count, COALESCE(AVG(courier_rating),0) avg
-  606: FROM order_ratings WHERE player_id=? AND employee_id=?""",
-
--- clients.loyalty --
-
--- loyalty --
-compensation.py 11
-  91: e.id employee_id, e.attention, e.stress, e.honesty, e.loyalty
-  190: "loyalty": float(position["loyalty"]),
-  418: loyalty_delta = 0.008 + 0.018 * severity
-  423: loyalty_delta = -(0.010 + 0.025 * severity)
-  427: loyalty_delta = 0.0
-  440: SET loyalty=MIN(1.0, MAX(0.0, loyalty+?)),
-  443: (loyalty_delta, stress_delta, player_id, role),
-  448: loyalty_delta, stress_delta
-  456: loyalty_delta,
-  848: reliability, attention, honesty, loyalty
-  859: candidate["loyalty"],
-courier_core.py 3
-  167: relationship = float(employee["loyalty"])
-  205: "loyalty": float(employee.get("loyalty", 0.55)) if isinstance(employee, dict) else float(employee["loyalty"]),
-  582: f"<b>Отношение</b>\n{relationship_band(float(employee['loyalty']))}\n\n"
-courier_management.py 40
-  16: 12: {"cost": 3_000, "stress": 28.0, "loyalty": 0.035},
-  17: 24: {"cost": 5_500, "stress": 48.0, "loyalty": 0.060},
-  288: loyalty_delta: float = 0.0,
-  294: player_id, employee_id, kind, amount, loyalty_delta, stress_delta, details_json
-  301: float(loyalty_delta),
-  349: "loyalty": float(row["loyalty"]),
-  350: "relationship": self._relationship(float(row["loyalty"])),
-  377: def _relationship(loyalty: float) -> str:
-  378: if loyalty >= 0.82:
-  380: if loyalty >= 0.67:
-  382: if loyalty >= 0.50:
-  384: if loyalty >= 0.36:
-  ...
-courier_model.py 2
-  96: def relationship_band(loyalty: float) -> str:
-  97: value = float(loyalty)
-courier_recruitment.py 3
-  67: starting_loyalty = clamp(
-  89: reliability, attention, honesty, loyalty, summary, expires_at,
-  101: starting_loyalty,
-customer_trust.py 5
-  222: + float(employee["loyalty"]) * 0.15
-  287: # shop-specific relationship the canonical loyalty source.
-  289: conn.execute("UPDATE clients SET loyalty=? WHERE id=?", (updated, order["client_id"]))
-  299: e.honesty, e.loyalty
-  399: "loyalty": float(position["loyalty"]),
-game.py 17
-  171: """SELECT d.*, o.*, c.id cid, c.review_tendency, c.loyalty, e.id eid
-  196: conn.execute("UPDATE clients SET loyalty=MIN(1.0, loyalty+0.03) WHERE id=?", (row["cid"],))
-  203: conn.execute("UPDATE clients SET loyalty=MAX(0.0, loyalty-0.12) WHERE id=?", (row["cid"],))
-  207: conn.execute("UPDATE employees SET loyalty=MIN(1.0, loyalty+0.01) WHERE id=?", (row["eid"],))
-  287: loyalty = self.rng.uniform(0.45, 0.88)
-  294: reliability, attention, honesty, loyalty, summary, expires_at)
-  296: (player_id, alias, desired, deposit, has_car, reliability, attention, honesty, loyalty, summary, iso(now + timedelta(hours=8))),
-  307: reliability, attention, honesty, loyalty)
-  309: (player_id, c["alias"], c["role"], c["desired_pay"], c["deposit"], c["has_car"], c["reliability"], c["attention"], c["honesty"], c["loyalty"]),
-  446: conn.execute("UPDATE clients SET loyalty=MIN(1.0, loyalty+0.06) WHERE id=?", (client_id,))
-  449: conn.execute("UPDATE clients SET loyalty=MAX(0.0, loyalty-0.025) WHERE id=?", (client_id,))
-  456: conn.execute("UPDATE employees SET pay_per_job=?, loyalty=MIN(1.0, loyalty+0.08) WHERE id=?", (new_pay, employee_id))
-  ...
-operations.py 1
-  27: reliability, attention, honesty, loyalty, stress
-recruitment.py 3
-  440: loyalty = clamp(self.rng.uniform(0.42, 0.86) + quality_bonus * 0.25, 0.30, 0.96)
-  477: reliability, attention, honesty, loyalty, summary, expires_at,
-  490: loyalty,
-recruitment_runtime.py 3
-  364: loyalty = clamp(self.rng.uniform(0.42, 0.86) + quality_bonus * 0.25, 0.30, 0.96)
-  407: reliability, attention, honesty, loyalty, summary, expires_at,
-  420: loyalty,
-runtime.py 6
-  412: reliability, attention, honesty, loyalty
-  425: candidate["loyalty"],
-  502: acceptance_score += (float(employee["loyalty"]) - 0.5) * 0.12
-  509: "UPDATE employees SET pay_per_job=?, loyalty=MIN(1.0, loyalty+0.04) WHERE id=?",
-  519: "UPDATE employees SET loyalty=MAX(0.0, loyalty-0.04), stress=MIN(100, stress+2) WHERE id=?",
-  546: "UPDATE employees SET pay_per_job=?, loyalty=MIN(1.0, loyalty+0.07) WHERE id=?",
-services.py 4
-  230: loyalty=MIN(1.0, loyalty+0.05),
-  318: """SELECT d.*, o.*, c.id cid, c.review_tendency, c.loyalty,
-  357: conn.execute("UPDATE clients SET loyalty=MIN(1.0, loyalty+0.03) WHERE id=?", (row["cid"],))
-  361: conn.execute("UPDATE clients SET loyalty=MAX(0.0, loyalty-0.12) WHERE id=?", (row["cid"],))
-simulation.py 8
-  108: reliability, attention, honesty, loyalty, stress
-  119: fraud_propensity, patience, loyalty, review_tendency
-  400: # Low loyalty and high stress can end employment without waiting for a scripted quest.
-  405: loyalty_risk = max(0.0, 0.62 - float(employee["loyalty"])) * 0.028 * min(sim_hours, 12.0)
-  407: if self.rng.random() >= loyalty_risk + stress_risk:
-  522: loyalty = self.rng.uniform(0.45, 0.90)
-  530: reliability, attention, honesty, loyalty, summary, expires_at)
-  532: (player_id, alias, role, desired, deposit, has_car, reliability, attention, honesty, loyalty, summary, iso(now + timedelta(hours=10))),
-staff_relationships.py 10
-  18: loyalty_delta: float,
-  31: SET loyalty=MIN(1.0, MAX(0.0, loyalty+?)),
-  34: (float(loyalty_delta), float(stress_delta), employee_id, player_id),
-  39: loyalty_delta, stress_delta
-  47: float(loyalty_delta),
-  84: loyalty_delta=0.025 * severity,
-  227: loyalty_delta = 0.028 if full else 0.018
-  230: loyalty_delta += 0.010
-  237: loyalty_delta=loyalty_delta,
-  248: loyalty_delta=-0.035 if full else -0.020,
-ui_staff.py 1
-  152: f"Отношения: {relationship_band(float(employee['loyalty']))}\n\n"
-workflow.py 2
-  422: low_loyalty = max(0.0, 0.60 - float(employee["loyalty"]))
-  424: hourly = 0.0008 + unsecured_ratio * (dishonesty * 0.018 + low_loyalty * 0.010 + stress * 0.004)
-workflow_final.py 4
-  36: e.attention, e.stress, e.honesty, e.loyalty
-  107: "loyalty": float(position["loyalty"]),
-  144: loyalty_pressure = max(0.0, 0.58 - float(employee["loyalty"]))
-  146: hourly_rate = loyalty_pressure * 0.020 + stress_pressure * 0.012
+runtime.py
+  302: pay = int(candidate["offered_pay"] or candidate["desired_pay"])
 
 -- raise_request --
-compensation.py 1
-  327: "SELECT id FROM inbox WHERE player_id=? AND id>? AND kind='raise_request'",
-courier_management.py 1
-  173: 'raise_request','leave_request','advance_request'
-game.py 1
+game.py
   451: elif item["kind"] == "raise_request":
-nightshift.py 1
+nightshift.py
   188: WHERE i.player_id=? AND i.status='open' AND i.kind='raise_request'""",
-runtime.py 3
+runtime.py
   18: "raise_request",
-  449: "SELECT * FROM inbox WHERE id=? AND player_id=? AND status='open' AND kind='raise_request'",
-  538: def accept_raise_request(self, player_id: int, item_id: int) -> str:
-simulation.py 2
-  362: kind = self.rng.choice(["raise_request", "leave_request", "advance_request"])
-  364: if kind == "raise_request":
-ui_navigation.py 2
+  346: "SELECT * FROM inbox WHERE id=? AND player_id=? AND status='open' AND kind='raise_request'",
+  435: def accept_raise_request(self, player_id: int, item_id: int) -> str:
+simulation.py
+  273: kind = self.rng.choice(["raise_request", "leave_request", "advance_request"])
+  275: if kind == "raise_request":
+ui_navigation.py
   200: elif kind == "raise_request":
   360: result = game.accept_raise_request(callback.from_user.id, item_id)
-workflow.py 2
-  354: kind = self.rng.choice(["raise_request", "leave_request", "advance_request"])
-  357: if kind == "raise_request":
 
 -- leave_request --
-courier_management.py 1
-  173: 'raise_request','leave_request','advance_request'
-game.py 1
+game.py
   461: elif item["kind"] == "leave_request":
-nightshift.py 2
+nightshift.py
   225: AND kind IN ('leave_request','advance_request','discount_request')""",
   232: if item["kind"] == "leave_request":
-runtime.py 1
+runtime.py
   19: "leave_request",
-services.py 1
+services.py
   221: if item["kind"] == "leave_request" and action == "approve":
-simulation.py 2
-  362: kind = self.rng.choice(["raise_request", "leave_request", "advance_request"])
-  367: elif kind == "leave_request":
-ui_navigation.py 1
+simulation.py
+  273: kind = self.rng.choice(["raise_request", "leave_request", "advance_request"])
+  278: elif kind == "leave_request":
+ui_navigation.py
   206: elif kind in {"leave_request", "advance_request", "discount_request"}:
-workflow.py 2
-  354: kind = self.rng.choice(["raise_request", "leave_request", "advance_request"])
-  372: elif kind == "leave_request":
 
 -- advance_request --
-courier_management.py 1
-  173: 'raise_request','leave_request','advance_request'
-game.py 1
+game.py
   470: elif item["kind"] == "advance_request":
-nightshift.py 2
+nightshift.py
   225: AND kind IN ('leave_request','advance_request','discount_request')""",
   244: elif item["kind"] == "advance_request":
-runtime.py 1
+runtime.py
   20: "advance_request",
-simulation.py 1
-  362: kind = self.rng.choice(["raise_request", "leave_request", "advance_request"])
-ui_navigation.py 1
+simulation.py
+  273: kind = self.rng.choice(["raise_request", "leave_request", "advance_request"])
+ui_navigation.py
   206: elif kind in {"leave_request", "advance_request", "discount_request"}:
-workflow.py 1
-  354: kind = self.rng.choice(["raise_request", "leave_request", "advance_request"])
 
 -- employee_theft --
-workflow.py 1
-  448: VALUES (?, 'employee_theft', 'urgent', 'Сотрудник пропал', ?, ?)""",
-workflow_final.py 2
-  20: CREATE TRIGGER IF NOT EXISTS trg_employee_theft_to_staff_inbox
-  22: WHEN NEW.kind='employee_theft'
+  none
 
--- packaging_rules --
-compensation.py 1
-  878: self.simulation._ensure_packaging_rules(player_id)
-global_packaging.py 6
-  8: self.simulation._ensure_packaging_rules(player_id)
-  11: "SELECT pct_1, pct_2, pct_5 FROM shop_packaging_rules WHERE player_id=?",
-  24: self.simulation._ensure_packaging_rules(player_id)
-  27: "SELECT pct_1, pct_2, pct_5 FROM shop_packaging_rules WHERE player_id=?",
-  55: """UPDATE shop_packaging_rules
-  65: self.simulation._ensure_packaging_rules(player_id)
-workflow.py 12
-  31: self._ensure_packaging_rules(player_id)
-  36: def _ensure_packaging_rules(self, player_id: int) -> None:
-  39: "INSERT OR IGNORE INTO shop_packaging_rules(player_id) VALUES (?)",
-  90: "INSERT OR IGNORE INTO shop_packaging_rules(player_id) VALUES (?)",
-  94: "SELECT pct_1, pct_2, pct_5 FROM shop_packaging_rules WHERE player_id=?",
-  886: "INSERT OR IGNORE INTO packaging_rules(player_id, employee_id, product_id) VALUES (?, ?, ?)",
-  892: def packaging_rules(self, player_id: int, employee_id: int):
-  893: self.simulation._ensure_packaging_rules(player_id)
-  896: """SELECT pr.*, p.title product_title FROM packaging_rules pr
-  907: self.simulation._ensure_packaging_rules(player_id)
-  910: """SELECT * FROM packaging_rules
-  935: """UPDATE packaging_rules SET pct_1=?, pct_2=?, pct_5=?
-workflow_final.py 1
-  251: self.simulation._ensure_packaging_rules(player_id)
+-- shops SET rating --
+customer_trust.py
+  147: "UPDATE shops SET rating=? WHERE player_id=?",
+game.py
+  210: conn.execute("UPDATE shops SET rating=MAX(1.0, MIN(5.0, rating+?)) WHERE player_id=?", (rating_delta, player_id))
+services.py
+  364: "UPDATE shops SET rating=MAX(1.0, MIN(5.0, rating+?)) WHERE player_id=?",
 
--- backward --
+-- shops.rating --
+  none
+
+-- clients SET loyalty --
+game.py
+  196: conn.execute("UPDATE clients SET loyalty=MIN(1.0, loyalty+0.03) WHERE id=?", (row["cid"],))
+  203: conn.execute("UPDATE clients SET loyalty=MAX(0.0, loyalty-0.12) WHERE id=?", (row["cid"],))
+  446: conn.execute("UPDATE clients SET loyalty=MIN(1.0, loyalty+0.06) WHERE id=?", (client_id,))
+  449: conn.execute("UPDATE clients SET loyalty=MAX(0.0, loyalty-0.025) WHERE id=?", (client_id,))
+services.py
+  357: conn.execute("UPDATE clients SET loyalty=MIN(1.0, loyalty+0.03) WHERE id=?", (row["cid"],))
+  361: conn.execute("UPDATE clients SET loyalty=MAX(0.0, loyalty-0.12) WHERE id=?", (row["cid"],))
+
+-- clients.loyalty --
+  none
 
 -- legacy --
-courier_core.py 3
-  65: self._sync_legacy_mirrors_conn(conn, int(row["id"]))
-  77: def _sync_legacy_mirrors_conn(self, conn, employee_id: int) -> None:
-  469: self.simulation._sync_legacy_mirrors_conn(conn, int(employee["id"]))
-ui_common.py 1
-  46: """Keep legacy service messages visually consistent with the new Russian UI."""
+courier_core.py
+  63: self._sync_legacy_mirrors_conn(conn, int(row["id"]))
+  75: def _sync_legacy_mirrors_conn(self, conn, employee_id: int) -> None:
+  467: self.simulation._sync_legacy_mirrors_conn(conn, int(employee["id"]))
+main.py
+  123: # One canonical presentation layer. Legacy UI routers are intentionally not
+
+-- backward --
+  none
 
 -- ALTER TABLE --
+  none
 
 -- executescript( --
-analytics_log.py 1
+analytics_log.py
   275: conn.executescript(ANALYTICS_TRIGGERS)
-db.py 1
+db.py
   32: conn.executescript(schema)
-workflow_final.py 1
-  18: conn.executescript(
 
-=== CLASS METHOD SHADOWING ===
-ensure_player: CourierManagementSimulationEngine -> CourierCoreSimulationEngine -> CustomerTrustSimulationEngine -> CompensationSimulationEngine -> ProcurementMarketSimulationEngine -> StaffInsightSimulationEngine -> WorkflowSimulationEngine -> OperationsSimulationEngine -> NightshiftSimulationEngine -> SimulationEngine
-_simulate_management_events: CourierManagementSimulationEngine -> CourierCoreSimulationEngine -> CustomerTrustSimulationEngine -> CompensationSimulationEngine -> FinalWorkflowSimulationEngine -> WorkflowSimulationEngine -> NightshiftSimulationEngine -> SimulationEngine
-_create_retail_order: CourierManagementSimulationEngine -> CourierCoreSimulationEngine -> CustomerTrustSimulationEngine -> CompensationSimulationEngine -> FinalWorkflowSimulationEngine -> WorkflowSimulationEngine
-advance: DelayedDisputeSimulationEngine -> ProcurementMarketSimulationEngine -> StaffInsightSimulationEngine -> NightshiftSimulationEngine -> PlayerSimulationEngine -> SimulationEngine
-_process_tasks: CourierCoreSimulationEngine -> StaffRelationshipSimulationEngine -> CompensationSimulationEngine -> WorkflowSimulationEngine
-_simulate_sales: CustomerTrustSimulationEngine -> StaffRelationshipSimulationEngine -> WorkflowSimulationEngine -> SimulationEngine
-fast_forward_timers: DelayedDisputeSimulationEngine -> WorkflowSimulationEngine -> NightshiftSimulationEngine
-rescale_existing_timers: DelayedDisputeSimulationEngine -> WorkflowSimulationEngine -> NightshiftSimulationEngine
-_courier_rating: CourierCoreSimulationEngine -> CustomerTrustSimulationEngine
-_create_order: PlayerSimulationEngine -> SimulationEngine
-_dispute_probability: CourierCoreSimulationEngine -> SimulationEngine
-_effective_pace: CourierManagementSimulationEngine -> CourierCoreSimulationEngine
-_effective_precision: CourierManagementSimulationEngine -> CourierCoreSimulationEngine
-_expire_items: NightshiftSimulationEngine -> SimulationEngine
-_has_stock: WorkflowSimulationEngine -> SimulationEngine
-_maybe_refresh_candidate: PlayerSimulationEngine -> SimulationEngine
-_maybe_refresh_offer: ProcurementMarketSimulationEngine -> SimulationEngine
-_open_dispute: CourierCoreSimulationEngine -> SimulationEngine
-_publish_allocation: StaffInsightSimulationEngine -> WorkflowSimulationEngine
-_record_rating_conn: CourierCoreSimulationEngine -> CustomerTrustSimulationEngine
-_seed_retail_positions: StaffInsightSimulationEngine -> WorkflowSimulationEngine
-effective_speed: NightshiftSimulationEngine -> PlayerSimulationEngine
-seed_catalog: NightshiftSimulationEngine -> SimulationEngine
+=== VERSION-LIKE MODULES / CLASSES ===
+nightshift.py
+  29: class NightshiftSimulationEngine(PlayerSimulationEngine):
+runtime.py
+  27: class PlayerSimulationEngine(SimulationEngine):
+  73: class NightshiftGameService(GameService):
+services.py
+  10: class FinalGameService(NightshiftGameService):
+workflow_final.py
+  10: class FinalWorkflowSimulationEngine(WorkflowSimulationEngine):
+  78: class FinalWorkflowGameService(WorkflowGameService):
 
-=== MODULE SIZES ===
+=== LARGE MODULES ===
 ui_staff.py: 53105
-workflow.py: 51045
-compensation.py: 39165
-customer_trust.py: 35092
-courier_management.py: 33621
+workflow.py: 39788
+customer_trust.py: 35089
 game.py: 31254
-simulation.py: 30373
+courier_management.py: 30920
+compensation.py: 30039
 business_analytics.py: 28258
-courier_core.py: 28156
-ui_staff_handlers.py: 27748
-runtime.py: 24408
-recruitment.py: 20586
+courier_core.py: 28122
+ui_staff_handlers.py: 27741
+simulation.py: 25617
+recruitment.py: 21068
+runtime.py: 20618
 staff_insights.py: 19845
 ui_commerce.py: 19750
-procurement_market.py: 19560
+procurement_market.py: 19492
 ui_navigation.py: 18429
 services.py: 18319
-recruitment_runtime.py: 18236
 analytics_log.py: 18043
 operations.py: 16491
-workflow_final.py: 15126
-nightshift.py: 14021
-ui_admin.py: 10255
-delayed_disputes.py: 9070
-ui_disputes.py: 8735
-staff_relationships.py: 8719
-main.py: 5972
-courier_recruitment.py: 5466
-analytics_handlers.py: 3769
-courier_model.py: 3677
-ui_common.py: 2784
-global_packaging.py: 2673
-employee_rename.py: 2143
-staff_idle.py: 2138
-courier_idle.py: 1256
-config.py: 967
-db.py: 878
-inbox_lifecycle.py: 740
-__init__.py: 1
-
-=== IMPORT GRAPH EDGES (local) ===
-analytics_handlers: business_analytics, db, ui_common
-analytics_log: db
-business_analytics: db, simulation
-compensation: delayed_disputes, simulation
-courier_core: courier_model, customer_trust, simulation
-courier_management: compensation, courier_core, courier_model, simulation
-courier_model: simulation
-courier_recruitment: courier_model, recruitment_runtime, simulation
-customer_trust: compensation, global_packaging, simulation, staff_relationships
-delayed_disputes: procurement_market, simulation
-game: db, simulation
-global_packaging: staff_idle
-inbox_lifecycle: db
-main: analytics_handlers, analytics_log, config, courier_management, courier_recruitment, db, inbox_lifecycle, simulation, ui_admin, ui_commerce, ui_common, ui_disputes, ui_navigation, ui_staff_handlers
-nightshift: game, runtime, simulation
-operations: nightshift, services, simulation
-procurement_market: simulation, staff_insights
-recruitment: db, simulation
-recruitment_runtime: compensation, recruitment, simulation
-runtime: db, game, simulation
-services: runtime, simulation
-simulation: db
-staff_idle: courier_idle, staff_relationships
-staff_insights: simulation, workflow_final
-staff_relationships: compensation, simulation
-ui_admin: simulation, ui_common
-ui_commerce: ui_common
-ui_disputes: ui_common, ui_navigation
-ui_navigation: business_analytics, ui_common
-ui_staff: courier_management, courier_model, employee_rename, recruitment, ui_common
-ui_staff_handlers: courier_management, employee_rename, recruitment, ui_common, ui_staff
-workflow: operations, runtime, simulation
-workflow_final: runtime, simulation, workflow
