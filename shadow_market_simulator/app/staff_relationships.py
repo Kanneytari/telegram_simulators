@@ -97,14 +97,6 @@ class StaffRelationshipSimulationEngine(CompensationSimulationEngine):
         with self.db.connect() as conn:
             pass
 
-    def _simulate_sales(self, conn, player_id: int, shop, sim_hours: float, now):
-        return super()._simulate_sales(
-            conn,
-            player_id,
-            shop,
-            max(0.0, float(sim_hours)) * SALES_ACTIVITY_MULTIPLIER,
-            now,
-        )
 
     def _process_tasks(self, conn, player_id: int, now) -> int:
         due_handoffs = conn.execute(

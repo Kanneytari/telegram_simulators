@@ -283,11 +283,12 @@ class CustomerTrustSimulationEngine(StaffRelationshipSimulationEngine):
                 int(order["client_id"]),
             ),
         )
-        # Preserve the generic client field for old risk calculations, but make the
-        # shop-specific relationship the canonical loyalty source.
-        updated = clamp(float(relationship["trust"]) + trust_delta, 0.0, 1.0)
-        conn.execute("UPDATE clients SET loyalty=? WHERE id=?", (updated, order["client_id"]))
         return int(order_id)
+
+    def _employee_deposit_contribution(
+        self, conn, player_id: int, employee_id: int, employee_cost: int, default_pct: int
+    ) -> int:
+        return _deposit_part(employee_cost, default_pct)
 
     def _create_retail_order(self, conn, player_id: int, listing, now) -> bool | None:
         position = conn.execute(
@@ -318,8 +319,12 @@ class CustomerTrustSimulationEngine(StaffRelationshipSimulationEngine):
         employee_cost = int(policy["fixed_fee"]) + _money_from_bps(
             revenue, int(policy["base_rate_bps"])
         )
-        deposit_part = _deposit_part(
-            employee_cost, int(policy["deposit_contribution_pct"])
+        deposit_part = self._employee_deposit_contribution(
+            conn,
+            player_id,
+            int(position["employee_id"]),
+            employee_cost,
+            int(policy["deposit_contribution_pct"]),
         )
         quality = float(position["position_quality"])
 

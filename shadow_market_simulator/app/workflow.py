@@ -192,115 +192,7 @@ class WorkflowSimulationEngine(OperationsSimulationEngine):
             completed += 1
         return completed
 
-    def _simulate_sales(self, conn, player_id: int, shop, sim_hours: float, now) -> tuple[int, int]:
-        self._process_tasks(conn, player_id, now)
-        listings = conn.execute(
-            """SELECT l.*, p.base_market_price, p.base_demand, p.complaint_modifier
-               FROM listings l JOIN products p ON p.id=l.product_id
-               WHERE l.player_id=? AND l.active=1""",
-            (player_id,),
-        ).fetchall()
-        rating_effect = clamp(0.70 + (float(shop["rating"]) - 4.0) * 0.55, 0.55, 1.25)
-        orders_created = 0
-        disputes_created = 0
-        for listing in listings:
-            available_positions = int(conn.execute(
-                """SELECT COALESCE(SUM(rp.position_count),0)
-                   FROM retail_positions rp
-                   JOIN employees e ON e.id=rp.employee_id
-                   WHERE rp.player_id=? AND rp.product_id=? AND rp.pack_size=?
-                     AND rp.position_count>0 AND e.active=1 AND e.available=1 AND e.role='courier'""",
-                (player_id, listing["product_id"], listing["pack_size"]),
-            ).fetchone()[0])
-            if available_positions <= 0:
-                continue
-            unit_price = listing["price"] / listing["pack_size"]
-            price_ratio = unit_price / listing["base_market_price"]
-            price_effect = clamp(math.exp(-2.2 * (price_ratio - 1.0)), 0.35, 1.55)
-            pack_effect = {1: 1.0, 2: 0.68, 5: 0.28}.get(listing["pack_size"], 0.2)
-            expected = (listing["base_demand"] / 24.0) * sim_hours * rating_effect * price_effect * pack_effect
-            count = min(available_positions, self._poisson(expected))
-            for _ in range(count):
-                disputed = self._create_retail_order(conn, player_id, listing, now)
-                if disputed is None:
-                    break
-                orders_created += 1
-                disputes_created += int(disputed)
-        return orders_created, disputes_created
 
-    def _create_retail_order(self, conn, player_id: int, listing, now) -> bool | None:
-        position = conn.execute(
-            """SELECT rp.*, e.*,
-                      rp.id position_id, rp.employee_id retail_employee_id,
-                      rp.unit_cost position_unit_cost, rp.quality position_quality
-               FROM retail_positions rp
-               JOIN employees e ON e.id=rp.employee_id
-               WHERE rp.player_id=? AND rp.product_id=? AND rp.pack_size=?
-                 AND rp.position_count>0 AND e.active=1 AND e.available=1 AND e.role='courier'
-               ORDER BY rp.created_at, rp.id LIMIT 1""",
-            (player_id, listing["product_id"], listing["pack_size"]),
-        ).fetchone()
-        client = conn.execute(
-            "SELECT * FROM clients WHERE player_id=? ORDER BY RANDOM() LIMIT 1",
-            (player_id,),
-        ).fetchone()
-        if not position or not client:
-            return None
-        qty = int(listing["pack_size"])
-        revenue = int(listing["price"])
-        cost = int(position["position_unit_cost"] * qty)
-        employee_cost = int(position["pay_per_job"])
-        contribution_pct = int(position["deposit_contribution_pct"] or 0)
-        contribution_preview = int(round(employee_cost * contribution_pct / 100.0))
-        quality = float(position["position_quality"])
-
-        conn.execute("UPDATE retail_positions SET position_count=position_count-1 WHERE id=?", (position["position_id"],))
-        conn.execute(
-            """UPDATE employees SET jobs_done=jobs_done+1, wages_accrued=wages_accrued+?,
-                   stress=MIN(100, stress+?), last_contact_at=? WHERE id=?""",
-            (employee_cost, self.rng.uniform(0.05, 0.35), iso(now), position["retail_employee_id"]),
-        )
-        conn.execute(
-            """UPDATE clients SET shop_orders=shop_orders+1, marketplace_orders=marketplace_orders+1,
-                   total_spend=total_spend+? WHERE id=?""",
-            (revenue, client["id"]),
-        )
-        cur = conn.execute(
-            """INSERT INTO orders(
-                   player_id, client_id, employee_id, batch_id, product_id, quantity,
-                   revenue, cost, employee_cost, employee_deposit_contribution, quality
-               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (
-                player_id,
-                client["id"],
-                position["retail_employee_id"],
-                position["batch_id"],
-                listing["product_id"],
-                qty,
-                revenue,
-                cost,
-                employee_cost,
-                contribution_preview,
-                quality,
-            ),
-        )
-        order_id = int(cur.lastrowid)
-        profit = revenue - cost - employee_cost
-        conn.execute(
-            """UPDATE shops SET balance=balance+?, total_revenue=total_revenue+?,
-                   total_profit=total_profit+?, total_orders=total_orders+1 WHERE player_id=?""",
-            (revenue, revenue, profit, player_id),
-        )
-        conn.execute(
-            """INSERT INTO ledger(player_id, amount, kind, reference_type, reference_id, note)
-               VALUES (?, ?, 'sale', 'order', ?, ?)""",
-            (player_id, revenue, order_id, f"Заказ #{order_id} · зарплата {employee_cost:,} ₽ начислена"),
-        )
-        probability = self._dispute_probability(client, position, quality, float(listing["complaint_modifier"]))
-        if self.rng.random() < probability:
-            self._open_dispute(conn, player_id, order_id, client, position, quality, revenue, now)
-            return True
-        return False
 
     def _has_stock(self, conn, player_id: int, product_id: int, qty: int) -> bool:
         count = conn.execute(
@@ -345,45 +237,6 @@ class WorkflowSimulationEngine(OperationsSimulationEngine):
     def _simulate_management_events(self, conn, player_id: int, sim_hours: float, now) -> int:
         created = 0
         chances = min(sim_hours, 12.0)
-        if self.rng.random() < 1 - math.exp(-0.055 * chances):
-            employee = conn.execute(
-                "SELECT * FROM employees WHERE player_id=? AND active=1 ORDER BY RANDOM() LIMIT 1",
-                (player_id,),
-            ).fetchone()
-            if employee:
-                kind = self.rng.choice(["raise_request", "leave_request", "advance_request"])
-                payload = {"employee_id": employee["id"]}
-                operation = "операцию" if employee["role"] == "warehouse" else "заказ"
-                if kind == "raise_request":
-                    market = ROLE_MARKET_PAY.get(employee["role"], 1500)
-                    target = max(
-                        int(employee["pay_per_job"]) + (250 if employee["role"] == "warehouse" else 100),
-                        int(round(max(employee["pay_per_job"] * self.rng.uniform(1.08, 1.22), market * 0.95) / 50) * 50),
-                    )
-                    floor = max(int(employee["pay_per_job"]), int(target * self.rng.uniform(0.88, 0.97)))
-                    payload.update({"requested_pay": target, "offer_pay": int(employee["pay_per_job"]), "floor_pay": floor, "round": 0})
-                    title = "Разговор об оплате"
-                    body = (
-                        f"{employee['alias']} просит пересмотреть условия.\n\n"
-                        f"Текущая ставка: {employee['pay_per_job']:,} ₽ / {operation}\n"
-                        f"Запрос: <b>{target:,} ₽ / {operation}</b>\n\n"
-                        "Можно согласиться, отказать или предложить встречную ставку."
-                    )
-                elif kind == "leave_request":
-                    title = "Просьба о паузе"
-                    body = f"{employee['alias']} просит временную паузу.\n\nСрок: 6 игровых часов\nПричина: личные обстоятельства"
-                else:
-                    amount = min(50_000 if employee["role"] == "warehouse" else 12_000, max(2_000, int(employee["deposit"] * 0.12)))
-                    payload["amount"] = amount
-                    title = "Запрос сотрудника"
-                    body = f"{employee['alias']} просит вернуть часть депозита.\n\nСумма: <b>{amount:,} ₽</b>\nТекущий депозит: {employee['deposit']:,} ₽"
-                conn.execute(
-                    """INSERT INTO inbox(player_id, kind, priority, title, body, payload_json, expires_at)
-                       VALUES (?, ?, 'normal', ?, ?, ?, ?)""",
-                    (player_id, kind, title, body, json.dumps(payload, ensure_ascii=False), iso(now + self._game_hours_to_real(player_id, 4))),
-                )
-                created += 1
-
         if self.rng.random() < 1 - math.exp(-0.035 * chances):
             client = conn.execute(
                 "SELECT * FROM clients WHERE player_id=? AND shop_orders>0 ORDER BY RANDOM() LIMIT 1",
@@ -445,7 +298,7 @@ class WorkflowSimulationEngine(OperationsSimulationEngine):
             )
             conn.execute(
                 """INSERT INTO inbox(player_id, kind, priority, title, body, payload_json)
-                   VALUES (?, 'employee_theft', 'urgent', 'Сотрудник пропал', ?, ?)""",
+                   VALUES (?, 'employee_exit', 'urgent', 'Сотрудник пропал', ?, ?)""",
                 (
                     player_id,
                     f"{employee['alias']} пропал со связи.\n\n"
@@ -716,11 +569,6 @@ class WorkflowGameService(OperationsGameService):
                         f"Приём партии {offer['product_title']}",
                     ),
                 )
-                conn.execute(
-                    """UPDATE employees SET jobs_done=jobs_done+1, wages_accrued=wages_accrued+?,
-                           stress=MIN(100, stress+1.2), last_contact_at=? WHERE id=?""",
-                    (employee["pay_per_job"], iso(now), employee_id),
-                )
                 note = f"Партия #{batch_id}: {offer['product_title']} · ответственный {employee['alias']}"
             else:
                 note = f"Срыв сделки с {offer['supplier_title']}"
@@ -743,7 +591,7 @@ class WorkflowGameService(OperationsGameService):
             f"Партия куплена за <b>{total:,} ₽</b>.\n\n"
             f"Ответственный: <b>{employee['alias']}</b>\n"
             "Статус: принимает партию\n"
-            f"Начислено за операцию: {employee['pay_per_job']:,} ₽"
+            "Оплата за работу будет начислена после передачи товара рознице."
             f"{risk}"
         )
 
@@ -889,54 +737,7 @@ class WorkflowGameService(OperationsGameService):
         role_title = "оптовый" if new_role == "warehouse" else "розничный"
         return f"{employee['alias']} переведён в роль «{role_title}». Новая базовая ставка: {new_pay:,} ₽ / операцию."
 
-    def packaging_rules(self, player_id: int, employee_id: int):
-        self.simulation._ensure_packaging_rules(player_id)
-        with self.db.connect() as conn:
-            return conn.execute(
-                """SELECT pr.*, p.title product_title FROM packaging_rules pr
-                   JOIN products p ON p.id=pr.product_id
-                   JOIN employees e ON e.id=pr.employee_id
-                   WHERE pr.player_id=? AND pr.employee_id=? AND e.active=1 AND e.role='courier'
-                   ORDER BY p.id""",
-                (player_id, employee_id),
-            ).fetchall()
 
-    def adjust_packaging_rule(self, player_id: int, employee_id: int, product_id: int, pack_size: int, delta: int) -> str:
-        if pack_size not in {1, 2, 5} or delta not in {-10, 10}:
-            raise ValueError("Unsupported packaging adjustment")
-        self.simulation._ensure_packaging_rules(player_id)
-        with self.db.connect() as conn:
-            row = conn.execute(
-                """SELECT * FROM packaging_rules
-                   WHERE player_id=? AND employee_id=? AND product_id=?""",
-                (player_id, employee_id, product_id),
-            ).fetchone()
-            if not row:
-                return "Правило не найдено."
-            values = {1: int(row["pct_1"]), 2: int(row["pct_2"]), 5: int(row["pct_5"])}
-            current = values[pack_size]
-            if delta > 0:
-                actual = min(delta, 100 - current)
-                needed = actual
-                for other in sorted((p for p in values if p != pack_size), key=lambda p: values[p], reverse=True):
-                    take = min(needed, values[other])
-                    values[other] -= take
-                    needed -= take
-                    if needed <= 0:
-                        break
-                actual -= needed
-                values[pack_size] += actual
-            else:
-                actual = min(-delta, current)
-                values[pack_size] -= actual
-                other = max((p for p in values if p != pack_size), key=lambda p: values[p])
-                values[other] += actual
-            conn.execute(
-                """UPDATE packaging_rules SET pct_1=?, pct_2=?, pct_5=?
-                   WHERE player_id=? AND employee_id=? AND product_id=?""",
-                (values[1], values[2], values[5], player_id, employee_id, product_id),
-            )
-        return f"×1 {values[1]}% · ×2 {values[2]}% · ×5 {values[5]}%"
 
     def fire_employee(self, player_id: int, employee_id: int) -> dict:
         exposure = self._employee_exposure(player_id, employee_id)

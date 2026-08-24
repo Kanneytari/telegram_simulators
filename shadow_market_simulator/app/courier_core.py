@@ -15,13 +15,11 @@ class CourierCoreSimulationEngine(CustomerTrustSimulationEngine):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            pass
             self._ensure_courier_profiles_conn(conn)
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
         created = super().ensure_player(player_id, username)
         with self.db.connect() as conn:
-            pass
             self._ensure_courier_profiles_conn(conn, player_id)
         return created
 
