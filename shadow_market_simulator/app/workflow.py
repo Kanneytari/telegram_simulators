@@ -20,11 +20,6 @@ TASK_LABELS = {
 class WorkflowSimulationEngine(OperationsSimulationEngine):
     """Stateful employee workflow with explicit inventory accountability."""
 
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        with self.db.connect() as conn:
-            pass
-
     def ensure_player(self, player_id: int, username: str | None) -> bool:
         created = super().ensure_player(player_id, username)
         self._ensure_packaging_rules(player_id)
@@ -444,10 +439,6 @@ class WorkflowSimulationEngine(OperationsSimulationEngine):
 
 
 class WorkflowGameService(OperationsGameService):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        with self.db.connect() as conn:
-            pass
 
     def _task_status(self, player_id: int, employee_id: int) -> str:
         with self.db.connect() as conn:

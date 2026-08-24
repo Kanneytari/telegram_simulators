@@ -120,8 +120,7 @@ async def main() -> None:
     dispatcher.message.outer_middleware(AnalyticsLoggingMiddleware(analytics))
     dispatcher.callback_query.outer_middleware(AnalyticsLoggingMiddleware(analytics))
 
-    # One canonical presentation layer. Legacy UI routers are intentionally not
-    # registered, so every entity has one screen tree and one navigation contract.
+    # Every player-facing entity has one screen tree and one navigation contract.
     dispatcher.include_router(build_navigation_router(db, game, simulation, settings.admin_ids))
     dispatcher.include_router(build_commerce_router(db, game, simulation))
     dispatcher.include_router(build_staff_router(game, simulation, recruitment))

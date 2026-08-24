@@ -10,7 +10,6 @@ from .recruitment import CHANNELS
 from .ui_common import clean, money, nav_row, notice, pct, present
 from .ui_staff import (
     RenameEmployeeState,
-    development_keyboard,
     render_allocation,
     render_batches,
     render_channels,

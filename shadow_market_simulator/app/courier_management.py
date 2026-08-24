@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from datetime import timedelta
 
-from .compensation import _deposit_part, _policy_conn
+from .compensation import _deposit_part
 from .courier_core import CourierCoreGameService, CourierCoreSimulationEngine
 from .courier_model import TRAIT_SENSITIVE
 from .simulation import clamp, iso, parse_dt, utcnow

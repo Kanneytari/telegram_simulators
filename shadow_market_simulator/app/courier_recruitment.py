@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import timedelta
 
 from .courier_model import generate_courier_blueprint
-from .recruitment import RecruitmentService, ROLE_TITLES
+from .recruitment import RecruitmentService
 from .simulation import clamp, iso
 
 
@@ -51,7 +51,6 @@ class CourierRecruitmentService(RecruitmentService):
             phone_level = 0 if phone_roll < 0.35 else 1 if phone_roll < 0.90 else 2
         else:
             phone_level = 0 if phone_roll < 0.55 else 1 if phone_roll < 0.95 else 2
-        phone_text = {0: "старый", 1: "нормальный", 2: "хороший"}[phone_level]
 
         # Low-deposit candidates are intentional: they create a meaningful choice
         # between immediate financial safety and long-term employee potential.
@@ -64,11 +63,6 @@ class CourierRecruitmentService(RecruitmentService):
             0.38,
             0.78,
         )
-        experience_text = {
-            0: "без подтверждённого опыта",
-            1: "есть опыт",
-            2: "опыт выглядит сильным",
-        }[experience_level]
 
         cur = conn.execute(
             """INSERT INTO candidates(

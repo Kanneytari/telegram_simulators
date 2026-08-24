@@ -1,7 +1,1 @@
-Traceback (most recent call last):
-  File "/home/runner/work/telegram_simulators/telegram_simulators/tools/cleanup_nightshift_unused.py", line 41, in <module>
-    replace(
-  File "/home/runner/work/telegram_simulators/telegram_simulators/tools/cleanup_nightshift_unused.py", line 15, in replace
-    raise RuntimeError(f"{path.name}: pattern not found: {old!r}")
-RuntimeError: courier_recruitment.py: pattern not found: '        experience_text = {\n            0: "без подтверждённого опыта",\n            1: "есть опыт",\n            2: "сильный опыт",\n        }[experience_level]\n'
-__EXIT_STATUS__=1
+__EXIT_STATUS__=0

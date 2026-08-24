@@ -3,8 +3,6 @@ from __future__ import annotations
 import random
 from datetime import timedelta
 
-import pytest
-
 from app.courier_management import (
     BONUS_COST,
     CourierManagementGameService,

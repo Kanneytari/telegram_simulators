@@ -19,11 +19,6 @@ class ProcurementMarketSimulationEngine(StaffInsightSimulationEngine):
     economic characteristics are game-balance values; physical logistics remain abstract.
     """
 
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        with self.db.connect() as conn:
-            pass
-
     def ensure_player(self, player_id: int, username: str | None) -> bool:
         created = super().ensure_player(player_id, username)
         now = utcnow()

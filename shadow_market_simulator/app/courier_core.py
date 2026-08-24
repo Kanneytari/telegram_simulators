@@ -6,7 +6,7 @@ from datetime import timedelta
 
 from .courier_model import TRAIT_CONCEALS, TRAIT_LEARNER, TRAIT_METICULOUS, TRAIT_OVERHEATS, TRAIT_PRESSURE_PROOF, TRAIT_SENSITIVE, TRAIT_STEADY, condition_band, pace_band, relationship_band
 from .customer_trust import CustomerTrustGameService, CustomerTrustSimulationEngine
-from .simulation import clamp, iso, utcnow
+from .simulation import clamp, iso
 
 
 class CourierCoreSimulationEngine(CustomerTrustSimulationEngine):

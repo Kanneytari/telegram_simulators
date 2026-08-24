@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from datetime import timedelta
-
-from .simulation import iso, parse_dt, utcnow
+from .simulation import parse_dt, utcnow
 from .workflow import WorkflowGameService, WorkflowSimulationEngine
 
 
@@ -10,11 +8,6 @@ from .workflow import WorkflowGameService, WorkflowSimulationEngine
 
 class StaffInsightSimulationEngine(WorkflowSimulationEngine):
     """Final simulation layer for starter safety and historical staff throughput."""
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        with self.db.connect() as conn:
-            pass
 
     def _seed_retail_positions(self, player_id: int) -> None:
         return None
@@ -125,11 +118,6 @@ class StaffInsightSimulationEngine(WorkflowSimulationEngine):
 
 class StaffInsightGameService(WorkflowGameService):
     """Employee profile with explicit activity, inventory and throughput history."""
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        with self.db.connect() as conn:
-            pass
 
     def _task_status(self, player_id: int, employee_id: int) -> str:
         now = utcnow()

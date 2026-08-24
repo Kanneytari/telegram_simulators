@@ -254,7 +254,7 @@ class CustomerTrustSimulationEngine(StaffRelationshipSimulationEngine):
                 courier_rating,
             ),
         )
-        relationship = self._relationship_conn(
+        self._relationship_conn(
             conn, int(order["player_id"]), int(order["client_id"])
         )
         product_norm = (product_rating - 1) / 4.0

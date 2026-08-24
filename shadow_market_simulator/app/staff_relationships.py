@@ -92,11 +92,6 @@ def _apply_overexposure_effect(
 class StaffRelationshipSimulationEngine(CompensationSimulationEngine):
     """Hidden staff reactions plus the live sales pacing multiplier."""
 
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        with self.db.connect() as conn:
-            pass
-
 
     def _process_tasks(self, conn, player_id: int, now) -> int:
         due_handoffs = conn.execute(
@@ -141,11 +136,6 @@ class StaffRelationshipSimulationEngine(CompensationSimulationEngine):
 
 class StaffRelationshipGameService(CompensationGameService):
     """Hidden trust, pressure and employer-support effects."""
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        with self.db.connect() as conn:
-            pass
 
     def buy_offer_for_employee(self, player_id: int, offer_id: int, employee_id: int) -> str:
         exposure_before = self._employee_exposure(player_id, employee_id)
