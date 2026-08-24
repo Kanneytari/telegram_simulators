@@ -135,3 +135,65 @@ def test_expired_dispute_records_automatic_shop_refund(tmp_path):
     assert dispute["decision"] == "auto_partial"
     assert dispute["refund_source"] == "shop"
     assert dispute["refund_amount"] == 5000
+
+
+def test_stale_reject_cannot_erase_completed_refund_metadata(tmp_path):
+    db, _, game = make_game(tmp_path)
+    dispute_id, _ = create_dispute(db, 10000)
+
+    game.resolve_dispute_with_source(1001, dispute_id, "partial", "shop")
+    with db.connect() as conn:
+        balance_after_refund = int(
+            conn.execute("SELECT balance FROM shops WHERE player_id=1001").fetchone()[0]
+        )
+
+    result = game.resolve_dispute_with_source(1001, dispute_id, "reject", "none")
+
+    with db.connect() as conn:
+        dispute = conn.execute("SELECT * FROM disputes WHERE id=?", (dispute_id,)).fetchone()
+        balance_after_stale_click = int(
+            conn.execute("SELECT balance FROM shops WHERE player_id=1001").fetchone()[0]
+        )
+    assert "уже закрыт" in result.lower()
+    assert dispute["decision"] == "partial"
+    assert dispute["refund_source"] == "shop"
+    assert dispute["refund_amount"] == 5000
+    assert balance_after_stale_click == balance_after_refund
+
+
+def test_refund_without_source_does_not_change_money_or_dispute(tmp_path):
+    db, _, game = make_game(tmp_path)
+    dispute_id, employee_id = create_dispute(db, 10000)
+    with db.connect() as conn:
+        before_balance = int(conn.execute("SELECT balance FROM shops WHERE player_id=1001").fetchone()[0])
+        before_deposit = int(conn.execute("SELECT deposit FROM employees WHERE id=?", (employee_id,)).fetchone()[0])
+
+    result = game.resolve_dispute_with_source(1001, dispute_id, "partial", "none")
+
+    with db.connect() as conn:
+        dispute = conn.execute("SELECT * FROM disputes WHERE id=?", (dispute_id,)).fetchone()
+        after_balance = int(conn.execute("SELECT balance FROM shops WHERE player_id=1001").fetchone()[0])
+        after_deposit = int(conn.execute("SELECT deposit FROM employees WHERE id=?", (employee_id,)).fetchone()[0])
+    assert "выберите источник" in result.lower()
+    assert dispute["status"] == "open"
+    assert after_balance == before_balance
+    assert after_deposit == before_deposit
+
+
+def test_good_employee_funded_refund_counts_as_won_dispute(tmp_path):
+    db, _, game = make_game(tmp_path)
+    dispute_id, _ = create_dispute(db, 10000)
+    with db.connect() as conn:
+        client_id = int(
+            conn.execute(
+                "SELECT o.client_id FROM disputes d JOIN orders o ON o.id=d.order_id WHERE d.id=?",
+                (dispute_id,),
+            ).fetchone()[0]
+        )
+        before_wins = int(conn.execute("SELECT disputes_won FROM clients WHERE id=?", (client_id,)).fetchone()[0])
+
+    game.resolve_dispute_with_source(1001, dispute_id, "refund", "employee")
+
+    with db.connect() as conn:
+        after_wins = int(conn.execute("SELECT disputes_won FROM clients WHERE id=?", (client_id,)).fetchone()[0])
+    assert after_wins == before_wins + 1
