@@ -120,7 +120,9 @@ def _normalize_menu_buttons(markup: InlineKeyboardMarkup | None) -> InlineKeyboa
         for button in row:
             original_text = button.text or ""
             replacement = _normalize_button_text(original_text)
-            if button.callback_data == "menu:home" and replacement == "Меню":
+            if replacement == "Обновить":
+                replacement = "🔄 Обновить"
+            elif button.callback_data == "menu:home" and replacement == "Меню":
                 replacement = "🏠 Меню"
             elif button.callback_data == "team:recruit" and replacement == "Нанять":
                 replacement = "🔎 Нанять"
