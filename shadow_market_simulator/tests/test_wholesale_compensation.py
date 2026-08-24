@@ -3,21 +3,18 @@ from __future__ import annotations
 import random
 from datetime import timedelta
 
+from app.compensation import CompensationGameService, CompensationSimulationEngine
 from app.db import Database
 from app.simulation import iso, utcnow
-from app.wholesale_compensation import (
-    WholesaleCompensationGameService,
-    WholesaleCompensationSimulationEngine,
-)
 
 
 def make_system(tmp_path):
     db = Database(str(tmp_path / "game.db"))
     db.init()
-    simulation = WholesaleCompensationSimulationEngine(db, speed=1.0, rng=random.Random(91))
+    simulation = CompensationSimulationEngine(db, speed=1.0, rng=random.Random(91))
     simulation.seed_catalog()
     simulation.ensure_player(1001, "tester")
-    game = WholesaleCompensationGameService(db, simulation, rng=random.Random(92))
+    game = CompensationGameService(db, simulation, rng=random.Random(92))
     return db, simulation, game
 
 
@@ -48,7 +45,7 @@ def finish_task(simulation, db, task_id: int) -> None:
         simulation._process_tasks(conn, 1001, now)
 
 
-def test_wholesale_pay_is_earned_on_retail_handoff_not_procurement(tmp_path):
+def test_wholesale_is_paid_percentage_on_successful_handoff_not_procurement(tmp_path):
     db, simulation, game = make_system(tmp_path)
     offer_id = create_certain_offer(db)
 
@@ -59,23 +56,24 @@ def test_wholesale_pay_is_earned_on_retail_handoff_not_procurement(tmp_path):
         retail = conn.execute(
             "SELECT * FROM employees WHERE player_id=1001 AND role='courier' AND active=1 ORDER BY id LIMIT 1"
         ).fetchone()
+        wholesale_id = int(wholesale["id"])
         before_jobs = int(wholesale["jobs_done"])
         before_wages = int(wholesale["wages_accrued"])
-        rate = int(wholesale["pay_per_job"])
+        conn.execute("UPDATE employees SET deposit=0 WHERE id=?", (wholesale_id,))
 
-    result = game.buy_offer_for_employee(1001, offer_id, int(wholesale["id"]))
-    assert "Оплата начислится после передачи товара" in result
+    result = game.buy_offer_for_employee(1001, offer_id, wholesale_id)
+    assert "Оплата будет начислена после успешной передачи товара рознице" in result
 
     with db.connect() as conn:
         after_purchase = conn.execute(
             "SELECT jobs_done, wages_accrued FROM employees WHERE id=?",
-            (wholesale["id"],),
+            (wholesale_id,),
         ).fetchone()
         receive_task = conn.execute(
             """SELECT * FROM employee_tasks
                WHERE player_id=1001 AND employee_id=? AND kind='receive_batch' AND status='active'
                ORDER BY id DESC LIMIT 1""",
-            (wholesale["id"],),
+            (wholesale_id,),
         ).fetchone()
     assert int(after_purchase["jobs_done"]) == before_jobs
     assert int(after_purchase["wages_accrued"]) == before_wages
@@ -87,7 +85,7 @@ def test_wholesale_pay_is_earned_on_retail_handoff_not_procurement(tmp_path):
             """SELECT * FROM batches
                WHERE player_id=1001 AND responsible_employee_id=? AND status='warehouse'
                ORDER BY id DESC LIMIT 1""",
-            (wholesale["id"],),
+            (wholesale_id,),
         ).fetchone()
     assert batch is not None
 
@@ -97,36 +95,40 @@ def test_wholesale_pay_is_earned_on_retail_handoff_not_procurement(tmp_path):
             """SELECT * FROM employee_tasks
                WHERE player_id=1001 AND employee_id=? AND kind='handoff' AND status='active'
                ORDER BY id DESC LIMIT 1""",
-            (wholesale["id"],),
+            (wholesale_id,),
         ).fetchone()
     assert handoff is not None
+
+    goods_value = 20 * int(batch["unit_cost"])
+    expected_base = round(goods_value * 0.02)
+    expected_risk = round(goods_value * 0.01)
+    expected_total = expected_base + expected_risk
 
     finish_task(simulation, db, int(handoff["id"]))
     with db.connect() as conn:
         after_handoff = conn.execute(
-            "SELECT jobs_done, wages_accrued FROM employees WHERE id=?",
-            (wholesale["id"],),
+            "SELECT jobs_done, wages_accrued, deposit_accrued FROM employees WHERE id=?",
+            (wholesale_id,),
         ).fetchone()
-        payments = int(conn.execute(
-            "SELECT COUNT(*) FROM wholesale_delivery_payments WHERE allocation_id=?",
+        payment = conn.execute(
+            "SELECT * FROM wholesale_delivery_payments WHERE allocation_id=?",
             (handoff["allocation_id"],),
-        ).fetchone()[0])
-    assert int(after_handoff["jobs_done"]) == before_jobs + 1
-    assert int(after_handoff["wages_accrued"]) == before_wages + rate
-    assert payments == 1
+        ).fetchone()
 
-    # Reprocessing must not pay the same delivery twice.
+    assert payment is not None
+    assert int(payment["goods_value"]) == goods_value
+    assert int(payment["uncovered_value"]) == goods_value
+    assert int(payment["base_amount"]) == expected_base
+    assert int(payment["risk_amount"]) == expected_risk
+    assert int(payment["amount"]) == expected_total
+    assert int(after_handoff["jobs_done"]) == before_jobs + 1
+    assert int(after_handoff["wages_accrued"]) == before_wages + expected_total
+    assert int(after_handoff["deposit_accrued"]) == round(expected_total * 0.25)
+
     with db.connect() as conn:
         simulation._process_tasks(conn, 1001, utcnow() + timedelta(hours=1))
-    with db.connect() as conn:
-        final = conn.execute(
-            "SELECT jobs_done, wages_accrued FROM employees WHERE id=?",
-            (wholesale["id"],),
-        ).fetchone()
-        payments = int(conn.execute(
+        count = int(conn.execute(
             "SELECT COUNT(*) FROM wholesale_delivery_payments WHERE allocation_id=?",
             (handoff["allocation_id"],),
         ).fetchone()[0])
-    assert int(final["jobs_done"]) == before_jobs + 1
-    assert int(final["wages_accrued"]) == before_wages + rate
-    assert payments == 1
+    assert count == 1
