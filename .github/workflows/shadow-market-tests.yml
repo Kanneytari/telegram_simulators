@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - "shadow_market_simulator/**"
-      - "tools/nightshift_ux_align_tests.py"
+      - "tools/nightshift_ux_*.py"
       - ".github/workflows/shadow-market-tests.yml"
   pull_request:
     paths:
@@ -32,7 +32,9 @@ jobs:
           python -m pip install -r requirements.txt
           python -m pip install ruff
       - name: Align tests and residual terminology
-        run: python tools/nightshift_ux_align_tests.py
+        run: |
+          python tools/nightshift_ux_align_tests.py
+          python tools/nightshift_ux_last_alignment.py
       - name: Compile
         run: python -m compileall -q shadow_market_simulator/app
       - name: Run tests
