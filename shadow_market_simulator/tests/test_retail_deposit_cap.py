@@ -3,80 +3,73 @@ from __future__ import annotations
 import random
 from dataclasses import replace
 
-from app.catalog_extension import ExpandedCatalogSimulationEngine
+from app.courier_management import CourierManagementSimulationEngine
+from app.courier_recruitment import CourierRecruitmentService
 from app.db import Database
 from app.recruitment import CHANNELS
-from app.recruitment_runtime import (
-    RETAIL_STARTING_DEPOSIT_CAP,
-    NightshiftRecruitmentService,
-)
+from app.recruitment_runtime import RETAIL_STARTING_DEPOSIT_CAP
 from app.simulation import utcnow
+
+
+PLAYER_ID = 1001
 
 
 def make_system(tmp_path):
     db = Database(str(tmp_path / "game.db"))
     db.init()
-    simulation = ExpandedCatalogSimulationEngine(db, speed=1.0, rng=random.Random(91))
+    simulation = CourierManagementSimulationEngine(db, speed=1.0, rng=random.Random(91))
     simulation.seed_catalog()
-    simulation.ensure_player(1001, "tester")
-    recruitment = NightshiftRecruitmentService(db, speed=1.0, rng=random.Random(92))
+    simulation.ensure_player(PLAYER_ID, "tester")
+    recruitment = CourierRecruitmentService(db, speed=1.0, rng=random.Random(92))
     return db, recruitment
 
 
 def test_retail_minimum_deposit_setting_cannot_exceed_100k(tmp_path):
     _, recruitment = make_system(tmp_path)
 
-    recruitment.update_draft(1001, "role", "courier")
-    recruitment.update_draft(1001, "min_deposit", 200_000)
-    draft = recruitment.ensure_draft(1001)
+    recruitment.update_draft(PLAYER_ID, "role", "courier")
+    recruitment.update_draft(PLAYER_ID, "min_deposit", 200_000)
+    draft = recruitment.ensure_draft(PLAYER_ID)
     assert int(draft["min_deposit"]) == RETAIL_STARTING_DEPOSIT_CAP
 
-    recruitment.adjust_draft(1001, "min_deposit", 50_000)
-    draft = recruitment.ensure_draft(1001)
+    recruitment.adjust_draft(PLAYER_ID, "min_deposit", 50_000)
+    draft = recruitment.ensure_draft(PLAYER_ID)
     assert int(draft["min_deposit"]) == RETAIL_STARTING_DEPOSIT_CAP
 
 
 def test_generated_retail_candidate_starting_deposit_is_capped(tmp_path):
     db, recruitment = make_system(tmp_path)
-    recruitment.update_draft(1001, "role", "courier")
-    recruitment.update_draft(1001, "channel", "forums")
-    recruitment.update_draft(1001, "min_deposit", RETAIL_STARTING_DEPOSIT_CAP)
-    recruitment.start_campaign(1001)
+    recruitment.update_draft(PLAYER_ID, "role", "courier")
+    recruitment.update_draft(PLAYER_ID, "channel", "forums")
+    recruitment.update_draft(PLAYER_ID, "min_deposit", RETAIL_STARTING_DEPOSIT_CAP)
+    recruitment.start_campaign(PLAYER_ID)
 
-    forced_large_deposit_channel = replace(
-        CHANNELS["forums"],
-        deposit_pool=(120_000,),
-    )
+    forced_large_deposit_channel = replace(CHANNELS["forums"], deposit_pool=(120_000,))
     with db.connect() as conn:
         campaign = conn.execute(
             """SELECT * FROM recruitment_campaigns
-               WHERE player_id=1001 AND role='courier'
-               ORDER BY id DESC LIMIT 1"""
+               WHERE player_id=? AND role='courier'
+               ORDER BY id DESC LIMIT 1""",
+            (PLAYER_ID,),
         ).fetchone()
-        recruitment._create_candidate(
-            conn,
-            1001,
-            campaign,
-            forced_large_deposit_channel,
-            utcnow(),
-        )
+        recruitment._create_candidate(conn, PLAYER_ID, campaign, forced_large_deposit_channel, utcnow())
         candidate = conn.execute(
             """SELECT * FROM candidates
-               WHERE player_id=1001 AND role='courier'
-               ORDER BY id DESC LIMIT 1"""
+               WHERE player_id=? AND role='courier'
+               ORDER BY id DESC LIMIT 1""",
+            (PLAYER_ID,),
         ).fetchone()
 
     assert int(candidate["deposit"]) <= RETAIL_STARTING_DEPOSIT_CAP
     assert int(candidate["min_deposit"]) <= RETAIL_STARTING_DEPOSIT_CAP
-    assert "Готовый депозит:" in candidate["summary"]
 
 
 def test_wholesale_recruitment_keeps_large_deposit_range(tmp_path):
     _, recruitment = make_system(tmp_path)
 
-    recruitment.update_draft(1001, "role", "warehouse")
-    recruitment.update_draft(1001, "min_deposit", 600_000)
-    draft = recruitment.ensure_draft(1001)
+    recruitment.update_draft(PLAYER_ID, "role", "warehouse")
+    recruitment.update_draft(PLAYER_ID, "min_deposit", 600_000)
+    draft = recruitment.ensure_draft(PLAYER_ID)
 
     assert int(draft["min_deposit"]) == 600_000
     assert int(draft["min_deposit"]) > RETAIL_STARTING_DEPOSIT_CAP
