@@ -451,7 +451,7 @@ class CourierCoreGameService(CustomerTrustGameService):
                         profile["resilience"], profile["integrity"], profile["trait"],
                     ),
                 )
-        role = "Розничный сотрудник" if candidate["role"] == "courier" else "Оптовый сотрудник"
+        role = "Закладчик" if candidate["role"] == "courier" else "Складмен"
         return f"<b>{candidate['alias']} принят.</b>\n\nРоль: {role}\nСтартовый депозит: {deposit:,} ₽\nУсловия оплаты: общие для роли."
 
     @staticmethod
@@ -546,7 +546,7 @@ class CourierCoreGameService(CustomerTrustGameService):
         accrued_cash = int(employee["wages_accrued"]) - int(employee["deposit_accrued"])
 
         text = (
-            f"<b>👤 {employee['alias']} · Розничный сотрудник</b>\n\n"
+            f"<b>👤 {employee['alias']} · Закладчик</b>\n\n"
             f"<b>Сейчас</b>\n{activity}\n"
             f"Состояние: {icon} <b>{condition}</b>\n\n"
             f"<b>Работа</b>\n"

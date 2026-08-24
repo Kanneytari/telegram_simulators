@@ -53,11 +53,11 @@ def test_primary_ui_screens_render_from_real_state(tmp_path):
     assert target.markup is not None
 
     asyncio.run(render_procurement_root(target, db, game, PLAYER_ID))
-    assert "Закупки" in target.text
+    assert "Товар" in target.text
     assert target.markup is not None
 
     asyncio.run(render_sales_root(target, db, game, simulation, PLAYER_ID))
-    assert "Продажа" in target.text
+    assert "Витрина" in target.text
     assert target.markup is not None
 
     asyncio.run(render_team(target, game, simulation, PLAYER_ID))
@@ -71,11 +71,11 @@ def test_primary_ui_screens_render_from_real_state(tmp_path):
         ).fetchone()
     assert courier is not None
     asyncio.run(render_profile(target, game, PLAYER_ID, int(courier["id"])))
-    assert "розничный сотрудник" in target.text
+    assert "закладчик" in target.text
     assert "Развитие" in [button.text for row in target.markup.inline_keyboard for button in row]
 
     asyncio.run(render_batches(target, game, PLAYER_ID))
-    assert "Партии" in target.text
+    assert "Склад" in target.text
 
     asyncio.run(render_recruitment_root(target, recruitment, PLAYER_ID))
     assert "Найм" in target.text
@@ -104,4 +104,4 @@ def test_no_primary_screen_uses_old_home_symbol_or_storefront_name(tmp_path):
     for text, markup in screens:
         names = [button.text for row in markup.inline_keyboard for button in row]
         assert all("⌂" not in name for name in names)
-        assert "Витрина" not in text
+        assert "Продажа" not in text

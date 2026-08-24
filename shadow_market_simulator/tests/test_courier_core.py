@@ -80,7 +80,7 @@ def test_candidate_generation_produces_distinct_hidden_archetypes(tmp_path):
         "id": 999,
         "role": "courier",
         "min_deposit": 0,
-        "car_required": 0,
+        "transport_required": 0,
         "experience_required": 0,
     }
     now = utcnow()
@@ -107,7 +107,7 @@ def test_hiring_preserves_hidden_candidate_personality(tmp_path):
         "id": 1000,
         "role": "courier",
         "min_deposit": 0,
-        "car_required": 0,
+        "transport_required": 0,
         "experience_required": 0,
     }
     with db.connect() as conn:

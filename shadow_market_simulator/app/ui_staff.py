@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from .courier_management import (
     BONUS_COST,
@@ -14,8 +13,7 @@ from .courier_management import (
     TRANSPORT,
 )
 from .courier_model import condition_band, pace_band, relationship_band
-from .employee_rename import rename_employee
-from .recruitment import CHANNELS, DURATION_OPTIONS, VOLUME_OPTIONS
+from .recruitment import CHANNELS, DURATION_OPTIONS
 from .ui_common import claim_tip, clean, money, nav_row, notice, pct, present, rating
 
 
@@ -308,7 +306,7 @@ async def render_batches(target: Message, game, player_id: int, employee_id: int
                 ORDER BY CASE b.status WHEN 'warehouse' THEN 0 ELSE 1 END, b.id DESC""",
             params,
         ).fetchall()
-    body = f"<b>📦 Склад · {len(rows)} партий</b>"
+    body = f"<b>📦 Склад · {len(rows)}</b>"
     if not rows:
         body += "\n\nНа складе нет активных партий."
     keyboard = batches_keyboard(rows) if employee_id is None else batches_keyboard(rows, f"team:employee:{employee_id}", "← Профиль")

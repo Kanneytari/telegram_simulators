@@ -15,8 +15,8 @@ def callbacks(markup):
 def test_home_uses_only_canonical_sections():
     assert labels(home_keyboard(5, 2)) == [
         "📨 Входящие · 5 · 🔴 2",
-        "📦 Закупки",
-        "🏷 Продажа",
+        "📦 Товар",
+        "🏷 Витрина",
         "👥 Команда",
         "📊 Аналитика",
         "Обновить",

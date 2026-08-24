@@ -81,8 +81,8 @@ def test_procurement_assigns_batch_but_does_not_pay_wholesale_employee(tmp_path)
             "SELECT * FROM employee_tasks WHERE batch_id=? AND kind='receive_batch'",
             (batch["id"],),
         ).fetchone()
-    assert "Ответственный" in result
-    assert "Оплата будет начислена после успешной передачи" in result
+    assert "Складмен" in result
+    assert "Оплата складмену будет начислена после успешной передачи" in result
     assert batch["responsible_employee_id"] == employee["id"]
     assert batch["status"] == "receiving"
     assert task is not None

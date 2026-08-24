@@ -346,7 +346,7 @@ def test_candidate_phone_profile_transfers_on_hire(tmp_path):
         "id": 999,
         "role": "courier",
         "min_deposit": 0,
-        "car_required": 0,
+        "transport_required": 0,
         "experience_required": 0,
     }
     with db.connect() as conn:

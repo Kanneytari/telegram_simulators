@@ -137,7 +137,7 @@ def test_role_change_requires_no_inventory_or_pending_assignment(tmp_path):
         conn.execute("UPDATE retail_positions SET position_count=0 WHERE employee_id=?", (retail["id"],))
         conn.execute("UPDATE retail_allocations SET status='completed' WHERE retail_employee_id=?", (retail["id"],))
     changed = game.change_employee_role(1001, int(retail["id"]))
-    assert "оптовый" in changed
+    assert "складмен" in changed
 
 
 def test_manual_firing_returns_remaining_deposit(tmp_path):

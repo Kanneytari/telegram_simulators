@@ -63,7 +63,7 @@ def _procurement_products_keyboard(db, player_id: int, products) -> InlineKeyboa
                WHERE player_id=? AND status IN ('receiving','warehouse') AND remaining>0""",
             (player_id,),
         ).fetchone()[0])
-    rows.append([InlineKeyboardButton(text=f"Склад · {batch_count} партий", callback_data="team:batches")])
+    rows.append([InlineKeyboardButton(text=f"Склад · {batch_count}", callback_data="team:batches")])
     rows.append([
         InlineKeyboardButton(text="Обновить", callback_data="menu:procurement"),
         InlineKeyboardButton(text="Меню", callback_data="menu:home"),

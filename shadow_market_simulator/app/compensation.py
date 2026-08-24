@@ -568,7 +568,7 @@ class CompensationGameService(DelayedDisputeGameService):
         dispute_rate = employee["disputes"] / employee["jobs_done"] * 100.0 if employee["jobs_done"] else 0.0
         role = str(employee["role"])
         policy = self.compensation_policy(player_id, role)
-        role_title = "Оптовый сотрудник" if role == "warehouse" else "Розничный сотрудник"
+        role_title = "Складмен" if role == "warehouse" else "Закладчик"
         role_icon = "🚚" if role == "warehouse" else "👤"
         activity = "\n".join(self._activity_details(player_id, employee_id))
         inventory = self._inventory_lines(player_id, employee_id, role)

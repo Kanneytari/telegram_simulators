@@ -11,9 +11,9 @@ from .simulation import clamp, iso, parse_dt, utcnow
 
 
 TASK_LABELS = {
-    "receive_batch": "принимает партию",
-    "handoff": "готовит передачу рознице",
-    "prepare_positions": "готовит позиции",
+    "receive_batch": "получает партию",
+    "handoff": "готовит передачу закладчику",
+    "prepare_positions": "готовит товар",
 }
 
 
@@ -175,7 +175,7 @@ class WorkflowSimulationEngine(OperationsSimulationEngine):
                                 allocation["product_id"],
                                 allocation["quantity"],
                                 iso(now + self._game_hours_to_real(player_id, game_hours)),
-                                "Подготовка розничных позиций",
+                                "Подготовка товара к витрине",
                             ),
                         )
                     else:
@@ -275,11 +275,11 @@ class WorkflowSimulationEngine(OperationsSimulationEngine):
             if probability <= 0 or self.rng.random() >= probability:
                 continue
             payout = int(employee["deposit"]) + int(employee["wages_accrued"])
-            role = "оптовый" if employee["role"] == "warehouse" else "розничный"
+            role = "складмен" if employee["role"] == "warehouse" else "закладчик"
             conn.execute("UPDATE employees SET available=0, unavailable_until=NULL WHERE id=?", (employee["id"],))
             body = (
                 f"{employee['alias']} сообщил, что хочет закончить работу.\n\n"
-                f"Роль: {role}\nТовар на ответственности: 0 ₽\n"
+                f"Роль: {role}\nТовар на руках: 0 ₽\n"
                 f"Депозит к возврату: {employee['deposit']:,} ₽\n"
                 f"Начисленная зарплата: {employee['wages_accrued']:,} ₽\n"
                 f"Полный расчёт: <b>{payout:,} ₽</b>\n\n"

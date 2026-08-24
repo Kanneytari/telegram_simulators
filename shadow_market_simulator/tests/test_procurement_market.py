@@ -114,7 +114,7 @@ def test_offer_specific_quality_is_used_on_purchase(tmp_path):
         conn.execute("UPDATE shops SET balance=100000000 WHERE player_id=1001")
 
     result = game.buy_offer_for_employee(1001, int(offer["id"]), int(employee["id"]))
-    assert "Партия куплена" in result
+    assert "✅ Куплено" in result
 
     with db.connect() as conn:
         batch = conn.execute(
