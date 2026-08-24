@@ -583,7 +583,7 @@ class CourierManagementGameService(CourierCoreGameService):
             return text
         equipment = (
             "<b>Оснащение</b>\n"
-            f"🛵 {snapshot['transport']} · 📱 {snapshot['phone']}\n\n"
+            f"🚲 {snapshot['transport']} · 📱 {snapshot['phone']}\n\n"
         )
         marker = "<b>Что известно</b>"
         if marker in text:
@@ -610,7 +610,7 @@ class CourierManagementGameService(CourierCoreGameService):
             f"Отношение: {s['relationship']}\n\n"
             f"<b>Депозит</b>\n{deposit_line}\n\n"
             f"<b>Оснащение</b>\n"
-            f"🛵 {s['transport']} · 📱 {s['phone']}\n\n"
+            f"🚲 {s['transport']} · 📱 {s['phone']}\n\n"
             f"Вложено в сотрудника: <b>{s['invested_total']:,} ₽</b>\n"
             f"Свободно у магазина: {s['free_cash']:,} ₽\n\n"
             "Премия и отдых помогают состоянию и отношениям, но имеют паузу между повторениями. "
@@ -651,7 +651,7 @@ class CourierManagementGameService(CourierCoreGameService):
         )
         return (
             f"<b>🧰 Оснащение · {s['alias']}</b>\n\n"
-            f"🛵 Транспорт: <b>{s['transport']}</b>\n"
+            f"🚲 Транспорт: <b>{s['transport']}</b>\n"
             f"Следующее: {t_next}\n"
             "Влияет на реальный темп подготовки.\n\n"
             f"📱 Телефон: <b>{s['phone']}</b>\n"
