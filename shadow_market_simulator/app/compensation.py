@@ -528,7 +528,7 @@ class CompensationGameService(ProcurementMarketGameService):
         lines = []
         for row in rows[:12]:
             status = "" if row["active"] else " · ушёл"
-            role = "опт" if row["role"] == "warehouse" else "розница"
+            role = "Складмен" if row["role"] == "warehouse" else "Закладчик"
             cash = int(row["wages_accrued"]) - int(row["deposit_accrued"])
             lines.append(
                 f"{row['alias']} · {role}{status}\n"

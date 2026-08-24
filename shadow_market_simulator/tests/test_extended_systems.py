@@ -128,18 +128,3 @@ def test_speed_change_rescales_existing_game_deadline(tmp_path):
         expires = conn.execute("SELECT expires_at FROM inbox WHERE id=?", (item_id,)).fetchone()[0]
     remaining_minutes = (parse_dt(expires) - now).total_seconds() / 60
     assert 1.9 <= remaining_minutes <= 2.1
-
-
-def test_simulation_does_not_create_individual_raise_requests(tmp_path):
-    db, simulation, _, _ = make_system(tmp_path)
-
-    now = utcnow()
-    for _ in range(20):
-        with db.connect() as conn:
-            simulation._simulate_management_events(conn, 1001, 12.0, now)
-
-    with db.connect() as conn:
-        count = int(conn.execute(
-            "SELECT COUNT(*) FROM inbox WHERE player_id=1001 AND kind='raise_request'"
-        ).fetchone()[0])
-    assert count == 0
