@@ -21,46 +21,6 @@ DEFAULT_POLICIES = {
     },
 }
 
-COMPENSATION_SCHEMA = """
-CREATE TABLE IF NOT EXISTS staff_compensation_policies (
-    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
-    role TEXT NOT NULL CHECK(role IN ('courier','warehouse')),
-    fixed_fee INTEGER NOT NULL DEFAULT 0,
-    base_rate_bps INTEGER NOT NULL DEFAULT 0,
-    risk_rate_bps INTEGER NOT NULL DEFAULT 0,
-    deposit_contribution_pct INTEGER NOT NULL DEFAULT 0,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY(player_id, role)
-);
-
-CREATE TABLE IF NOT EXISTS wholesale_delivery_payments (
-    allocation_id INTEGER PRIMARY KEY REFERENCES retail_allocations(id) ON DELETE CASCADE,
-    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
-    employee_id INTEGER NOT NULL REFERENCES employees(id),
-    goods_value INTEGER NOT NULL,
-    uncovered_value INTEGER NOT NULL DEFAULT 0,
-    base_amount INTEGER NOT NULL,
-    risk_amount INTEGER NOT NULL DEFAULT 0,
-    amount INTEGER NOT NULL,
-    deposit_contribution INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_wholesale_delivery_payments_employee
-    ON wholesale_delivery_payments(player_id, employee_id, created_at);
-
-CREATE TABLE IF NOT EXISTS compensation_policy_changes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
-    role TEXT NOT NULL,
-    field TEXT NOT NULL,
-    old_value INTEGER NOT NULL,
-    new_value INTEGER NOT NULL,
-    loyalty_delta REAL NOT NULL DEFAULT 0,
-    stress_delta REAL NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-"""
 
 
 def _ensure_policy_conn(conn, player_id: int, role: str) -> None:
@@ -103,7 +63,7 @@ class CompensationSimulationEngine(DelayedDisputeSimulationEngine):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            conn.executescript(COMPENSATION_SCHEMA)
+            pass
             for row in conn.execute("SELECT player_id FROM shops").fetchall():
                 for role in DEFAULT_POLICIES:
                     _ensure_policy_conn(conn, int(row["player_id"]), role)
@@ -111,7 +71,7 @@ class CompensationSimulationEngine(DelayedDisputeSimulationEngine):
     def ensure_player(self, player_id: int, username: str | None) -> bool:
         created = super().ensure_player(player_id, username)
         with self.db.connect() as conn:
-            conn.executescript(COMPENSATION_SCHEMA)
+            pass
             for role in DEFAULT_POLICIES:
                 _ensure_policy_conn(conn, player_id, role)
             # Live compensation is defined by the shop-wide policy. Per-employee
@@ -387,7 +347,7 @@ class CompensationGameService(DelayedDisputeGameService):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            conn.executescript(COMPENSATION_SCHEMA)
+            pass
             for row in conn.execute("SELECT player_id FROM shops").fetchall():
                 for role in DEFAULT_POLICIES:
                     _ensure_policy_conn(conn, int(row["player_id"]), role)

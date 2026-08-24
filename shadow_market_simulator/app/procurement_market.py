@@ -10,14 +10,6 @@ from .staff_insights import StaffInsightGameService, StaffInsightSimulationEngin
 PROCUREMENT_BATCH_SIZES = (50, 100, 200, 400)
 ROTATION_MINUTES = 15
 
-PROCUREMENT_SCHEMA = """
-CREATE TABLE IF NOT EXISTS procurement_market_state (
-    player_id INTEGER PRIMARY KEY REFERENCES shops(player_id) ON DELETE CASCADE,
-    last_rotation_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_supplier_offers_market
-    ON supplier_offers(player_id, product_id, quantity, status);
-"""
 
 
 class ProcurementMarketSimulationEngine(StaffInsightSimulationEngine):
@@ -30,7 +22,7 @@ class ProcurementMarketSimulationEngine(StaffInsightSimulationEngine):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            conn.executescript(PROCUREMENT_SCHEMA)
+            pass
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
         created = super().ensure_player(player_id, username)

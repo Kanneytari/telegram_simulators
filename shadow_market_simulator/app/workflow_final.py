@@ -5,7 +5,7 @@ import math
 
 from .runtime import ROLE_MARKET_PAY, STAFF_INBOX_KINDS
 from .simulation import iso, parse_dt, utcnow
-from .workflow import TASK_LABELS, WORKFLOW_SCHEMA, WorkflowGameService, WorkflowSimulationEngine
+from .workflow import TASK_LABELS, WorkflowGameService, WorkflowSimulationEngine
 
 STAFF_INBOX_KINDS.add("resignation_notice")
 
@@ -14,7 +14,7 @@ class FinalWorkflowSimulationEngine(WorkflowSimulationEngine):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            conn.executescript(WORKFLOW_SCHEMA)
+            pass
             conn.executescript(
                 """
                 CREATE TRIGGER IF NOT EXISTS trg_employee_theft_to_staff_inbox

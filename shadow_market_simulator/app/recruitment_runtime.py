@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 from datetime import timedelta
 
-from .compensation import COMPENSATION_SCHEMA, DEFAULT_POLICIES, _ensure_policy_conn
+from .compensation import DEFAULT_POLICIES, _ensure_policy_conn
 from .recruitment import CHANNELS, RecruitmentService
 from .simulation import clamp, iso, parse_dt, utcnow
 
@@ -26,7 +26,7 @@ class NightshiftRecruitmentService(RecruitmentService):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            conn.executescript(COMPENSATION_SCHEMA)
+            pass
             for row in conn.execute("SELECT player_id FROM shops").fetchall():
                 for role in DEFAULT_POLICIES:
                     _ensure_policy_conn(conn, int(row["player_id"]), role)

@@ -9,67 +9,6 @@ from .runtime import ROLE_MARKET_PAY
 from .simulation import clamp, iso, parse_dt, utcnow
 
 
-WORKFLOW_SCHEMA = """
-CREATE TABLE IF NOT EXISTS employee_tasks (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
-    employee_id INTEGER NOT NULL REFERENCES employees(id),
-    kind TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'active',
-    batch_id INTEGER REFERENCES batches(id),
-    allocation_id INTEGER,
-    product_id INTEGER REFERENCES products(id),
-    quantity INTEGER NOT NULL DEFAULT 0,
-    started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    completes_at TEXT NOT NULL,
-    note TEXT
-);
-
-CREATE TABLE IF NOT EXISTS retail_allocations (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
-    batch_id INTEGER NOT NULL REFERENCES batches(id),
-    wholesale_employee_id INTEGER NOT NULL REFERENCES employees(id),
-    retail_employee_id INTEGER NOT NULL REFERENCES employees(id),
-    product_id INTEGER NOT NULL REFERENCES products(id),
-    quantity INTEGER NOT NULL,
-    unit_cost INTEGER NOT NULL,
-    quality REAL NOT NULL,
-    status TEXT NOT NULL DEFAULT 'waiting',
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    received_at TEXT,
-    completed_at TEXT
-);
-
-CREATE TABLE IF NOT EXISTS retail_positions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
-    allocation_id INTEGER NOT NULL REFERENCES retail_allocations(id) ON DELETE CASCADE,
-    batch_id INTEGER NOT NULL REFERENCES batches(id),
-    employee_id INTEGER NOT NULL REFERENCES employees(id),
-    product_id INTEGER NOT NULL REFERENCES products(id),
-    pack_size INTEGER NOT NULL,
-    position_count INTEGER NOT NULL,
-    unit_cost INTEGER NOT NULL,
-    quality REAL NOT NULL,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(allocation_id, pack_size)
-);
-
-CREATE TABLE IF NOT EXISTS shop_packaging_rules (
-    player_id INTEGER PRIMARY KEY REFERENCES shops(player_id) ON DELETE CASCADE,
-    pct_1 INTEGER NOT NULL DEFAULT 60,
-    pct_2 INTEGER NOT NULL DEFAULT 30,
-    pct_5 INTEGER NOT NULL DEFAULT 10,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_tasks_player_active ON employee_tasks(player_id, status, completes_at);
-CREATE INDEX IF NOT EXISTS idx_tasks_employee_active ON employee_tasks(employee_id, status);
-CREATE INDEX IF NOT EXISTS idx_allocations_retail_status ON retail_allocations(player_id, retail_employee_id, status);
-CREATE INDEX IF NOT EXISTS idx_positions_product_pack ON retail_positions(player_id, product_id, pack_size, position_count);
-CREATE INDEX IF NOT EXISTS idx_positions_employee ON retail_positions(player_id, employee_id, position_count);
-"""
 
 
 TASK_LABELS = {
@@ -85,7 +24,7 @@ class WorkflowSimulationEngine(OperationsSimulationEngine):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            conn.executescript(WORKFLOW_SCHEMA)
+            pass
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
         created = super().ensure_player(player_id, username)
@@ -615,7 +554,7 @@ class WorkflowGameService(OperationsGameService):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            conn.executescript(WORKFLOW_SCHEMA)
+            pass
 
     def _task_status(self, player_id: int, employee_id: int) -> str:
         with self.db.connect() as conn:

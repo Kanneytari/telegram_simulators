@@ -70,50 +70,6 @@ CHANNELS: dict[str, RecruitmentChannel] = {
 }
 
 
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS recruitment_campaigns (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
-    role TEXT NOT NULL DEFAULT 'courier',
-    channel TEXT NOT NULL,
-    cost INTEGER NOT NULL,
-    resolves_at TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'active',
-    candidates_created INTEGER NOT NULL DEFAULT 0,
-    traffic_multiplier INTEGER NOT NULL DEFAULT 1,
-    duration_hours INTEGER NOT NULL DEFAULT 4,
-    pay_per_job INTEGER NOT NULL DEFAULT 220,
-    min_deposit INTEGER NOT NULL DEFAULT 25000,
-    deposit_contribution_pct INTEGER NOT NULL DEFAULT 10,
-    car_required INTEGER NOT NULL DEFAULT 0,
-    experience_required INTEGER NOT NULL DEFAULT 0,
-    expected_min INTEGER NOT NULL DEFAULT 0,
-    expected_max INTEGER NOT NULL DEFAULT 0,
-    terms_fixed_fee INTEGER NOT NULL DEFAULT 0,
-    terms_base_rate_bps INTEGER NOT NULL DEFAULT 0,
-    terms_risk_rate_bps INTEGER NOT NULL DEFAULT 0,
-    terms_deposit_pct INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    completed_at TEXT
-);
-
-CREATE INDEX IF NOT EXISTS idx_recruitment_player_status
-    ON recruitment_campaigns(player_id, status, resolves_at);
-
-CREATE TABLE IF NOT EXISTS recruitment_drafts (
-    player_id INTEGER PRIMARY KEY REFERENCES shops(player_id) ON DELETE CASCADE,
-    role TEXT NOT NULL DEFAULT 'courier',
-    channel TEXT NOT NULL DEFAULT 'stickers',
-    traffic_multiplier INTEGER NOT NULL DEFAULT 1,
-    duration_hours INTEGER NOT NULL DEFAULT 4,
-    pay_per_job INTEGER NOT NULL DEFAULT 220,
-    min_deposit INTEGER NOT NULL DEFAULT 25000,
-    deposit_contribution_pct INTEGER NOT NULL DEFAULT 10,
-    car_required INTEGER NOT NULL DEFAULT 0,
-    experience_required INTEGER NOT NULL DEFAULT 0,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-"""
 
 
 class RecruitmentService:
@@ -132,7 +88,7 @@ class RecruitmentService:
 
     def init_schema(self) -> None:
         with self.db.connect() as conn:
-            conn.executescript(SCHEMA)
+            pass
 
     def get_channel(self, code: str) -> RecruitmentChannel | None:
         return CHANNELS.get(code)

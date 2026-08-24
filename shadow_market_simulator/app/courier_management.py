@@ -9,46 +9,6 @@ from .courier_model import TRAIT_SENSITIVE
 from .simulation import clamp, iso, parse_dt, utcnow
 
 
-COURIER_MANAGEMENT_SCHEMA = r"""
-CREATE TABLE IF NOT EXISTS courier_management (
-    employee_id INTEGER PRIMARY KEY REFERENCES employees(id) ON DELETE CASCADE,
-    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
-    deposit_target INTEGER NOT NULL DEFAULT 60000,
-    deposit_contribution_pct INTEGER NOT NULL DEFAULT 50,
-    transport_level INTEGER NOT NULL DEFAULT 0 CHECK(transport_level BETWEEN 0 AND 2),
-    phone_level INTEGER NOT NULL DEFAULT 0 CHECK(phone_level BETWEEN 0 AND 2),
-    invested_total INTEGER NOT NULL DEFAULT 0,
-    bonuses_given INTEGER NOT NULL DEFAULT 0,
-    rests_taken INTEGER NOT NULL DEFAULT 0,
-    last_bonus_at TEXT,
-    last_rest_at TEXT,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_courier_management_player
-    ON courier_management(player_id, employee_id);
-
-CREATE TABLE IF NOT EXISTS courier_candidate_equipment (
-    candidate_id INTEGER PRIMARY KEY REFERENCES candidates(id) ON DELETE CASCADE,
-    phone_level INTEGER NOT NULL DEFAULT 0 CHECK(phone_level BETWEEN 0 AND 2)
-);
-
-CREATE TABLE IF NOT EXISTS courier_management_events (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
-    employee_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
-    kind TEXT NOT NULL,
-    amount INTEGER NOT NULL DEFAULT 0,
-    loyalty_delta REAL NOT NULL DEFAULT 0,
-    stress_delta REAL NOT NULL DEFAULT 0,
-    details_json TEXT NOT NULL DEFAULT '{}',
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_courier_management_events_employee
-    ON courier_management_events(player_id, employee_id, created_at);
-"""
 
 BONUS_COST = 5_000
 BONUS_COOLDOWN_HOURS = 24.0
@@ -78,13 +38,13 @@ class CourierManagementSimulationEngine(CourierCoreSimulationEngine):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            conn.executescript(COURIER_MANAGEMENT_SCHEMA)
+            pass
             self._ensure_courier_management_conn(conn)
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
         created = super().ensure_player(player_id, username)
         with self.db.connect() as conn:
-            conn.executescript(COURIER_MANAGEMENT_SCHEMA)
+            pass
             self._ensure_courier_management_conn(conn, player_id)
         return created
 
@@ -236,7 +196,7 @@ class CourierManagementGameService(CourierCoreGameService):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            conn.executescript(COURIER_MANAGEMENT_SCHEMA)
+            pass
             self.simulation._ensure_courier_management_conn(conn)
 
     def hire_candidate(self, player_id: int, candidate_id: int) -> str:

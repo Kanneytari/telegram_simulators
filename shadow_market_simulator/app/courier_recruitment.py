@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from .courier_management import COURIER_MANAGEMENT_SCHEMA
-from .courier_model import COURIER_SCHEMA, generate_courier_blueprint
+from .courier_model import generate_courier_blueprint
 from .recruitment_runtime import NightshiftRecruitmentService, ROLE_TITLES
 from .simulation import clamp, iso
 
@@ -14,8 +13,8 @@ class CourierRecruitmentService(NightshiftRecruitmentService):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            conn.executescript(COURIER_SCHEMA)
-            conn.executescript(COURIER_MANAGEMENT_SCHEMA)
+            pass
+            pass
 
     def _create_candidate(self, conn, player_id: int, campaign, channel, now) -> None:
         if campaign["role"] != "courier":

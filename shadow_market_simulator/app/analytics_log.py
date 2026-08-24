@@ -10,27 +10,6 @@ from aiogram.types import CallbackQuery, Message
 from .db import Database
 
 
-ANALYTICS_SCHEMA = r"""
-CREATE TABLE IF NOT EXISTS analytics_events (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    player_id INTEGER NOT NULL,
-    run_id TEXT,
-    event_kind TEXT NOT NULL,
-    event_name TEXT NOT NULL,
-    source TEXT NOT NULL,
-    entity_type TEXT,
-    entity_id INTEGER,
-    balance INTEGER,
-    rating REAL,
-    time_multiplier REAL,
-    payload_json TEXT NOT NULL DEFAULT '{}',
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_analytics_player_time ON analytics_events(player_id, created_at, id);
-CREATE INDEX IF NOT EXISTS idx_analytics_run_time ON analytics_events(run_id, created_at, id);
-CREATE INDEX IF NOT EXISTS idx_analytics_event_name ON analytics_events(event_name, created_at);
-CREATE INDEX IF NOT EXISTS idx_analytics_kind ON analytics_events(event_kind, created_at);
-"""
 
 
 # The event log deliberately has no foreign key to shops so reset history survives.
@@ -292,7 +271,7 @@ class AnalyticsLogger:
 
     def install(self) -> None:
         with self.db.connect() as conn:
-            conn.executescript(ANALYTICS_SCHEMA)
+            pass
             conn.executescript(ANALYTICS_TRIGGERS)
 
     def log(

@@ -5,51 +5,6 @@ from dataclasses import dataclass
 from .simulation import clamp
 
 
-COURIER_SCHEMA = r"""
-CREATE TABLE IF NOT EXISTS courier_candidate_profiles (
-    candidate_id INTEGER PRIMARY KEY REFERENCES candidates(id) ON DELETE CASCADE,
-    pace REAL NOT NULL,
-    precision REAL NOT NULL,
-    resilience REAL NOT NULL,
-    integrity REAL NOT NULL,
-    trait TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS courier_profiles (
-    employee_id INTEGER PRIMARY KEY REFERENCES employees(id) ON DELETE CASCADE,
-    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
-    pace REAL NOT NULL,
-    precision REAL NOT NULL,
-    resilience REAL NOT NULL,
-    integrity REAL NOT NULL,
-    trait TEXT NOT NULL,
-    prep_tasks INTEGER NOT NULL DEFAULT 0,
-    prep_units INTEGER NOT NULL DEFAULT 0,
-    prep_game_hours REAL NOT NULL DEFAULT 0,
-    pace_observation_sum REAL NOT NULL DEFAULT 0,
-    pace_observation_count INTEGER NOT NULL DEFAULT 0,
-    observed_orders INTEGER NOT NULL DEFAULT 0,
-    rating_sum INTEGER NOT NULL DEFAULT 0,
-    high_stress_orders INTEGER NOT NULL DEFAULT 0,
-    high_stress_rating_sum INTEGER NOT NULL DEFAULT 0,
-    negative_events INTEGER NOT NULL DEFAULT 0,
-    missed_shifts INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_courier_profiles_player
-    ON courier_profiles(player_id, employee_id);
-
-CREATE TABLE IF NOT EXISTS courier_task_metrics (
-    task_id INTEGER PRIMARY KEY REFERENCES employee_tasks(id) ON DELETE CASCADE,
-    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
-    employee_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
-    planned_game_hours REAL NOT NULL,
-    effective_pace REAL NOT NULL,
-    stress_at_start REAL NOT NULL,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-"""
 
 
 TRAIT_OVERHEATS = "overheats"

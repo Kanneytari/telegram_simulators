@@ -6,27 +6,6 @@ from .simulation import iso, parse_dt, utcnow
 from .workflow_final import FinalWorkflowGameService, FinalWorkflowSimulationEngine
 
 
-STAFF_INSIGHT_SCHEMA = """
-CREATE TABLE IF NOT EXISTS game_clock (
-    player_id INTEGER PRIMARY KEY REFERENCES shops(player_id) ON DELETE CASCADE,
-    game_hours REAL NOT NULL DEFAULT 0
-);
-
-CREATE TABLE IF NOT EXISTS publication_events (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
-    allocation_id INTEGER NOT NULL UNIQUE REFERENCES retail_allocations(id) ON DELETE CASCADE,
-    employee_id INTEGER NOT NULL REFERENCES employees(id),
-    product_id INTEGER NOT NULL REFERENCES products(id),
-    units INTEGER NOT NULL,
-    positions INTEGER NOT NULL,
-    game_hour REAL NOT NULL,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_publication_employee_game_hour
-    ON publication_events(player_id, employee_id, game_hour);
-"""
 
 
 class StaffInsightSimulationEngine(FinalWorkflowSimulationEngine):
@@ -35,7 +14,7 @@ class StaffInsightSimulationEngine(FinalWorkflowSimulationEngine):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            conn.executescript(STAFF_INSIGHT_SCHEMA)
+            pass
 
     def _seed_retail_positions(self, player_id: int) -> None:
         return None
@@ -150,7 +129,7 @@ class StaffInsightGameService(FinalWorkflowGameService):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            conn.executescript(STAFF_INSIGHT_SCHEMA)
+            pass
 
     def _task_status(self, player_id: int, employee_id: int) -> str:
         now = utcnow()

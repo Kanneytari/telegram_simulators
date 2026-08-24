@@ -4,19 +4,7 @@ import json
 import math
 from datetime import timedelta
 
-from .courier_model import (
-    COURIER_SCHEMA,
-    TRAIT_CONCEALS,
-    TRAIT_LEARNER,
-    TRAIT_METICULOUS,
-    TRAIT_OVERHEATS,
-    TRAIT_PRESSURE_PROOF,
-    TRAIT_SENSITIVE,
-    TRAIT_STEADY,
-    condition_band,
-    pace_band,
-    relationship_band,
-)
+from .courier_model import TRAIT_CONCEALS, TRAIT_LEARNER, TRAIT_METICULOUS, TRAIT_OVERHEATS, TRAIT_PRESSURE_PROOF, TRAIT_SENSITIVE, TRAIT_STEADY, condition_band, pace_band, relationship_band
 from .customer_trust import CustomerTrustGameService, CustomerTrustSimulationEngine
 from .simulation import clamp, iso, utcnow
 
@@ -27,13 +15,13 @@ class CourierCoreSimulationEngine(CustomerTrustSimulationEngine):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            conn.executescript(COURIER_SCHEMA)
+            pass
             self._ensure_courier_profiles_conn(conn)
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
         created = super().ensure_player(player_id, username)
         with self.db.connect() as conn:
-            conn.executescript(COURIER_SCHEMA)
+            pass
             self._ensure_courier_profiles_conn(conn, player_id)
         return created
 
@@ -439,7 +427,7 @@ class CourierCoreGameService(CustomerTrustGameService):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            conn.executescript(COURIER_SCHEMA)
+            pass
             self.simulation._ensure_courier_profiles_conn(conn)
 
     def hire_candidate(self, player_id: int, candidate_id: int) -> str:

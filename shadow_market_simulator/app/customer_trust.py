@@ -3,54 +3,11 @@ from __future__ import annotations
 import math
 
 from .compensation import _deposit_part, _money_from_bps, _policy_conn
-from .catalog_extension import ExpandedCatalogSimulationEngine
 from .global_packaging import GlobalPackagingGameService
 from .simulation import clamp, iso
-from .staff_relationships import SALES_ACTIVITY_MULTIPLIER
+from .staff_relationships import SALES_ACTIVITY_MULTIPLIER, StaffRelationshipSimulationEngine
 
 
-CUSTOMER_TRUST_SCHEMA = """
-CREATE TABLE IF NOT EXISTS order_ratings (
-    order_id INTEGER PRIMARY KEY REFERENCES orders(id) ON DELETE CASCADE,
-    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
-    client_id INTEGER NOT NULL REFERENCES clients(id),
-    employee_id INTEGER NOT NULL REFERENCES employees(id),
-    product_id INTEGER NOT NULL REFERENCES products(id),
-    product_rating INTEGER NOT NULL CHECK(product_rating BETWEEN 1 AND 5),
-    courier_rating INTEGER NOT NULL CHECK(courier_rating BETWEEN 1 AND 5),
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_order_ratings_product
-    ON order_ratings(player_id, product_id, created_at);
-CREATE INDEX IF NOT EXISTS idx_order_ratings_employee
-    ON order_ratings(player_id, employee_id, created_at);
-CREATE INDEX IF NOT EXISTS idx_order_ratings_client
-    ON order_ratings(player_id, client_id, created_at);
-
-CREATE TABLE IF NOT EXISTS client_relationships (
-    player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
-    client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-    purchases INTEGER NOT NULL DEFAULT 0,
-    lifetime_value INTEGER NOT NULL DEFAULT 0,
-    trust REAL NOT NULL DEFAULT 0.48,
-    last_product_rating INTEGER,
-    last_courier_rating INTEGER,
-    last_purchase_at TEXT,
-    PRIMARY KEY(player_id, client_id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_client_relationships_value
-    ON client_relationships(player_id, purchases, trust);
-
-CREATE TABLE IF NOT EXISTS shop_trust_state (
-    player_id INTEGER PRIMARY KEY REFERENCES shops(player_id) ON DELETE CASCADE,
-    trust_score REAL NOT NULL DEFAULT 64.0,
-    availability_ema REAL NOT NULL DEFAULT 0.60,
-    fairness_ema REAL NOT NULL DEFAULT 0.65,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-"""
 
 
 def _bayesian_rating(conn, player_id: int, field: str, where: str = "", params=()) -> tuple[float, int]:
@@ -87,19 +44,19 @@ def premium_allowance(score: float, regular_share: float = 0.0) -> float:
     return clamp(base + max(0.0, float(regular_share)) * 0.05, 0.0, 0.30)
 
 
-class CustomerTrustSimulationEngine(ExpandedCatalogSimulationEngine):
+class CustomerTrustSimulationEngine(StaffRelationshipSimulationEngine):
     """Final live economy: structured ratings, repeat buyers and long-term trust."""
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            conn.executescript(CUSTOMER_TRUST_SCHEMA)
+            pass
             self._ensure_all_relationships_conn(conn)
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
         created = super().ensure_player(player_id, username)
         with self.db.connect() as conn:
-            conn.executescript(CUSTOMER_TRUST_SCHEMA)
+            pass
             self._ensure_all_relationships_conn(conn, player_id)
             conn.execute(
                 "INSERT OR IGNORE INTO shop_trust_state(player_id) VALUES (?)",
