@@ -128,7 +128,6 @@ class CourierManagementGameService(CourierCoreGameService):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            pass
             self.simulation._ensure_courier_management_conn(conn)
 
     def hire_candidate(self, player_id: int, candidate_id: int) -> str:
@@ -161,7 +160,7 @@ class CourierManagementGameService(CourierCoreGameService):
                    WHERE employee_id=?""",
                 (
                     max(60_000, int(employee["deposit"])),
-                    int(profile["transport_level"]) if profile else (2 if int(candidate["has_car"]) else 0),
+                    int(profile["transport_level"]) if profile else 0,
                     int(profile["phone_level"]) if profile else 0,
                     int(employee["id"]),
                 ),

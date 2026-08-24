@@ -81,7 +81,7 @@ async def render_candidate(target: Message, game, player_id: int, candidate_id: 
     lines = [f"<b>{'👤' if role == 'courier' else '🚚'} {clean(row['alias'])} · {role_text}</b>", "", f"Депозит: {money(row['deposit'])}", f"Опыт: {experience}"]
     policy = game.compensation_policy(player_id, role)
     if role == "courier":
-        transport_level = int(profile["transport_level"] if profile else (2 if row["has_car"] else 0))
+        transport_level = int(profile["transport_level"] if profile else 0)
         lines.extend([f"Передвижение: {TRANSPORT[transport_level][0]}", f"Телефон: {PHONE[int(profile['phone_level'] if profile else 0)][0]}"])
         fixed = int(row["terms_fixed_fee"] if row["terms_fixed_fee"] is not None else policy["fixed_fee"])
         rate = int(row["terms_base_rate_bps"] if row["terms_base_rate_bps"] is not None else policy["base_rate_bps"])

@@ -175,7 +175,7 @@ class StaffInsightGameService(WorkflowGameService):
                     (player_id, employee_id),
                 ).fetchone()[0])
                 if preparing:
-                    return f"готовит товар · {preparing} ед."
+                    return f"раскидывает клады · {preparing} ед."
                 published = int(conn.execute(
                     """SELECT COALESCE(SUM(position_count*pack_size),0) FROM retail_positions
                        WHERE player_id=? AND employee_id=? AND position_count>0""",
