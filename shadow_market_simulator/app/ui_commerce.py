@@ -64,10 +64,7 @@ def _procurement_products_keyboard(db, player_id: int, products) -> InlineKeyboa
             (player_id,),
         ).fetchone()[0])
     rows.append([InlineKeyboardButton(text=f"🚚 Склад · {batch_count}", callback_data="team:batches")])
-    rows.append([
-        InlineKeyboardButton(text="Обновить", callback_data="menu:product"),
-        InlineKeyboardButton(text="Меню", callback_data="menu:home"),
-    ])
+    rows.append([InlineKeyboardButton(text="Меню", callback_data="menu:home")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 async def render_product_root(target: Message, db, game, player_id: int, *, flash: str | None = None) -> None:

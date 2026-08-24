@@ -30,7 +30,7 @@ def home_keyboard(opened: int, urgent: int, *, is_admin: bool = False) -> Inline
     ]
     if is_admin:
         rows.append([InlineKeyboardButton(text="🛠 Админ", callback_data="admin:panel")])
-    rows.append([InlineKeyboardButton(text="Обновить", callback_data="menu:home")])
+    rows.append([InlineKeyboardButton(text="🔄 Обновить", callback_data="menu:home")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 def _home_snapshot(db, game, simulation, player_id: int) -> tuple[str, int, int]:

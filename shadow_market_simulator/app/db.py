@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import sqlite3
 from pathlib import Path
 
@@ -28,5 +29,10 @@ class Database:
 
     def init(self) -> None:
         schema = SCHEMA_PATH.read_text(encoding="utf-8")
+        schema = re.sub(
+            r"CREATE (TABLE|INDEX|TRIGGER) (?!IF NOT EXISTS)",
+            r"CREATE \1 IF NOT EXISTS ",
+            schema,
+        )
         with self.connect() as conn:
             conn.executescript(schema)

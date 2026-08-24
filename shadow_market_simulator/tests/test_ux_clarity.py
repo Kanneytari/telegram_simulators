@@ -57,6 +57,7 @@ def test_main_menu_uses_product_and_storefront(tmp_path):
     labels = button_texts(home_keyboard(opened, urgent))
     assert "📦 Товар" in labels
     assert "🏷 Витрина" in labels
+    assert "🔄 Обновить" in labels
     assert "Баланс:" in text
     assert "Свободно:" in text
     assert "Передай товар закладчику" not in text
@@ -153,7 +154,9 @@ def test_first_handoff_tutorial_guides_product_warehouse_and_batch(tmp_path):
     target = Target()
     asyncio.run(render_product_root(target, db, game, PLAYER_ID))
     assert "<blockquote>Нажми на кнопку 🚚 Склад</blockquote>" in target.text
-    assert any("🚚 Склад" in label for label in button_texts(target.reply_markup))
+    product_labels = button_texts(target.reply_markup)
+    assert any("🚚 Склад" in label for label in product_labels)
+    assert not any("Обновить" in label for label in product_labels)
     asyncio.run(render_batches(target, game, PLAYER_ID))
     assert "<blockquote>Выбери партию стаффа, которую хочешь передать закладчику.</blockquote>" in target.text
     with db.connect() as conn:
@@ -167,7 +170,12 @@ def test_first_handoff_tutorial_guides_product_warehouse_and_batch(tmp_path):
     quantity = int(recipient["recommended_quantity"])
     assert quantity > 0
     asyncio.run(render_allocation(target, game, PLAYER_ID, batch_id, int(recipient["id"]), quantity))
-    assert f"<blockquote>Проверь количество и нажми кнопку «Передать {quantity} ед.».</blockquote>" in target.text
+    assert f"<blockquote>Проверь количество и нажми кнопку «✅ Отправить {quantity} ед.».</blockquote>" in target.text
+    allocation_rows = [[button.text for button in row] for row in target.reply_markup.inline_keyboard]
+    assert allocation_rows[0] == ["−5", f"📦 {quantity} ед.", "+5"]
+    assert allocation_rows[1] == [f"✅ Отправить {quantity} ед."]
+    assert allocation_rows[-1] == ["← Назад", "Меню"]
+    assert not any("Всё" in label for row in allocation_rows for label in row)
 
 
 def test_first_handoff_tutorial_disappears_after_transfer(tmp_path):

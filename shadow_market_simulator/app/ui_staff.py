@@ -324,22 +324,14 @@ async def render_allocation(target: Message, game, player_id: int, batch_id: int
     value = quantity * int(batch["unit_cost"])
     after = int(employee["exposure"]) + value
     unsecured = max(0, after - int(employee["deposit"]))
-    presets = sorted({min(int(batch["remaining"]), value) for value in (10, 20, 30) if value <= int(batch["remaining"])})
-    rows: list[list[InlineKeyboardButton]] = []
-    if presets:
-        rows.append([InlineKeyboardButton(
-            text=("✓ " if value == quantity else "") + str(value),
-            callback_data=f"team:alloc:{batch_id}:{employee_id}:{value}",
-        ) for value in presets])
-    rows.append([
+    rows: list[list[InlineKeyboardButton]] = [[
         InlineKeyboardButton(text="−5", callback_data=f"team:alloc:{batch_id}:{employee_id}:{max(0, quantity-5)}"),
+        InlineKeyboardButton(text=f"📦 {quantity} ед.", callback_data=f"team:alloc:{batch_id}:{employee_id}:{quantity}"),
         InlineKeyboardButton(text="+5", callback_data=f"team:alloc:{batch_id}:{employee_id}:{min(int(batch['remaining']), quantity+5)}"),
-    ])
-    if quantity != int(batch["remaining"]):
-        rows.append([InlineKeyboardButton(text=f"Всё · {batch['remaining']} ед.", callback_data=f"team:alloc:{batch_id}:{employee_id}:{batch['remaining']}")])
+    ]]
     if quantity > 0:
-        rows.append([InlineKeyboardButton(text=f"Передать {quantity} ед.", callback_data=f"team:allocdo:{batch_id}:{employee_id}:{quantity}")])
-    rows.append(nav_row(f"team:batch:{batch_id}", "← Партия"))
+        rows.append([InlineKeyboardButton(text=f"✅ Отправить {quantity} ед.", callback_data=f"team:allocdo:{batch_id}:{employee_id}:{quantity}")])
+    rows.append(nav_row(f"team:batch:{batch_id}", "← Назад"))
     text = (
         f"<b>Передать {clean(employee['alias'])}</b>\n\n"
         f"Количество: <b>{quantity} ед.</b> · {money(value)}\n"
@@ -351,7 +343,7 @@ async def render_allocation(target: Message, game, player_id: int, batch_id: int
         text += f"\n🔴 Не покрыто депозитом: {money(unsecured)}" if unsecured else "\n🟢 Полностью покрыто депозитом."
     if game.needs_first_handoff_tutorial(player_id):
         if quantity > 0:
-            text += "\n\n" + tutorial_hint(f"Проверь количество и нажми кнопку «Передать {quantity} ед.».")
+            text += "\n\n" + tutorial_hint(f"Проверь количество и нажми кнопку «✅ Отправить {quantity} ед.».")
         else:
             text += "\n\n" + tutorial_hint("Выбери количество от 5 ед. или вернись и выбери другого закладчика.")
     await present(target, text, InlineKeyboardMarkup(inline_keyboard=rows))
