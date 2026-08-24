@@ -75,6 +75,22 @@ def _callback_data(markup: InlineKeyboardMarkup | None) -> set[str]:
     }
 
 
+def _normalize_menu_buttons(markup: InlineKeyboardMarkup | None) -> InlineKeyboardMarkup | None:
+    if not markup:
+        return None
+    changed = False
+    rows: list[list[InlineKeyboardButton]] = []
+    for row in markup.inline_keyboard:
+        normalized_row: list[InlineKeyboardButton] = []
+        for button in row:
+            if button.callback_data == "menu:home" and button.text == "Меню":
+                button = button.model_copy(update={"text": "🏠 Меню"})
+                changed = True
+            normalized_row.append(button)
+        rows.append(normalized_row)
+    return InlineKeyboardMarkup(inline_keyboard=rows) if changed else markup
+
+
 def _screen_image(text: str, markup: InlineKeyboardMarkup | None) -> Path | None:
     callbacks = _callback_data(markup)
     if {"menu:inbox", "menu:product", "menu:storefront", "menu:team"}.issubset(callbacks):
@@ -106,6 +122,7 @@ async def present(
     edit: bool = True,
 ) -> None:
     text = normalize_text(text)
+    markup = _normalize_menu_buttons(markup)
     image = _screen_image(text, markup)
 
     if image is not None:
@@ -161,7 +178,7 @@ def nav(
     if parent_callback:
         row.append(InlineKeyboardButton(text=parent_text, callback_data=parent_callback))
     if menu:
-        row.append(InlineKeyboardButton(text="Меню", callback_data="menu:home"))
+        row.append(InlineKeyboardButton(text="🏠 Меню", callback_data="menu:home"))
     return InlineKeyboardMarkup(inline_keyboard=[row] if row else [])
 
 
@@ -175,7 +192,7 @@ def nav_row(
     if parent_callback:
         row.append(InlineKeyboardButton(text=parent_text, callback_data=parent_callback))
     if menu:
-        row.append(InlineKeyboardButton(text="Меню", callback_data="menu:home"))
+        row.append(InlineKeyboardButton(text="🏠 Меню", callback_data="menu:home"))
     return row
 
 
