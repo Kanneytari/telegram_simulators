@@ -10,6 +10,9 @@ from aiogram.types import FSInputFile, InlineKeyboardButton, InlineKeyboardMarku
 
 
 _THOUSANDS_COMMA = re.compile(r"(?<=\d),(?=\d{3}(?:\D|$))")
+_TUTORIAL_BUTTON_MENTION = re.compile(
+    r"(?i)(\bкнопк\w*\s+)(?:«([^»]+)»|\[([^\]]+)\]|([^\n.!?]+))"
+)
 _ASSET_DIR = Path(__file__).resolve().parent.parent / "assets"
 _HOME_IMAGE = _ASSET_DIR / "nightshift_menu.jpg"
 _PRODUCT_IMAGE = _ASSET_DIR / "nightshift_product.jpg"
@@ -47,8 +50,22 @@ def clean(value: object) -> str:
     return escape(str(value or ""))
 
 
+def _normalize_tutorial_button_mentions(text: str) -> str:
+    text = text.replace("🚚 Склад", "📦 Склад")
+
+    def replace(match: re.Match[str]) -> str:
+        label = next(
+            group.strip()
+            for group in match.groups()[1:]
+            if group is not None
+        )
+        return f"{match.group(1)}[{label}]"
+
+    return _TUTORIAL_BUTTON_MENTION.sub(replace, text)
+
+
 def tutorial_hint(text: str) -> str:
-    return f"<blockquote>{clean(text)}</blockquote>"
+    return f"<blockquote>{clean(_normalize_tutorial_button_mentions(text))}</blockquote>"
 
 
 def normalize_text(text: str) -> str:
