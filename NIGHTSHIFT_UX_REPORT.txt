@@ -1,0 +1,610 @@
+=== tools/nightshift_ux_backend.py ===
+backend UX transform ok
+EXIT=0
+=== tools/nightshift_ux_navigation_commerce.py ===
+navigation/commerce UX transform ok
+EXIT=0
+=== tools/nightshift_ux_staff.py ===
+staff UX transform ok
+EXIT=0
+=== tools/nightshift_ux_finish.py ===
+finish UX transform ok
+EXIT=0
+=== COMPILE ===
+=== PYTEST ===
+..................F........FF................F.....FFFF................. [ 60%]
+F..............FF.......F.........FF...F....F..                          [100%]
+=================================== FAILURES ===================================
+____________________ test_home_uses_only_canonical_sections ____________________
+
+    def test_home_uses_only_canonical_sections():
+>       assert labels(home_keyboard(5, 2)) == [
+            "📨 Входящие · 5 · 🔴 2",
+            "📦 Закупки",
+            "🏷 Продажа",
+            "👥 Команда",
+            "📊 Аналитика",
+            "Обновить",
+        ]
+E       AssertionError: assert ['📨 Входящие ...', 'Обновить'] == ['📨 Входящие ...', 'Обновить']
+E         
+E         At index 1 diff: '📦 Товар' != '📦 Закупки'
+E         
+E         Full diff:
+E           [
+E               '📨 Входящие · 5 · 🔴 2',
+E         -     '📦 Закупки',
+E         -     '🏷 Продажа',
+E         +     '📦 Товар',
+E         +     '🏷 Витрина',
+E               '👥 Команда',
+E               '📊 Аналитика',
+E               'Обновить',
+E           ]
+
+tests/test_compact_ui.py:16: AssertionError
+________ test_candidate_generation_produces_distinct_hidden_archetypes _________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_candidate_generation_prod0')
+
+    def test_candidate_generation_produces_distinct_hidden_archetypes(tmp_path):
+        db, _, _, recruitment = make_system(tmp_path)
+        channel = CHANNELS["forums"]
+        campaign = {
+            "id": 999,
+            "role": "courier",
+            "min_deposit": 0,
+            "car_required": 0,
+            "experience_required": 0,
+        }
+        now = utcnow()
+        with db.connect() as conn:
+            for _ in range(35):
+>               recruitment._create_candidate(conn, PLAYER_ID, campaign, channel, now)
+
+tests/test_courier_core.py:89: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.courier_recruitment.CourierRecruitmentService object at 0x7f84b8722150>
+conn = <app.db.ClosingConnection object at 0x7f84b86f1b50>, player_id = 1001
+campaign = {'car_required': 0, 'experience_required': 0, 'id': 999, 'min_deposit': 0, ...}
+channel = RecruitmentChannel(code='forums', title='Реклама на форумах', icon='🕸', base_cost=9000, base_leads=1.15, quality_bonus...5000, 40000, 60000, 90000, 100000), description='Тематический канал: меньше откликов, но кандидаты в среднем сильнее.')
+now = datetime.datetime(2026, 8, 24, 18, 47, 18, 896192, tzinfo=datetime.timezone.utc)
+
+    def _create_candidate(self, conn, player_id: int, campaign, channel, now) -> None:
+        if campaign["role"] != "courier":
+            super()._create_candidate(conn, player_id, campaign, channel, now)
+            return
+    
+        min_deposit = int(campaign["min_deposit"])
+>       transport_required = int(campaign["transport_required"])
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'transport_required'
+
+app/courier_recruitment.py:20: KeyError
+______________ test_hiring_preserves_hidden_candidate_personality ______________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_hiring_preserves_hidden_c0')
+
+    def test_hiring_preserves_hidden_candidate_personality(tmp_path):
+        db, _, game, recruitment = make_system(tmp_path)
+        campaign = {
+            "id": 1000,
+            "role": "courier",
+            "min_deposit": 0,
+            "car_required": 0,
+            "experience_required": 0,
+        }
+        with db.connect() as conn:
+>           recruitment._create_candidate(conn, PLAYER_ID, campaign, CHANNELS["forums"], utcnow())
+
+tests/test_courier_core.py:114: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.courier_recruitment.CourierRecruitmentService object at 0x7f84b8ee40e0>
+conn = <app.db.ClosingConnection object at 0x7f84b86f2850>, player_id = 1001
+campaign = {'car_required': 0, 'experience_required': 0, 'id': 1000, 'min_deposit': 0, ...}
+channel = RecruitmentChannel(code='forums', title='Реклама на форумах', icon='🕸', base_cost=9000, base_leads=1.15, quality_bonus...5000, 40000, 60000, 90000, 100000), description='Тематический канал: меньше откликов, но кандидаты в среднем сильнее.')
+now = datetime.datetime(2026, 8, 24, 18, 47, 18, 974060, tzinfo=datetime.timezone.utc)
+
+    def _create_candidate(self, conn, player_id: int, campaign, channel, now) -> None:
+        if campaign["role"] != "courier":
+            super()._create_candidate(conn, player_id, campaign, channel, now)
+            return
+    
+        min_deposit = int(campaign["min_deposit"])
+>       transport_required = int(campaign["transport_required"])
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'transport_required'
+
+app/courier_recruitment.py:20: KeyError
+________________ test_candidate_phone_profile_transfers_on_hire ________________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_candidate_phone_profile_t0')
+
+    def test_candidate_phone_profile_transfers_on_hire(tmp_path):
+        db, _, game, recruitment = make_system(tmp_path)
+        campaign = {
+            "id": 999,
+            "role": "courier",
+            "min_deposit": 0,
+            "car_required": 0,
+            "experience_required": 0,
+        }
+        with db.connect() as conn:
+>           recruitment._create_candidate(conn, PLAYER_ID, campaign, CHANNELS["forums"], utcnow())
+
+tests/test_courier_management.py:353: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.courier_recruitment.CourierRecruitmentService object at 0x7f84b8610830>
+conn = <app.db.ClosingConnection object at 0x7f84b86f2f50>, player_id = 1001
+campaign = {'car_required': 0, 'experience_required': 0, 'id': 999, 'min_deposit': 0, ...}
+channel = RecruitmentChannel(code='forums', title='Реклама на форумах', icon='🕸', base_cost=9000, base_leads=1.15, quality_bonus...5000, 40000, 60000, 90000, 100000), description='Тематический канал: меньше откликов, но кандидаты в среднем сильнее.')
+now = datetime.datetime(2026, 8, 24, 18, 47, 21, 558497, tzinfo=datetime.timezone.utc)
+
+    def _create_candidate(self, conn, player_id: int, campaign, channel, now) -> None:
+        if campaign["role"] != "courier":
+            super()._create_candidate(conn, player_id, campaign, channel, now)
+            return
+    
+        min_deposit = int(campaign["min_deposit"])
+>       transport_required = int(campaign["transport_required"])
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'transport_required'
+
+app/courier_recruitment.py:20: KeyError
+_____ test_employee_explanation_is_delayed_between_5_and_120_game_minutes ______
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_employee_explanation_is_d0')
+
+    def test_employee_explanation_is_delayed_between_5_and_120_game_minutes(tmp_path):
+        db, simulation, game = make_game(tmp_path)
+        dispute_id = create_dispute(db)
+        before = utcnow()
+    
+        status = game.ask_employee_about_dispute(1001, dispute_id)
+    
+        with db.connect() as conn:
+>           row = conn.execute(
+                "SELECT courier_reply, courier_reply_pending, courier_reply_due_at FROM disputes WHERE id=?",
+                (dispute_id,),
+            ).fetchone()
+E           sqlite3.OperationalError: no such column: courier_reply_pending
+
+tests/test_delayed_disputes.py:57: OperationalError
+_______________ test_repeated_request_does_not_create_new_timer ________________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_repeated_request_does_not0')
+
+    def test_repeated_request_does_not_create_new_timer(tmp_path):
+        db, _, game = make_game(tmp_path)
+        dispute_id = create_dispute(db)
+        game.ask_employee_about_dispute(1001, dispute_id)
+        with db.connect() as conn:
+>           first_due = conn.execute(
+                "SELECT courier_reply_due_at FROM disputes WHERE id=?",
+                (dispute_id,),
+            ).fetchone()[0]
+E           sqlite3.OperationalError: no such column: courier_reply_due_at
+
+tests/test_delayed_disputes.py:74: OperationalError
+______________ test_tick_fast_forward_materializes_pending_reply _______________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_tick_fast_forward_materia0')
+
+    def test_tick_fast_forward_materializes_pending_reply(tmp_path):
+        db, simulation, game = make_game(tmp_path)
+        dispute_id = create_dispute(db)
+        game.ask_employee_about_dispute(1001, dispute_id)
+    
+        simulation.fast_forward_timers(1001, 2.0)
+    
+        with db.connect() as conn:
+>           row = conn.execute(
+                "SELECT courier_reply, courier_reply_pending, courier_reply_due_at FROM disputes WHERE id=?",
+                (dispute_id,),
+            ).fetchone()
+E           sqlite3.OperationalError: no such column: courier_reply_pending
+
+tests/test_delayed_disputes.py:98: OperationalError
+_______________ test_speed_rescale_preserves_remaining_game_time _______________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_speed_rescale_preserves_r0')
+
+    def test_speed_rescale_preserves_remaining_game_time(tmp_path):
+        db, simulation, game = make_game(tmp_path)
+        dispute_id = create_dispute(db)
+        game.ask_employee_about_dispute(1001, dispute_id)
+        now = utcnow()
+        with db.connect() as conn:
+>           due_before = parse_dt(conn.execute(
+                "SELECT courier_reply_due_at FROM disputes WHERE id=?",
+                (dispute_id,),
+            ).fetchone()[0])
+E           sqlite3.OperationalError: no such column: courier_reply_due_at
+
+tests/test_delayed_disputes.py:114: OperationalError
+_______________ test_offer_specific_quality_is_used_on_purchase ________________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_offer_specific_quality_is0')
+
+    def test_offer_specific_quality_is_used_on_purchase(tmp_path):
+        db, simulation, game = make_game(tmp_path, seed=23)
+        offer = game.offers(1001, 1)[0]
+        with db.connect() as conn:
+            conn.execute(
+                """UPDATE supplier_offers
+                   SET offer_quality_mean=98, offer_quality_sigma=2, offer_reliability=1.0
+                   WHERE id=?""",
+                (offer["id"],),
+            )
+            employee = conn.execute(
+                "SELECT id FROM employees WHERE player_id=1001 AND role='warehouse' AND active=1 LIMIT 1"
+            ).fetchone()
+            conn.execute("UPDATE shops SET balance=100000000 WHERE player_id=1001")
+    
+        result = game.buy_offer_for_employee(1001, int(offer["id"]), int(employee["id"]))
+>       assert "Партия куплена" in result
+E       AssertionError: assert 'Партия куплена' in '✅ Куплено: Амфетамин · 50 ед. за <b>150,000 ₽</b>.\n\nСкладмен Маяк получает партию.\nПосле получения её можно будет ...м.\nОплата складмену будет начислена после успешной передачи товара.\n\nПартия полностью покрыта депозитом сотрудника.'
+
+tests/test_procurement_market.py:117: AssertionError
+____________ test_profile_separates_current_activity_from_inventory ____________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_profile_separates_current0')
+
+    def test_profile_separates_current_activity_from_inventory(tmp_path):
+        db, simulation, game = make_system(tmp_path)
+        with db.connect() as conn:
+            courier = conn.execute(
+                "SELECT * FROM employees WHERE player_id=1001 AND role='courier' ORDER BY id LIMIT 1"
+            ).fetchone()
+            batch = conn.execute(
+                "SELECT * FROM batches WHERE player_id=1001 AND remaining>=10 ORDER BY id LIMIT 1"
+            ).fetchone()
+            warehouse = conn.execute(
+                "SELECT id FROM employees WHERE player_id=1001 AND role='warehouse' ORDER BY id LIMIT 1"
+            ).fetchone()
+            conn.execute("UPDATE batches SET remaining=remaining-10 WHERE id=?", (batch["id"],))
+            cur = conn.execute(
+                """INSERT INTO retail_allocations(
+                       player_id, batch_id, wholesale_employee_id, retail_employee_id,
+                       product_id, quantity, unit_cost, quality, status, received_at
+                   ) VALUES (1001, ?, ?, ?, ?, 10, ?, ?, 'preparing', CURRENT_TIMESTAMP)""",
+                (batch["id"], warehouse["id"], courier["id"], batch["product_id"], batch["unit_cost"], batch["quality"]),
+            )
+            allocation_id = cur.lastrowid
+            conn.execute(
+                """INSERT INTO employee_tasks(
+                       player_id, employee_id, kind, batch_id, allocation_id,
+                       product_id, quantity, completes_at, note
+                   ) VALUES (1001, ?, 'prepare_positions', ?, ?, ?, 10, ?, 'test')""",
+                (courier["id"], batch["id"], allocation_id, batch["product_id"], iso(utcnow() + timedelta(hours=2))),
+            )
+    
+        text = game.employee_details(1001, courier["id"])
+>       assert "Статус: <b>готовит позиции" in text
+E       AssertionError: assert 'Статус: <b>готовит позиции' in '<b>👤 Крот · Розничный сотрудник</b>\n\n<b>Сейчас</b>\nСтатус: <b>готовит товар · ~2.0 ч</b>\nЗадача: Подготовка товар...ар</b>\nАмфетамин: на руках 10 ед.\n\n<b>История</b>\nЗаказов: 0\nСрывов работы: 0\nПотери: 0 ₽\nВсего заработано: 0 ₽'
+
+tests/test_staff_insights.py:66: AssertionError
+__________ test_publication_history_drives_productivity_and_inventory __________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_publication_history_drive0')
+
+    def test_publication_history_drives_productivity_and_inventory(tmp_path):
+        db, simulation, game = make_system(tmp_path)
+        with db.connect() as conn:
+            courier = conn.execute(
+                "SELECT * FROM employees WHERE player_id=1001 AND role='courier' ORDER BY id LIMIT 1"
+            ).fetchone()
+            batch = conn.execute(
+                "SELECT * FROM batches WHERE player_id=1001 AND remaining>=12 ORDER BY id LIMIT 1"
+            ).fetchone()
+            warehouse = conn.execute(
+                "SELECT id FROM employees WHERE player_id=1001 AND role='warehouse' ORDER BY id LIMIT 1"
+            ).fetchone()
+            conn.execute("UPDATE batches SET remaining=remaining-12 WHERE id=?", (batch["id"],))
+            cur = conn.execute(
+                """INSERT INTO retail_allocations(
+                       player_id, batch_id, wholesale_employee_id, retail_employee_id,
+                       product_id, quantity, unit_cost, quality, status, received_at
+                   ) VALUES (1001, ?, ?, ?, ?, 12, ?, ?, 'preparing', CURRENT_TIMESTAMP)""",
+                (batch["id"], warehouse["id"], courier["id"], batch["product_id"], batch["unit_cost"], batch["quality"]),
+            )
+            allocation_id = cur.lastrowid
+            simulation._publish_allocation(conn, 1001, allocation_id)
+    
+        with db.connect() as conn:
+            event = conn.execute(
+                "SELECT * FROM publication_events WHERE player_id=1001 AND employee_id=?",
+                (courier["id"],),
+            ).fetchone()
+            positions = conn.execute(
+                "SELECT COALESCE(SUM(position_count),0) FROM retail_positions WHERE employee_id=?",
+                (courier["id"],),
+            ).fetchone()[0]
+        assert event is not None
+        assert event["positions"] == positions
+    
+        text = game.employee_details(1001, courier["id"])
+        assert "витрина" in text
+        productivity = "\n".join(game._productivity_lines(1001, int(courier["id"])))
+        assert "Средняя: <b>" in productivity
+>       assert "поз. / игровые сутки" in productivity
+E       AssertionError: assert 'поз. / игровые сутки' in 'Средняя: <b>11.0 фасовок / игровые сутки</b>\nПоследние 24 игровых ч: 11 фасовок\nДинамика: нужно минимум двое игровых суток'
+
+tests/test_staff_insights.py:111: AssertionError
+______ test_procurement_assigns_batch_but_does_not_pay_wholesale_employee ______
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_procurement_assigns_batch0')
+
+    def test_procurement_assigns_batch_but_does_not_pay_wholesale_employee(tmp_path):
+        db, _, game, _ = make_system(tmp_path)
+        with db.connect() as conn:
+            employee = conn.execute(
+                "SELECT * FROM employees WHERE player_id=1001 AND role='warehouse' LIMIT 1"
+            ).fetchone()
+            conn.execute("UPDATE employees SET deposit=2000000, wages_accrued=0 WHERE id=?", (employee["id"],))
+            conn.execute("UPDATE shops SET balance=3000000 WHERE player_id=1001")
+            conn.execute("UPDATE suppliers SET reliability=1.0 WHERE id=1")
+            cur = conn.execute(
+                """INSERT INTO supplier_offers(
+                       player_id, supplier_id, product_id, quantity, unit_cost,
+                       quality_hint, offer_quality_mean, offer_quality_sigma,
+                       offer_reliability, market_profile, expires_at
+                   ) VALUES (1001, 1, 1, 50, 3000, 'стабильное', 82, 2, 1.0, 'normal', datetime('now','+1 day'))"""
+            )
+            offer_id = cur.lastrowid
+    
+        result = game.buy_offer_for_employee(1001, offer_id, int(employee["id"]))
+    
+        with db.connect() as conn:
+            batch = conn.execute(
+                "SELECT * FROM batches WHERE player_id=1001 ORDER BY id DESC LIMIT 1"
+            ).fetchone()
+            updated = conn.execute("SELECT * FROM employees WHERE id=?", (employee["id"],)).fetchone()
+            task = conn.execute(
+                "SELECT * FROM employee_tasks WHERE batch_id=? AND kind='receive_batch'",
+                (batch["id"],),
+            ).fetchone()
+>       assert "Ответственный" in result
+E       AssertionError: assert 'Ответственный' in '✅ Куплено: Амфетамин · 50 ед. за <b>150,000 ₽</b>.\n\nСкладмен Маяк получает партию.\nПосле получения её можно будет ...м.\nОплата складмену будет начислена после успешной передачи товара.\n\nПартия полностью покрыта депозитом сотрудника.'
+
+tests/test_staff_responsibility.py:84: AssertionError
+________________ test_primary_ui_screens_render_from_real_state ________________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_primary_ui_screens_render0')
+
+    def test_primary_ui_screens_render_from_real_state(tmp_path):
+        db, simulation, game, recruitment = make_system(tmp_path)
+    
+        home, opened, urgent = _home_snapshot(db, game, simulation, PLAYER_ID)
+        assert "NIGHTSHIFT" in home
+        assert isinstance(opened, int)
+        assert isinstance(urgent, int)
+    
+        target = FakeMessage()
+        asyncio.run(render_inbox(target, game, simulation, PLAYER_ID))
+        assert "Входящие" in target.text
+        assert target.markup is not None
+    
+        asyncio.run(render_procurement_root(target, db, game, PLAYER_ID))
+>       assert "Закупки" in target.text
+E       AssertionError: assert 'Закупки' in '<b>📦 Товар</b>\n\nСвободно: <b>120 000 ₽</b>'
+E        +  where '<b>📦 Товар</b>\n\nСвободно: <b>120 000 ₽</b>' = <test_ui_scenarios.FakeMessage object at 0x7f84b84cdc10>.text
+
+tests/test_ui_scenarios.py:56: AssertionError
+________ test_no_primary_screen_uses_old_home_symbol_or_storefront_name ________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_no_primary_screen_uses_ol0')
+
+    def test_no_primary_screen_uses_old_home_symbol_or_storefront_name(tmp_path):
+        db, simulation, game, recruitment = make_system(tmp_path)
+        target = FakeMessage()
+    
+        async def collect():
+            screens = []
+            await render_inbox(target, game, simulation, PLAYER_ID)
+            screens.append((target.text, target.markup))
+            await render_procurement_root(target, db, game, PLAYER_ID)
+            screens.append((target.text, target.markup))
+            await render_sales_root(target, db, game, simulation, PLAYER_ID)
+            screens.append((target.text, target.markup))
+            await render_team(target, game, simulation, PLAYER_ID)
+            screens.append((target.text, target.markup))
+            await render_recruitment_root(target, recruitment, PLAYER_ID)
+            screens.append((target.text, target.markup))
+            return screens
+    
+        screens = asyncio.run(collect())
+        for text, markup in screens:
+            names = [button.text for row in markup.inline_keyboard for button in row]
+            assert all("⌂" not in name for name in names)
+>           assert "Витрина" not in text
+E           AssertionError: assert 'Витрина' not in '<b>🏷 Витрин...ижает спрос.'
+E             
+E             'Витрина' is contained here:
+E               <b>🏷 Витрина</b>
+E               
+E               Доверие: 67/100
+E               Наценка до ~+7% обычно не снижает спрос.
+
+tests/test_ui_scenarios.py:107: AssertionError
+___ test_wholesale_is_paid_percentage_on_successful_handoff_not_procurement ____
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_wholesale_is_paid_percent0')
+
+    def test_wholesale_is_paid_percentage_on_successful_handoff_not_procurement(tmp_path):
+        db, simulation, game = make_system(tmp_path)
+        offer_id = create_certain_offer(db)
+    
+        with db.connect() as conn:
+            wholesale = conn.execute(
+                "SELECT * FROM employees WHERE player_id=1001 AND role='warehouse' AND active=1 ORDER BY id LIMIT 1"
+            ).fetchone()
+            retail = conn.execute(
+                "SELECT * FROM employees WHERE player_id=1001 AND role='courier' AND active=1 ORDER BY id LIMIT 1"
+            ).fetchone()
+            wholesale_id = int(wholesale["id"])
+            before_jobs = int(wholesale["jobs_done"])
+            before_wages = int(wholesale["wages_accrued"])
+            conn.execute("UPDATE employees SET deposit=0 WHERE id=?", (wholesale_id,))
+    
+        result = game.buy_offer_for_employee(1001, offer_id, wholesale_id)
+>       assert "Оплата будет начислена после успешной передачи товара рознице" in result
+E       AssertionError: assert 'Оплата будет начислена после успешной передачи товара рознице' in '✅ Куплено: Амфетамин · 100 ед. за <b>250,000 ₽</b>.\n\nСкладмен Маяк получает партию.\nПосле получения её можно будет...а складмену будет начислена после успешной передачи товара.\n\n🔴 Не покрыто депозитом после закупки: <b>795,500 ₽</b>.'
+
+tests/test_wholesale_compensation.py:65: AssertionError
+_________ test_role_change_requires_no_inventory_or_pending_assignment _________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_role_change_requires_no_i0')
+
+    def test_role_change_requires_no_inventory_or_pending_assignment(tmp_path):
+        db, _, game = make_system(tmp_path)
+        with db.connect() as conn:
+            wholesale = conn.execute(
+                "SELECT id FROM employees WHERE player_id=1001 AND role='warehouse' LIMIT 1"
+            ).fetchone()
+            retail = conn.execute(
+                "SELECT id FROM employees WHERE player_id=1001 AND role='courier' LIMIT 1"
+            ).fetchone()
+        blocked = game.change_employee_role(1001, int(wholesale["id"]))
+        assert "не иметь назначенного товара" in blocked or "не иметь товара" in blocked
+    
+        with db.connect() as conn:
+            conn.execute("UPDATE retail_positions SET position_count=0 WHERE employee_id=?", (retail["id"],))
+            conn.execute("UPDATE retail_allocations SET status='completed' WHERE retail_employee_id=?", (retail["id"],))
+        changed = game.change_employee_role(1001, int(retail["id"]))
+>       assert "оптовый" in changed
+E       AssertionError: assert 'оптовый' in 'Крот переведён в роль «складмен».'
+
+tests/test_workflow_pipeline.py:140: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_compact_ui.py::test_home_uses_only_canonical_sections - AssertionError: assert ['📨 Входящие ...', 'Обновить'] == ['📨 Входящие ...', 'Обновить']
+  
+  At index 1 diff: '📦 Товар' != '📦 Закупки'
+  
+  Full diff:
+    [
+        '📨 Входящие · 5 · 🔴 2',
+  -     '📦 Закупки',
+  -     '🏷 Продажа',
+  +     '📦 Товар',
+  +     '🏷 Витрина',
+        '👥 Команда',
+        '📊 Аналитика',
+        'Обновить',
+    ]
+FAILED tests/test_courier_core.py::test_candidate_generation_produces_distinct_hidden_archetypes - KeyError: 'transport_required'
+FAILED tests/test_courier_core.py::test_hiring_preserves_hidden_candidate_personality - KeyError: 'transport_required'
+FAILED tests/test_courier_management.py::test_candidate_phone_profile_transfers_on_hire - KeyError: 'transport_required'
+FAILED tests/test_delayed_disputes.py::test_employee_explanation_is_delayed_between_5_and_120_game_minutes - sqlite3.OperationalError: no such column: courier_reply_pending
+FAILED tests/test_delayed_disputes.py::test_repeated_request_does_not_create_new_timer - sqlite3.OperationalError: no such column: courier_reply_due_at
+FAILED tests/test_delayed_disputes.py::test_tick_fast_forward_materializes_pending_reply - sqlite3.OperationalError: no such column: courier_reply_pending
+FAILED tests/test_delayed_disputes.py::test_speed_rescale_preserves_remaining_game_time - sqlite3.OperationalError: no such column: courier_reply_due_at
+FAILED tests/test_procurement_market.py::test_offer_specific_quality_is_used_on_purchase - AssertionError: assert 'Партия куплена' in '✅ Куплено: Амфетамин · 50 ед. за <b>150,000 ₽</b>.\n\nСкладмен Маяк получает партию.\nПосле получения её можно будет ...м.\nОплата складмену будет начислена после успешной передачи товара.\n\nПартия полностью покрыта депозитом сотрудника.'
+FAILED tests/test_staff_insights.py::test_profile_separates_current_activity_from_inventory - AssertionError: assert 'Статус: <b>готовит позиции' in '<b>👤 Крот · Розничный сотрудник</b>\n\n<b>Сейчас</b>\nСтатус: <b>готовит товар · ~2.0 ч</b>\nЗадача: Подготовка товар...ар</b>\nАмфетамин: на руках 10 ед.\n\n<b>История</b>\nЗаказов: 0\nСрывов работы: 0\nПотери: 0 ₽\nВсего заработано: 0 ₽'
+FAILED tests/test_staff_insights.py::test_publication_history_drives_productivity_and_inventory - AssertionError: assert 'поз. / игровые сутки' in 'Средняя: <b>11.0 фасовок / игровые сутки</b>\nПоследние 24 игровых ч: 11 фасовок\nДинамика: нужно минимум двое игровых суток'
+FAILED tests/test_staff_responsibility.py::test_procurement_assigns_batch_but_does_not_pay_wholesale_employee - AssertionError: assert 'Ответственный' in '✅ Куплено: Амфетамин · 50 ед. за <b>150,000 ₽</b>.\n\nСкладмен Маяк получает партию.\nПосле получения её можно будет ...м.\nОплата складмену будет начислена после успешной передачи товара.\n\nПартия полностью покрыта депозитом сотрудника.'
+FAILED tests/test_ui_scenarios.py::test_primary_ui_screens_render_from_real_state - AssertionError: assert 'Закупки' in '<b>📦 Товар</b>\n\nСвободно: <b>120 000 ₽</b>'
+ +  where '<b>📦 Товар</b>\n\nСвободно: <b>120 000 ₽</b>' = <test_ui_scenarios.FakeMessage object at 0x7f84b84cdc10>.text
+FAILED tests/test_ui_scenarios.py::test_no_primary_screen_uses_old_home_symbol_or_storefront_name - AssertionError: assert 'Витрина' not in '<b>🏷 Витрин...ижает спрос.'
+  
+  'Витрина' is contained here:
+    <b>🏷 Витрина</b>
+    
+    Доверие: 67/100
+    Наценка до ~+7% обычно не снижает спрос.
+FAILED tests/test_wholesale_compensation.py::test_wholesale_is_paid_percentage_on_successful_handoff_not_procurement - AssertionError: assert 'Оплата будет начислена после успешной передачи товара рознице' in '✅ Куплено: Амфетамин · 100 ед. за <b>250,000 ₽</b>.\n\nСкладмен Маяк получает партию.\nПосле получения её можно будет...а складмену будет начислена после успешной передачи товара.\n\n🔴 Не покрыто депозитом после закупки: <b>795,500 ₽</b>.'
+FAILED tests/test_workflow_pipeline.py::test_role_change_requires_no_inventory_or_pending_assignment - AssertionError: assert 'оптовый' in 'Крот переведён в роль «складмен».'
+16 failed, 103 passed in 14.21s
+=== RUFF ===
+F401 [*] `aiogram.F` imported but unused
+ --> app/ui_staff.py:3:21
+  |
+1 | from __future__ import annotations
+2 |
+3 | from aiogram import F, Router
+  |                     ^
+4 | from aiogram.fsm.context import FSMContext
+5 | from aiogram.fsm.state import State, StatesGroup
+  |
+help: Remove unused import
+  |
+2 |
+  - from aiogram import F, Router
+3 | from aiogram.fsm.context import FSMContext
+  |
+
+F401 [*] `aiogram.Router` imported but unused
+ --> app/ui_staff.py:3:24
+  |
+1 | from __future__ import annotations
+2 |
+3 | from aiogram import F, Router
+  |                        ^^^^^^
+4 | from aiogram.fsm.context import FSMContext
+5 | from aiogram.fsm.state import State, StatesGroup
+  |
+help: Remove unused import
+  |
+2 |
+  - from aiogram import F, Router
+3 | from aiogram.fsm.context import FSMContext
+  |
+
+F401 [*] `aiogram.types.CallbackQuery` imported but unused
+ --> app/ui_staff.py:6:27
+  |
+4 | from aiogram.fsm.context import FSMContext
+5 | from aiogram.fsm.state import State, StatesGroup
+6 | from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
+  |                           ^^^^^^^^^^^^^
+7 |
+8 | from .courier_management import (
+  |
+help: Remove unused import: `aiogram.types.CallbackQuery`
+  |
+5 | from aiogram.fsm.state import State, StatesGroup
+  - from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
+6 + from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+7 |
+  |
+
+F401 [*] `.employee_rename.rename_employee` imported but unused
+  --> app/ui_staff.py:17:30
+   |
+15 | )
+16 | from .courier_model import condition_band, pace_band, relationship_band
+17 | from .employee_rename import rename_employee
+   |                              ^^^^^^^^^^^^^^^
+18 | from .recruitment import CHANNELS, DURATION_OPTIONS, VOLUME_OPTIONS
+19 | from .ui_common import claim_tip, clean, money, nav_row, notice, pct, present, rating
+   |
+help: Remove unused import: `.employee_rename.rename_employee`
+   |
+16 | from .courier_model import condition_band, pace_band, relationship_band
+   - from .employee_rename import rename_employee
+17 | from .recruitment import CHANNELS, DURATION_OPTIONS, VOLUME_OPTIONS
+   |
+
+F401 [*] `.recruitment.VOLUME_OPTIONS` imported but unused
+  --> app/ui_staff.py:18:54
+   |
+16 | from .courier_model import condition_band, pace_band, relationship_band
+17 | from .employee_rename import rename_employee
+18 | from .recruitment import CHANNELS, DURATION_OPTIONS, VOLUME_OPTIONS
+   |                                                      ^^^^^^^^^^^^^^
+19 | from .ui_common import claim_tip, clean, money, nav_row, notice, pct, present, rating
+   |
+help: Remove unused import: `.recruitment.VOLUME_OPTIONS`
+   |
+17 | from .employee_rename import rename_employee
+   - from .recruitment import CHANNELS, DURATION_OPTIONS, VOLUME_OPTIONS
+18 + from .recruitment import CHANNELS, DURATION_OPTIONS
+19 | from .ui_common import claim_tip, clean, money, nav_row, notice, pct, present, rating
+   |
+
+Found 5 errors.
+[*] 5 fixable with the `--fix` option.
+SUMMARY transform=0 compile=0 pytest=1 ruff=1

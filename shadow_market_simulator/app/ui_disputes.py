@@ -24,10 +24,12 @@ def _dispute_context(game, player_id: int, dispute_id: int):
         ).fetchone()
 
 
-def decision_keyboard(dispute_id: int, page: int = 0) -> InlineKeyboardMarkup:
+def decision_keyboard(dispute_id: int, page: int = 0, *, has_reply: bool = False) -> InlineKeyboardMarkup:
     back = f"inbox:page:{page}" if page else "menu:inbox"
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Запросить пояснение", callback_data=f"dispute:ask:{dispute_id}:{page}")],
+    rows: list[list[InlineKeyboardButton]] = []
+    if not has_reply:
+        rows.append([InlineKeyboardButton(text="Запросить пояснение", callback_data=f"dispute:ask:{dispute_id}:{page}")])
+    rows.extend([
         [
             InlineKeyboardButton(text="Вернуть 100%", callback_data=f"dispute:amount:{dispute_id}:refund:{page}"),
             InlineKeyboardButton(text="Вернуть 50%", callback_data=f"dispute:amount:{dispute_id}:partial:{page}"),
@@ -35,7 +37,7 @@ def decision_keyboard(dispute_id: int, page: int = 0) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="Отказать", callback_data=f"dispute:reject:{dispute_id}:{page}")],
         nav_row(back, "← Входящие"),
     ])
-
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 async def render_dispute(target: Message, game, player_id: int, dispute_id: int, *, page: int = 0) -> bool:
     row = _dispute_context(game, player_id, dispute_id)
@@ -47,15 +49,14 @@ async def render_dispute(target: Message, game, player_id: int, dispute_id: int,
         f"<b>⚖️ Заказ #{row['order_id']} · {money(row['revenue'])}</b>\n\n"
         f"{clean(row['message'])}\n\n"
         f"Товар: {clean(row['product_title'])} · оценка {product_rating}\n"
-        f"Курьер: {clean(row['employee_alias'])} · оценка {courier_rating}"
+        f"Закладчик: {clean(row['employee_alias'])} · оценка {courier_rating}"
     )
     if row["courier_reply"]:
-        text += f"\n\n<b>Пояснение курьера</b>\n{clean(row['courier_reply'])}"
+        text += f"\n\n<b>Пояснение закладчика</b>\n{clean(row['courier_reply'])}"
     else:
-        text += "\n\nПояснение курьера пока не запрошено."
-    await present(target, text, decision_keyboard(dispute_id, page))
+        text += "\n\nПояснение закладчика не запрошено."
+    await present(target, text, decision_keyboard(dispute_id, page, has_reply=bool(row["courier_reply"])))
     return True
-
 
 def source_keyboard(context, decision: str, page: int = 0) -> InlineKeyboardMarkup:
     dispute_id = int(context["dispute_id"])

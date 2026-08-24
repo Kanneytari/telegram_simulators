@@ -323,7 +323,7 @@ class ProcurementMarketGameService(StaffInsightGameService):
             if not offer:
                 return "Предложение уже недоступно."
             if not employee:
-                return "Оптовый сотрудник больше недоступен."
+                return "Складмен больше недоступен."
 
             total = int(offer["quantity"] * offer["unit_cost"])
             if int(shop["balance"]) < total:
@@ -367,7 +367,7 @@ class ProcurementMarketGameService(StaffInsightGameService):
                         offer["product_id"],
                         offer["quantity"],
                         iso(now + timedelta(hours=game_hours / self.simulation.effective_speed(player_id))),
-                        f"Приём партии {offer['product_title']}",
+                        f"Получение партии {offer['product_title']}",
                     ),
                 )
                 conn.execute(
@@ -400,9 +400,9 @@ class ProcurementMarketGameService(StaffInsightGameService):
             else "\n\nПартия полностью покрыта депозитом сотрудника."
         )
         return (
-            f"Партия куплена за <b>{total:,} ₽</b>.\n\n"
-            f"Ответственный: <b>{employee['alias']}</b>\n"
-            "Статус: получает партию\n"
-            "Оплата будет начислена после успешной передачи товара рознице."
+            f"✅ Куплено: {offer['product_title']} · {offer['quantity']} ед. за <b>{total:,} ₽</b>.\n\n"
+            f"Складмен {employee['alias']} получает партию.\n"
+            "После получения её можно будет передать закладчикам.\n"
+            "Оплата складмену будет начислена после успешной передачи товара."
             f"{risk}"
         )

@@ -530,7 +530,7 @@ class WorkflowGameService(OperationsGameService):
             if not offer:
                 return "Предложение уже недоступно."
             if not employee:
-                return "Оптовый сотрудник больше недоступен."
+                return "Складмен больше недоступен."
             total = int(offer["quantity"] * offer["unit_cost"])
             if int(shop["balance"]) < total:
                 return f"Недостаточно денег. Нужно {total:,} ₽."
@@ -582,8 +582,8 @@ class WorkflowGameService(OperationsGameService):
         return (
             f"Партия куплена за <b>{total:,} ₽</b>.\n\n"
             f"Ответственный: <b>{employee['alias']}</b>\n"
-            "Статус: принимает партию\n"
-            "Оплата за работу будет начислена после передачи товара рознице."
+            "Статус: получает партию\n"
+            "Оплата за работу будет начислена после передачи товара закладчику."
             f"{risk}"
         )
 
@@ -605,7 +605,7 @@ class WorkflowGameService(OperationsGameService):
             if not batch:
                 return "Партия ещё не готова к распределению или уже закончилась."
             if not retail:
-                return "Розничный сотрудник недоступен."
+                return "Закладчик недоступен."
             quantity = min(quantity, int(batch["remaining"]))
             conn.execute("UPDATE batches SET remaining=remaining-? WHERE id=?", (quantity, batch_id))
             cur = conn.execute(
@@ -634,10 +634,10 @@ class WorkflowGameService(OperationsGameService):
             )
         retail_after = self._employee_exposure(player_id, retail_employee_id) + quantity * int(batch["unit_cost"])
         unsecured = max(0, retail_after - int(retail["deposit"]))
-        warning = f"\n\n🔴 После получения у сотрудника будет не покрыто депозитом: {unsecured:,} ₽." if unsecured else ""
+        warning = f"\n\n🔴 После получения у закладчика будет не покрыто депозитом: {unsecured:,} ₽." if unsecured else ""
         return (
             f"Назначено <b>{quantity} ед.</b> {batch['product_title']} сотруднику {retail['alias']}.\n\n"
-            f"{batch['wholesale_alias']} начал подготовку передачи. После завершения {retail['alias']} автоматически начнёт подготовку позиций.{warning}"
+            f"{batch['wholesale_alias']} начал подготовку передачи. После завершения {retail['alias']} автоматически начнёт подготовку товара к витрине.{warning}"
         )
 
     def retail_staff_for_batch(self, player_id: int, batch_id: int):
@@ -721,7 +721,7 @@ class WorkflowGameService(OperationsGameService):
                 return "Сначала сотрудник должен завершить текущие задачи и не иметь назначенного товара."
             new_role = "warehouse" if employee["role"] == "courier" else "courier"
             conn.execute("UPDATE employees SET role=? WHERE id=?", (new_role, employee_id))
-        role_title = "оптовый" if new_role == "warehouse" else "розничный"
+        role_title = "складмен" if new_role == "warehouse" else "закладчик"
         return f"{employee['alias']} переведён в роль «{role_title}»."
 
 

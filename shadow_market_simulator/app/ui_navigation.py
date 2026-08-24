@@ -20,8 +20,8 @@ def home_keyboard(opened: int, urgent: int, *, is_admin: bool = False) -> Inline
     rows = [
         [InlineKeyboardButton(text=inbox, callback_data="menu:inbox")],
         [
-            InlineKeyboardButton(text="📦 Закупки", callback_data="menu:procurement"),
-            InlineKeyboardButton(text="🏷 Продажа", callback_data="menu:sales"),
+            InlineKeyboardButton(text="📦 Товар", callback_data="menu:procurement"),
+            InlineKeyboardButton(text="🏷 Витрина", callback_data="menu:sales"),
         ],
         [
             InlineKeyboardButton(text="👥 Команда", callback_data="menu:team"),
@@ -32,7 +32,6 @@ def home_keyboard(opened: int, urgent: int, *, is_admin: bool = False) -> Inline
         rows.append([InlineKeyboardButton(text="🛠 Админ", callback_data="admin:panel")])
     rows.append([InlineKeyboardButton(text="Обновить", callback_data="menu:home")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
-
 
 def _home_snapshot(db, game, simulation, player_id: int) -> tuple[str, int, int]:
     simulation.advance(player_id)
@@ -64,6 +63,12 @@ def _home_snapshot(db, game, simulation, player_id: int) -> tuple[str, int, int]
                ORDER BY stress DESC LIMIT 1""",
             (player_id,),
         ).fetchone()
+        ready_batch = conn.execute(
+            """SELECT id FROM batches
+               WHERE player_id=? AND status='warehouse' AND remaining>0
+               ORDER BY id LIMIT 1""",
+            (player_id,),
+        ).fetchone()
 
     opened = int(inbox["opened"] or 0)
     urgent = int(inbox["urgent"] or 0)
@@ -87,15 +92,23 @@ def _home_snapshot(db, game, simulation, player_id: int) -> tuple[str, int, int]
     if not alerts:
         alerts.append("Срочных проблем нет.")
 
+    next_step = ""
+    if urgent:
+        next_step = "→ 🔴 Разбери срочное сообщение во Входящих."
+    elif ready_batch:
+        next_step = "→ Партия получена. Передай товар закладчику."
+
     text = (
         f"<b>🌒 {clean(shop['name'])}</b>\n\n"
-        f"На счёте <b>{money(shop['balance'])}</b> · можно потратить {money(free_cash)}\n"
+        f"Баланс: <b>{money(shop['balance'])}</b>\n"
+        f"Свободно: <b>{money(free_cash)}</b>\n"
         f"За 7 дней: <b>{money(current['earned'])}</b>{earned_trend} · "
         f"{current['orders']} заказов{orders_trend}\n\n"
-        + "\n".join(alerts[:3])
+        + "\n".join(alerts[:2])
     )
+    if next_step:
+        text += f"\n\n{next_step}"
     return text, opened, urgent
-
 
 async def render_home(target: Message, db, game, simulation, admin_ids: frozenset[int], player_id: int, *, edit: bool = True) -> None:
     text, opened, urgent = _home_snapshot(db, game, simulation, player_id)
@@ -228,7 +241,9 @@ def build_navigation_router(db, game, simulation, admin_ids: frozenset[int]) -> 
         if created:
             await message.answer(
                 "<b>🌒 NIGHTSHIFT</b>\n\n"
-                "Магазин работает, даже когда ты офлайн. Следи за входящими, товаром и командой.",
+                "Ты управляешь магазином, который работает даже когда ты офлайн.\n\n"
+                "Закупай товар, распределяй его между сотрудниками, управляй витриной и разбирай проблемы.\n\n"
+                "<b>Товар → Склад → Закладчики → Витрина → Продажи</b>",
                 reply_markup=ReplyKeyboardRemove(),
             )
         await render_home(message, db, game, simulation, admin_ids, message.from_user.id, edit=False)

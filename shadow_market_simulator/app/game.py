@@ -8,8 +8,8 @@ from .simulation import SimulationEngine, clamp, iso, utcnow
 
 
 ROLE_NAMES = {
-    "courier": "Розничный сотрудник",
-    "warehouse": "Оптовый сотрудник",
+    "courier": "Закладчик",
+    "warehouse": "Складмен",
     "operator": "Оператор",
 }
 

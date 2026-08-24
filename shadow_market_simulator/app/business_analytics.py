@@ -356,7 +356,7 @@ def _team_summary(team: dict, current: dict, previous: dict, ready: bool) -> str
         return f"🟡 {len(tense)} сотрудник(а) перегружены."
     if ready and current["rating_count"] >= 3 and previous["rating_count"] >= 3:
         if current["courier_rating"] <= previous["courier_rating"] - 0.35:
-            return "🟡 Покупатели стали хуже оценивать работу курьеров."
+            return "🟡 Покупатели стали хуже оценивать работу закладчиков."
     return "🟢 Команда работает нормально."
 
 
@@ -407,7 +407,7 @@ def _overview_insights(current: dict, previous: dict, ready: bool, products: lis
 
     if ready and current["rating_count"] >= 3 and previous["rating_count"] >= 3:
         if current["courier_rating"] <= previous["courier_rating"] - 0.35:
-            candidates.append((75, f"🟡 Оценка работы курьеров снизилась до {current['courier_rating']:.1f}/5."))
+            candidates.append((75, f"🟡 Оценка работы закладчиков снизилась до {current['courier_rating']:.1f}/5."))
         if current["product_rating"] <= previous["product_rating"] - 0.35:
             candidates.append((76, f"🟡 Покупатели стали хуже оценивать товар: {current['product_rating']:.1f}/5."))
     if ready and current["orders"] > 0 and previous["orders"] > 0:
@@ -463,10 +463,10 @@ def overview_text(db: Database, player_id: int, period: str = "7", now: datetime
         f"<b>{status}</b>\n"
         f"Заработано: {_money_with_trend(current['earned'], previous['earned'], ready)}\n"
         f"Заказов: {_count_with_trend(current['orders'], previous['orders'], ready)}\n"
-        f"Денег сейчас: <b>{_money(team['balance'])}</b>\n\n"
+        f"Баланс сейчас: <b>{_money(team['balance'])}</b>\n\n"
         f"<b>Покупатели</b>\n"
         f"Товар: {_rating_with_trend(current['product_rating'], current['rating_count'], previous['product_rating'], previous['rating_count'], ready)}\n"
-        f"Курьеры: {_rating_with_trend(current['courier_rating'], current['rating_count'], previous['courier_rating'], previous['rating_count'], ready)}\n"
+        f"Закладчики: {_rating_with_trend(current['courier_rating'], current['rating_count'], previous['courier_rating'], previous['rating_count'], ready)}\n"
         f"Возвращаются: {_share_with_trend(current['repeat_share'], current['orders'], previous['repeat_share'], previous['orders'], ready)}\n"
         f"Доверие: <b>{team['trust']:.0f}/100</b>\n\n"
         f"<b>Команда</b>\n{team_text}\n\n"
@@ -599,7 +599,7 @@ def finance_text(db: Database, player_id: int, period: str = "7", now: datetime 
         f"<b>Заработано:</b> {_money_with_trend(current['earned'], previous['earned'], ready)}\n\n"
         f"<b>Отдельно от торговли</b>\n"
         f"Вложено в развитие: <b>{_money(current['investments'])}</b>\n"
-        f"Денег сейчас: <b>{_money(team['balance'])}</b>\n"
+        f"Баланс сейчас: <b>{_money(team['balance'])}</b>\n"
         f"Нужно выплатить сотрудникам: <b>{_money(team['accrued'])}</b>\n\n"
         f"<b>Где теряем деньги</b>\n" + "\n".join(losses)
     )
