@@ -331,21 +331,6 @@ class CustomerTrustSimulationEngine(GlobalPackagingSimulationEngine):
         conn.execute("UPDATE clients SET loyalty=? WHERE id=?", (updated, order["client_id"]))
         return int(order_id)
 
-    def _create_review(self, conn, player_id: int, order_id: int, *, force: bool):
-        # Old callers now create structured ratings; no text review is generated.
-        employee = conn.execute(
-            """SELECT e.* FROM orders o JOIN employees e ON e.id=o.employee_id
-               WHERE o.id=? AND o.player_id=?""",
-            (order_id, player_id),
-        ).fetchone()
-        if not employee:
-            return None
-        return self._record_rating_conn(conn, order_id, employee)
-
-    def create_review_for_order(self, player_id: int, order_id: int, force: bool = False):
-        with self.db.connect() as conn:
-            return self._create_review(conn, player_id, order_id, force=force)
-
     def _create_retail_order(self, conn, player_id: int, listing, now) -> bool | None:
         position = conn.execute(
             """SELECT rp.id position_id, rp.allocation_id, rp.batch_id,
