@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - "shadow_market_simulator/**"
-      - "tools/nightshift_ux_*.py"
+      - "tools/nightshift_ux_align_tests.py"
       - ".github/workflows/shadow-market-tests.yml"
   pull_request:
     paths:
@@ -31,12 +31,8 @@ jobs:
         run: |
           python -m pip install -r requirements.txt
           python -m pip install ruff
-      - name: Apply UX package
-        run: |
-          python tools/nightshift_ux_backend.py
-          python tools/nightshift_ux_navigation_commerce.py
-          python tools/nightshift_ux_staff.py
-          python tools/nightshift_ux_finish.py
+      - name: Align tests and residual terminology
+        run: python tools/nightshift_ux_align_tests.py
       - name: Compile
         run: python -m compileall -q shadow_market_simulator/app
       - name: Run tests
@@ -45,13 +41,13 @@ jobs:
       - name: Check unused code
         working-directory: shadow_market_simulator
         run: ruff check app tests --select F401,F821,F841
-      - name: Commit generated UX changes
+      - name: Commit validated alignment
         if: success()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add shadow_market_simulator
           if ! git diff --cached --quiet; then
-            git commit -m "Implement NIGHTSHIFT UX redesign [ux-ci]"
+            git commit -m "Align NIGHTSHIFT tests with new UX [ux-tests]"
             git push origin HEAD:ux/nightshift-clearer-game-flow
           fi
