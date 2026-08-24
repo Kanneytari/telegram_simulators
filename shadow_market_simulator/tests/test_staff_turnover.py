@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import random
 
+from app.courier_management import CourierManagementGameService, CourierManagementSimulationEngine
 from app.db import Database
 from app.simulation import utcnow
-from app.workflow_final import FinalWorkflowGameService, FinalWorkflowSimulationEngine
 
 
 def make_system(tmp_path):
     db = Database(str(tmp_path / "game.db"))
     db.init()
-    simulation = FinalWorkflowSimulationEngine(db, rng=random.Random(71))
+    simulation = CourierManagementSimulationEngine(db, rng=random.Random(71))
     simulation.ensure_player(1001, "tester")
-    game = FinalWorkflowGameService(db, simulation, rng=random.Random(72))
+    game = CourierManagementGameService(db, simulation, rng=random.Random(72))
     return db, simulation, game
 
 
@@ -22,7 +22,6 @@ def test_low_loyalty_employee_can_give_resignation_notice(tmp_path):
         employee = conn.execute(
             "SELECT * FROM employees WHERE player_id=1001 AND role='courier' ORDER BY id LIMIT 1"
         ).fetchone()
-        # Free the employee from stock/tasks so this test isolates normal turnover.
         conn.execute("UPDATE retail_positions SET position_count=0 WHERE employee_id=?", (employee["id"],))
         conn.execute("UPDATE retail_allocations SET status='completed' WHERE retail_employee_id=?", (employee["id"],))
         conn.execute("UPDATE employee_tasks SET status='completed' WHERE employee_id=?", (employee["id"],))
