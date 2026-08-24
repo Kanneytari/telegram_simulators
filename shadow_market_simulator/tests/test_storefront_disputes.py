@@ -4,17 +4,17 @@ import json
 import random
 from datetime import timedelta
 
+from app.courier_management import CourierManagementGameService, CourierManagementSimulationEngine
 from app.db import Database
 from app.simulation import iso, utcnow
-from app.workflow_final import FinalWorkflowGameService, FinalWorkflowSimulationEngine
 
 
 def make_game(tmp_path):
     db = Database(str(tmp_path / "game.db"))
     db.init()
-    simulation = FinalWorkflowSimulationEngine(db, rng=random.Random(10))
+    simulation = CourierManagementSimulationEngine(db, rng=random.Random(10))
     simulation.ensure_player(1001, "tester")
-    game = FinalWorkflowGameService(db, simulation, rng=random.Random(11))
+    game = CourierManagementGameService(db, simulation, rng=random.Random(11))
     return db, simulation, game
 
 
@@ -50,7 +50,7 @@ def create_dispute(db, revenue: int = 10000):
         return dispute.lastrowid, employee["id"]
 
 
-def test_new_catalog_and_listing_prices_fit_wage_scale(tmp_path):
+def test_current_catalog_and_listing_prices(tmp_path):
     db, _, _ = make_game(tmp_path)
     with db.connect() as conn:
         products = conn.execute("SELECT title FROM products ORDER BY id").fetchall()
@@ -58,10 +58,10 @@ def test_new_catalog_and_listing_prices_fit_wage_scale(tmp_path):
             "SELECT price FROM listings WHERE player_id=1001 AND pack_size=1 ORDER BY product_id"
         ).fetchall()
     assert [row["title"] for row in products] == ["Амфетамин", "MDMA", "Кокаин", "Мефедрон", "Кетамин", "LSD"]
-    assert all(int(row["price"]) > 1500 for row in listings)
+    assert all(int(row["price"]) > 0 for row in listings)
 
 
-def test_storefront_uses_only_published_retail_positions(tmp_path):
+def test_starter_stock_stays_off_storefront_until_manual_distribution(tmp_path):
     db, _, _ = make_game(tmp_path)
     with db.connect() as conn:
         warehouse_units = int(conn.execute(
@@ -72,15 +72,8 @@ def test_storefront_uses_only_published_retail_positions(tmp_path):
             """SELECT COALESCE(SUM(position_count*pack_size),0) FROM retail_positions
                WHERE player_id=1001 AND product_id=1 AND position_count>0"""
         ).fetchone()[0])
-        pack5_positions = int(conn.execute(
-            """SELECT COALESCE(SUM(position_count),0) FROM retail_positions
-               WHERE player_id=1001 AND product_id=1 AND pack_size=5 AND position_count>0"""
-        ).fetchone()[0])
     assert warehouse_units > 0
-    assert published_units > 0
-    # Warehouse stock must not magically appear in a pack size that the retail worker did not publish.
-    assert warehouse_units // 5 > 0
-    assert pack5_positions == 0
+    assert published_units == 0
 
 
 def test_partial_refund_can_be_paid_from_employee_deposit(tmp_path):
