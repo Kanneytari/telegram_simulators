@@ -12,11 +12,12 @@ from .analytics_handlers import build_analytics_router
 from .analytics_log import AnalyticsLogger, AnalyticsLoggingMiddleware
 from .compensation_handlers import build_compensation_router
 from .config import load_settings
+from .customer_trust import CustomerTrustGameService, CustomerTrustSimulationEngine
+from .customer_trust_handlers import build_customer_trust_router
 from .db import Database
 from .dispute_handlers import build_dispute_router
 from .employee_profile_handlers import build_employee_profile_router
 from .extended_handlers import build_extended_router
-from .global_packaging import GlobalPackagingGameService, GlobalPackagingSimulationEngine
 from .global_packaging_handlers import build_global_packaging_router
 from .handlers import build_router
 from .inbox_close_handlers import build_inbox_close_router
@@ -24,7 +25,6 @@ from .inbox_lifecycle import install_inbox_lifecycle
 from .keyboards import notification_actions
 from .operations_handlers import build_operations_router
 from .procurement_handlers import build_procurement_router
-from .product_review_handlers import build_product_review_router
 from .recruitment_handlers import build_recruitment_router
 from .recruitment_runtime import NightshiftRecruitmentService
 from .simulation import iso, utcnow
@@ -39,8 +39,8 @@ from .workflow_reassign_handlers import build_workflow_reassign_router
 async def notification_loop(
     bot: Bot,
     db: Database,
-    simulation: GlobalPackagingSimulationEngine,
-    game: GlobalPackagingGameService,
+    simulation: CustomerTrustSimulationEngine,
+    game: CustomerTrustGameService,
     recruitment: NightshiftRecruitmentService,
     analytics: AnalyticsLogger,
     interval: int,
@@ -94,9 +94,9 @@ async def main() -> None:
 
     db = Database(settings.db_path)
     db.init()
-    simulation = GlobalPackagingSimulationEngine(db, speed=settings.simulation_speed)
+    simulation = CustomerTrustSimulationEngine(db, speed=settings.simulation_speed)
     simulation.seed_catalog()
-    game = GlobalPackagingGameService(db, simulation)
+    game = CustomerTrustGameService(db, simulation)
     recruitment = NightshiftRecruitmentService(db, speed=settings.simulation_speed)
     install_inbox_lifecycle(db)
 
@@ -114,12 +114,12 @@ async def main() -> None:
     )
     dispatcher.include_router(build_compensation_router(game))
     dispatcher.include_router(build_global_packaging_router(game))
+    dispatcher.include_router(build_customer_trust_router(game, simulation))
     dispatcher.include_router(build_workflow_reassign_router(game))
     dispatcher.include_router(build_workflow_allocation_router(game))
     dispatcher.include_router(build_employee_profile_router(game))
     dispatcher.include_router(build_workflow_router(game))
     dispatcher.include_router(build_procurement_router(game))
-    dispatcher.include_router(build_product_review_router(game))
     dispatcher.include_router(build_operations_router(game))
     dispatcher.include_router(build_dispute_router(game))
     dispatcher.include_router(build_storefront_router(db, game, simulation))
