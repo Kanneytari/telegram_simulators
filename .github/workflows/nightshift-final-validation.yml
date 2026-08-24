@@ -77,4 +77,4 @@ jobs:
             exit 1
           fi
 
-# rerun after aligning all tests with current runtime contracts
+# final green-gate run
