@@ -48,6 +48,14 @@ def clean(value: object) -> str:
 
 def _normalize_tutorial_button_mentions(text: str) -> str:
     text = text.replace("🚚 Склад", "📦 Склад")
+    text = text.replace(
+        "нажми ⏩ Пропустить ожидание",
+        "нажми [⏩ Пропустить ожидание]",
+    )
+    text = text.replace(
+        "нажать ⏩ Пропустить ожидание",
+        "нажать [⏩ Пропустить ожидание]",
+    )
 
     def replace(match: re.Match[str]) -> str:
         label = next(
