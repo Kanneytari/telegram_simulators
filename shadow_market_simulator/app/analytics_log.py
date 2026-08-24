@@ -22,7 +22,7 @@ BEGIN
         entity_type, entity_id, balance, rating, time_multiplier, payload_json
     ) VALUES (
         OLD.player_id, OLD.created_at, 'game_event', 'progress_reset', 'system',
-        'shop', OLD.player_id, OLD.balance, OLD.rating,
+        'shop', OLD.player_id, OLD.balance, COALESCE((SELECT trust_score / 20.0 FROM shop_trust_state WHERE player_id=OLD.player_id), NULL),
         COALESCE((SELECT time_multiplier FROM settings WHERE player_id=OLD.player_id), 1.0),
         json_object('total_orders', OLD.total_orders, 'total_revenue', OLD.total_revenue, 'total_profit', OLD.total_profit)
     );
@@ -36,7 +36,7 @@ BEGIN
         NEW.player_id, (SELECT created_at FROM shops WHERE player_id=NEW.player_id),
         'game_event', 'employee_added', 'staff', 'employee', NEW.id,
         (SELECT balance FROM shops WHERE player_id=NEW.player_id),
-        (SELECT rating FROM shops WHERE player_id=NEW.player_id),
+        COALESCE((SELECT trust_score / 20.0 FROM shop_trust_state WHERE player_id=NEW.player_id), NULL),
         COALESCE((SELECT time_multiplier FROM settings WHERE player_id=NEW.player_id), 1.0),
         json_object('role', NEW.role, 'deposit', NEW.deposit)
     );
@@ -51,7 +51,7 @@ BEGIN
         NEW.player_id, (SELECT created_at FROM shops WHERE player_id=NEW.player_id),
         'game_event', 'employee_deactivated', 'staff', 'employee', NEW.id,
         (SELECT balance FROM shops WHERE player_id=NEW.player_id),
-        (SELECT rating FROM shops WHERE player_id=NEW.player_id),
+        COALESCE((SELECT trust_score / 20.0 FROM shop_trust_state WHERE player_id=NEW.player_id), NULL),
         COALESCE((SELECT time_multiplier FROM settings WHERE player_id=NEW.player_id), 1.0),
         json_object('role', NEW.role, 'deposit_after', NEW.deposit, 'losses', NEW.losses)
     );
@@ -65,7 +65,7 @@ BEGIN
         NEW.player_id, (SELECT created_at FROM shops WHERE player_id=NEW.player_id),
         'game_event', 'supplier_offer_created', 'procurement', 'supplier_offer', NEW.id,
         (SELECT balance FROM shops WHERE player_id=NEW.player_id),
-        (SELECT rating FROM shops WHERE player_id=NEW.player_id),
+        COALESCE((SELECT trust_score / 20.0 FROM shop_trust_state WHERE player_id=NEW.player_id), NULL),
         COALESCE((SELECT time_multiplier FROM settings WHERE player_id=NEW.player_id), 1.0),
         json_object('supplier_id', NEW.supplier_id, 'product_id', NEW.product_id, 'quantity', NEW.quantity, 'unit_cost', NEW.unit_cost)
     );
@@ -79,7 +79,7 @@ BEGIN
         NEW.player_id, (SELECT created_at FROM shops WHERE player_id=NEW.player_id),
         'game_event', 'batch_created', 'workflow', 'batch', NEW.id,
         (SELECT balance FROM shops WHERE player_id=NEW.player_id),
-        (SELECT rating FROM shops WHERE player_id=NEW.player_id),
+        COALESCE((SELECT trust_score / 20.0 FROM shop_trust_state WHERE player_id=NEW.player_id), NULL),
         COALESCE((SELECT time_multiplier FROM settings WHERE player_id=NEW.player_id), 1.0),
         json_object('supplier_id', NEW.supplier_id, 'product_id', NEW.product_id, 'quantity', NEW.quantity, 'unit_cost', NEW.unit_cost, 'responsible_employee_id', NEW.responsible_employee_id)
     );
@@ -93,7 +93,7 @@ BEGIN
         NEW.player_id, (SELECT created_at FROM shops WHERE player_id=NEW.player_id),
         'game_event', 'order_created', 'sales', 'order', NEW.id,
         (SELECT balance FROM shops WHERE player_id=NEW.player_id),
-        (SELECT rating FROM shops WHERE player_id=NEW.player_id),
+        COALESCE((SELECT trust_score / 20.0 FROM shop_trust_state WHERE player_id=NEW.player_id), NULL),
         COALESCE((SELECT time_multiplier FROM settings WHERE player_id=NEW.player_id), 1.0),
         json_object('client_id', NEW.client_id, 'employee_id', NEW.employee_id, 'batch_id', NEW.batch_id,
                     'product_id', NEW.product_id, 'quantity', NEW.quantity, 'revenue', NEW.revenue,
@@ -111,7 +111,7 @@ BEGIN
         NEW.player_id, (SELECT created_at FROM shops WHERE player_id=NEW.player_id),
         'game_event', 'order_rated', 'customer', 'order', NEW.order_id,
         (SELECT balance FROM shops WHERE player_id=NEW.player_id),
-        (SELECT rating FROM shops WHERE player_id=NEW.player_id),
+        COALESCE((SELECT trust_score / 20.0 FROM shop_trust_state WHERE player_id=NEW.player_id), NULL),
         COALESCE((SELECT time_multiplier FROM settings WHERE player_id=NEW.player_id), 1.0),
         json_object('client_id', NEW.client_id, 'product_id', NEW.product_id, 'employee_id', NEW.employee_id,
                     'product_rating', NEW.product_rating, 'courier_rating', NEW.courier_rating)
@@ -126,7 +126,7 @@ BEGIN
         NEW.player_id, (SELECT created_at FROM shops WHERE player_id=NEW.player_id),
         'game_event', 'dispute_opened', 'customer', 'dispute', NEW.id,
         (SELECT balance FROM shops WHERE player_id=NEW.player_id),
-        (SELECT rating FROM shops WHERE player_id=NEW.player_id),
+        COALESCE((SELECT trust_score / 20.0 FROM shop_trust_state WHERE player_id=NEW.player_id), NULL),
         COALESCE((SELECT time_multiplier FROM settings WHERE player_id=NEW.player_id), 1.0),
         json_object('order_id', NEW.order_id, 'true_cause', NEW.true_cause, 'deadline_at', NEW.deadline_at)
     );
@@ -141,7 +141,7 @@ BEGIN
         NEW.player_id, (SELECT created_at FROM shops WHERE player_id=NEW.player_id),
         'game_event', 'dispute_resolved', 'customer', 'dispute', NEW.id,
         (SELECT balance FROM shops WHERE player_id=NEW.player_id),
-        (SELECT rating FROM shops WHERE player_id=NEW.player_id),
+        COALESCE((SELECT trust_score / 20.0 FROM shop_trust_state WHERE player_id=NEW.player_id), NULL),
         COALESCE((SELECT time_multiplier FROM settings WHERE player_id=NEW.player_id), 1.0),
         json_object('order_id', NEW.order_id, 'decision', NEW.decision, 'refund_amount', NEW.refund_amount,
                     'refund_source', NEW.refund_source, 'refund_employee_id', NEW.refund_employee_id)
@@ -156,7 +156,7 @@ BEGIN
         NEW.player_id, (SELECT created_at FROM shops WHERE player_id=NEW.player_id),
         'game_event', 'inbox_created', 'inbox', 'inbox', NEW.id,
         (SELECT balance FROM shops WHERE player_id=NEW.player_id),
-        (SELECT rating FROM shops WHERE player_id=NEW.player_id),
+        COALESCE((SELECT trust_score / 20.0 FROM shop_trust_state WHERE player_id=NEW.player_id), NULL),
         COALESCE((SELECT time_multiplier FROM settings WHERE player_id=NEW.player_id), 1.0),
         json_object('kind', NEW.kind, 'priority', NEW.priority, 'title', NEW.title)
     );
@@ -170,7 +170,7 @@ BEGIN
         NEW.player_id, (SELECT created_at FROM shops WHERE player_id=NEW.player_id),
         'game_event', 'ledger_entry_created', 'finance', 'ledger', NEW.id,
         (SELECT balance FROM shops WHERE player_id=NEW.player_id),
-        (SELECT rating FROM shops WHERE player_id=NEW.player_id),
+        COALESCE((SELECT trust_score / 20.0 FROM shop_trust_state WHERE player_id=NEW.player_id), NULL),
         COALESCE((SELECT time_multiplier FROM settings WHERE player_id=NEW.player_id), 1.0),
         json_object('amount', NEW.amount, 'kind', NEW.kind, 'reference_type', NEW.reference_type, 'reference_id', NEW.reference_id)
     );
@@ -184,7 +184,7 @@ BEGIN
         NEW.player_id, (SELECT created_at FROM shops WHERE player_id=NEW.player_id),
         'game_event', 'payroll_processed', 'finance', 'payroll_run', NEW.id,
         (SELECT balance FROM shops WHERE player_id=NEW.player_id),
-        (SELECT rating FROM shops WHERE player_id=NEW.player_id),
+        COALESCE((SELECT trust_score / 20.0 FROM shop_trust_state WHERE player_id=NEW.player_id), NULL),
         COALESCE((SELECT time_multiplier FROM settings WHERE player_id=NEW.player_id), 1.0),
         json_object('gross_wages', NEW.gross_wages, 'cash_paid', NEW.cash_paid, 'deposit_added', NEW.deposit_added,
                     'employee_count', NEW.employee_count, 'status', NEW.status)
@@ -199,7 +199,7 @@ BEGIN
         NEW.player_id, (SELECT created_at FROM shops WHERE player_id=NEW.player_id),
         'game_event', 'recruitment_campaign_started', 'recruitment', 'recruitment_campaign', NEW.id,
         (SELECT balance FROM shops WHERE player_id=NEW.player_id),
-        (SELECT rating FROM shops WHERE player_id=NEW.player_id),
+        COALESCE((SELECT trust_score / 20.0 FROM shop_trust_state WHERE player_id=NEW.player_id), NULL),
         COALESCE((SELECT time_multiplier FROM settings WHERE player_id=NEW.player_id), 1.0),
         json_object('channel', NEW.channel, 'role', NEW.role, 'cost', NEW.cost, 'traffic_multiplier', NEW.traffic_multiplier,
                     'duration_hours', NEW.duration_hours, 'min_deposit', NEW.min_deposit,
@@ -216,7 +216,7 @@ BEGIN
         NEW.player_id, (SELECT created_at FROM shops WHERE player_id=NEW.player_id),
         'game_event', 'recruitment_campaign_completed', 'recruitment', 'recruitment_campaign', NEW.id,
         (SELECT balance FROM shops WHERE player_id=NEW.player_id),
-        (SELECT rating FROM shops WHERE player_id=NEW.player_id),
+        COALESCE((SELECT trust_score / 20.0 FROM shop_trust_state WHERE player_id=NEW.player_id), NULL),
         COALESCE((SELECT time_multiplier FROM settings WHERE player_id=NEW.player_id), 1.0),
         json_object('channel', NEW.channel, 'role', NEW.role, 'cost', NEW.cost, 'candidates_created', NEW.candidates_created)
     );
@@ -231,7 +231,7 @@ BEGIN
         NEW.player_id, (SELECT created_at FROM shops WHERE player_id=NEW.player_id),
         'game_event', 'listing_price_changed', 'storefront', 'listing', NEW.id,
         (SELECT balance FROM shops WHERE player_id=NEW.player_id),
-        (SELECT rating FROM shops WHERE player_id=NEW.player_id),
+        COALESCE((SELECT trust_score / 20.0 FROM shop_trust_state WHERE player_id=NEW.player_id), NULL),
         COALESCE((SELECT time_multiplier FROM settings WHERE player_id=NEW.player_id), 1.0),
         json_object('product_id', NEW.product_id, 'pack_size', NEW.pack_size, 'old_price', OLD.price, 'new_price', NEW.price)
     );
@@ -246,7 +246,7 @@ BEGIN
         NEW.player_id, (SELECT created_at FROM shops WHERE player_id=NEW.player_id),
         'game_event', 'time_multiplier_changed', 'admin', 'settings', NEW.player_id,
         (SELECT balance FROM shops WHERE player_id=NEW.player_id),
-        (SELECT rating FROM shops WHERE player_id=NEW.player_id),
+        COALESCE((SELECT trust_score / 20.0 FROM shop_trust_state WHERE player_id=NEW.player_id), NULL),
         NEW.time_multiplier,
         json_object('old', OLD.time_multiplier, 'new', NEW.time_multiplier)
     );
@@ -287,7 +287,10 @@ class AnalyticsLogger:
     ) -> None:
         with self.db.connect() as conn:
             shop = conn.execute(
-                "SELECT created_at, balance, rating FROM shops WHERE player_id=?",
+                """SELECT s.created_at, s.balance, st.trust_score
+                   FROM shops s
+                   LEFT JOIN shop_trust_state st ON st.player_id=s.player_id
+                   WHERE s.player_id=?""",
                 (player_id,),
             ).fetchone()
             settings = conn.execute(
@@ -308,7 +311,7 @@ class AnalyticsLogger:
                     entity_type,
                     entity_id,
                     int(shop["balance"]) if shop else None,
-                    float(shop["rating"]) if shop else None,
+                    float(shop["trust_score"]) / 20.0 if shop and shop["trust_score"] is not None else None,
                     float(settings["time_multiplier"]) if settings else None,
                     json.dumps(payload or {}, ensure_ascii=False, separators=(",", ":")),
                 ),
