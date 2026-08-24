@@ -77,4 +77,4 @@ jobs:
             exit 1
           fi
 
-# rerun after final dead-code cleanup
+# rerun after canonical analytics trust cleanup
