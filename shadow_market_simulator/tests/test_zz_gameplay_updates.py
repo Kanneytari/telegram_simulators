@@ -24,8 +24,10 @@ EXPECTED_BATCH_SIZES = {50, 100, 250, 500, 1000}
 
 def make_system(tmp_path, seed=101):
     from app.gameplay_updates import apply_gameplay_updates
+    from app.handoff_copy_update import apply_handoff_copy_update
 
     apply_gameplay_updates()
+    apply_handoff_copy_update()
     db = Database(str(tmp_path / "game.db"))
     db.init()
     simulation = CourierManagementSimulationEngine(db, speed=1.0, rng=random.Random(seed))
