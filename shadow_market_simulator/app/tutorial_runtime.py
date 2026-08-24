@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+
 from . import procurement_market, tutorial, workflow
 from .simulation import utcnow
+from .ui_common import tutorial_hint
 
 
 def _install_final_procurement_protection() -> None:
@@ -68,6 +71,55 @@ def _install_affordable_product_filter() -> None:
     )
 
 
+def _install_management_tour() -> None:
+    current_markup = tutorial._tutorial_home_markup
+    current_text = tutorial._home_text
+    if getattr(current_markup, "_nightshift_management_tour", False):
+        return
+
+    def tutorial_home_markup(stage: str) -> InlineKeyboardMarkup:
+        if stage != tutorial.STAGE_TEAM:
+            return current_markup(stage)
+        return InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(text="👥 Команда", callback_data="menu:team"),
+                    InlineKeyboardButton(text="🔎 Найм", callback_data="team:recruit"),
+                ],
+                [
+                    InlineKeyboardButton(text="💰 Оплата", callback_data="team:terms"),
+                    InlineKeyboardButton(text="⚙️ Фасовки", callback_data="sales:packaging"),
+                ],
+                [
+                    InlineKeyboardButton(text="📊 Аналитика", callback_data="menu:analytics"),
+                    InlineKeyboardButton(text="📨 Входящие", callback_data="menu:inbox"),
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="✅ Завершить обучение",
+                        callback_data="tutorial:finish",
+                    )
+                ],
+            ]
+        )
+
+    def home_text(game, player_id: int, state: dict) -> str:
+        text = current_text(game, player_id, state)
+        if state["stage"] != tutorial.STAGE_TEAM:
+            return text
+        return text + "\n\n" + tutorial_hint(
+            "Перед завершением загляни в остальные рабочие экраны. В Команде видны состояние, "
+            "история и риск сотрудников; в Найме задаются требования к кандидатам; в Оплате — "
+            "условия ролей; Фасовки управляют будущей публикацией товара; Аналитика показывает "
+            "результаты бизнеса; во Входящих появляются события, требующие решения."
+        )
+
+    tutorial_home_markup._nightshift_management_tour = True
+    tutorial._tutorial_home_markup = tutorial_home_markup
+    tutorial._home_text = home_text
+
+
 def apply_tutorial_runtime_fixes() -> None:
     _install_final_procurement_protection()
     _install_affordable_product_filter()
+    _install_management_tour()
