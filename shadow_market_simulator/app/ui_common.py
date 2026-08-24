@@ -84,8 +84,15 @@ def _normalize_menu_buttons(markup: InlineKeyboardMarkup | None) -> InlineKeyboa
     for row in markup.inline_keyboard:
         normalized_row: list[InlineKeyboardButton] = []
         for button in row:
+            replacement = None
             if button.callback_data == "menu:home" and button.text == "Меню":
-                button = button.model_copy(update={"text": "🏠 Меню"})
+                replacement = "🏠 Меню"
+            elif button.callback_data == "team:recruit" and button.text == "Нанять":
+                replacement = "🔎 Нанять"
+            elif button.callback_data == "team:terms" and button.text == "Оплата":
+                replacement = "⚙️ Оплата"
+            if replacement is not None:
+                button = button.model_copy(update={"text": replacement})
                 changed = True
             normalized_row.append(button)
         rows.append(normalized_row)
