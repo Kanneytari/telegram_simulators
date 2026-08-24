@@ -2,12 +2,17 @@ from __future__ import annotations
 
 import re
 from html import escape
+from pathlib import Path
 
+from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto, Message
 
 
 _THOUSANDS_COMMA = re.compile(r"(?<=\d),(?=\d{3}(?:\D|$))")
+_ASSET_DIR = Path(__file__).resolve().parent.parent / "assets"
+_HOME_IMAGE = _ASSET_DIR / "nightshift_menu.jpg"
+_PRODUCT_IMAGE = _ASSET_DIR / "nightshift_product.jpg"
 
 
 def money(value: int | float) -> str:
@@ -55,6 +60,40 @@ def claim_tip(db, player_id: int, code: str) -> bool:
     return cur.rowcount > 0
 
 
+def _callback_data(markup: InlineKeyboardMarkup | None) -> set[str]:
+    if not markup:
+        return set()
+    return {
+        button.callback_data
+        for row in markup.inline_keyboard
+        for button in row
+        if button.callback_data
+    }
+
+
+def _screen_image(text: str, markup: InlineKeyboardMarkup | None) -> Path | None:
+    callbacks = _callback_data(markup)
+    if {"menu:inbox", "menu:product", "menu:storefront", "menu:team"}.issubset(callbacks):
+        return _HOME_IMAGE if _HOME_IMAGE.is_file() else None
+    if "<b>📦 Товар</b>" in text and "menu:product" in callbacks:
+        return _PRODUCT_IMAGE if _PRODUCT_IMAGE.is_file() else None
+    return None
+
+
+async def _answer_photo(
+    target: Message,
+    image: Path,
+    text: str,
+    markup: InlineKeyboardMarkup | None,
+) -> None:
+    await target.answer_photo(
+        photo=FSInputFile(image),
+        caption=text,
+        parse_mode=ParseMode.HTML,
+        reply_markup=markup,
+    )
+
+
 async def present(
     target: Message,
     text: str,
@@ -63,6 +102,41 @@ async def present(
     edit: bool = True,
 ) -> None:
     text = normalize_text(text)
+    image = _screen_image(text, markup)
+
+    if image is not None:
+        if not edit:
+            await _answer_photo(target, image, text, markup)
+            return
+        if target.photo:
+            try:
+                await target.edit_media(
+                    InputMediaPhoto(
+                        media=FSInputFile(image),
+                        caption=text,
+                        parse_mode=ParseMode.HTML,
+                    ),
+                    reply_markup=markup,
+                )
+            except TelegramBadRequest as exc:
+                if "message is not modified" not in str(exc).lower():
+                    raise
+            return
+        try:
+            await target.delete()
+        except TelegramBadRequest:
+            pass
+        await _answer_photo(target, image, text, markup)
+        return
+
+    if target.photo and edit:
+        try:
+            await target.delete()
+        except TelegramBadRequest:
+            pass
+        await target.answer(text, reply_markup=markup)
+        return
+
     if not edit:
         await target.answer(text, reply_markup=markup)
         return
