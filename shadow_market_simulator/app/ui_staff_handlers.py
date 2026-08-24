@@ -58,7 +58,7 @@ async def render_batch(target: Message, game, player_id: int, batch_id: int, *, 
             if status == "свободен": status = "готов принять"
             unsecured = max(0, int(employee.get("exposure", 0)) - int(employee["deposit"]))
             risk = f" · 🔴 уже не покрыто {money(unsecured)}" if unsecured else ""
-            rows.append([InlineKeyboardButton(text=f"{employee['alias']} · {status}{risk}", callback_data=f"team:alloc:{batch_id}:{employee['id']}:{min(10, int(batch['remaining']))}")])
+            rows.append([InlineKeyboardButton(text=f"{employee['alias']} · {status}{risk}", callback_data=f"team:alloc:{batch_id}:{employee['id']}:{int(employee.get('recommended_quantity', 0))}")])
         if warehouse_count > 1:
             rows.append([InlineKeyboardButton(text="Сменить складмена", callback_data=f"team:reassign:{batch_id}")])
     rows.append(nav_row("team:batches", "← Склад"))
@@ -364,7 +364,7 @@ def build_staff_router(game, simulation, recruitment) -> Router:
                 result = "Партия или сотрудник уже недоступны."
             else:
                 conn.execute("UPDATE batches SET responsible_employee_id=? WHERE id=?", (employee_id, batch_id))
-                result = f"Ответственный: {employee['alias']}."
+                result = f"Складмен: {employee['alias']}."
         await render_batch(callback.message, game, callback.from_user.id, batch_id, flash=result)
 
     @router.callback_query(F.data == "team:terms")

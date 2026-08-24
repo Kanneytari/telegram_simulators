@@ -151,7 +151,7 @@ class StaffInsightGameService(WorkflowGameService):
                 labels = {
                     "receive_batch": "получает партию",
                     "handoff": "готовит передачу",
-                    "prepare_positions": "готовит товар",
+                    "place_stashes": "раскидывает клады",
                 }
                 return f"{labels.get(task['kind'], task['kind'])} · {eta}"
             if not employee["available"]:
@@ -215,7 +215,7 @@ class StaffInsightGameService(WorkflowGameService):
             labels = {
                 "receive_batch": "Получение партии",
                 "handoff": "Подготовка передачи закладчику",
-                "prepare_positions": "Подготовка товара к витрине",
+                "place_stashes": "Подготовка товара к витрине",
             }
             remaining_real_min = max(0.0, (parse_dt(task["completes_at"]) - now).total_seconds() / 60.0)
             remaining_game_h = remaining_real_min / 60.0 * self.simulation.effective_speed(player_id)

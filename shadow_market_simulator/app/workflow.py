@@ -13,7 +13,7 @@ from .simulation import clamp, iso, parse_dt, utcnow
 TASK_LABELS = {
     "receive_batch": "получает партию",
     "handoff": "готовит передачу закладчику",
-    "prepare_positions": "готовит товар",
+    "place_stashes": "раскидывает клады",
 }
 
 
@@ -166,7 +166,7 @@ class WorkflowSimulationEngine(OperationsSimulationEngine):
                             """INSERT INTO employee_tasks(
                                    player_id, employee_id, kind, batch_id, allocation_id,
                                    product_id, quantity, completes_at, note
-                               ) VALUES (?, ?, 'prepare_positions', ?, ?, ?, ?, ?, ?)""",
+                               ) VALUES (?, ?, 'place_stashes', ?, ?, ?, ?, ?, ?)""",
                             (
                                 player_id,
                                 retail["id"],
@@ -180,7 +180,7 @@ class WorkflowSimulationEngine(OperationsSimulationEngine):
                         )
                     else:
                         conn.execute("UPDATE retail_allocations SET status='blocked' WHERE id=?", (allocation["id"],))
-            elif task["kind"] == "prepare_positions":
+            elif task["kind"] == "place_stashes":
                 self._publish_allocation(conn, player_id, int(task["allocation_id"]))
             conn.execute("UPDATE employee_tasks SET status='completed' WHERE id=?", (task["id"],))
             completed += 1
@@ -581,7 +581,7 @@ class WorkflowGameService(OperationsGameService):
         )
         return (
             f"Партия куплена за <b>{total:,} ₽</b>.\n\n"
-            f"Ответственный: <b>{employee['alias']}</b>\n"
+            f"Складмен: <b>{employee['alias']}</b>\n"
             "Статус: получает партию\n"
             "Оплата за работу будет начислена после передачи товара закладчику."
             f"{risk}"
@@ -650,14 +650,21 @@ class WorkflowGameService(OperationsGameService):
         if not batch:
             return None, []
         result = []
+        remaining = max(0, int(batch["remaining"]))
+        unit_cost = max(1, int(batch["unit_cost"]))
         for employee in staff:
             exposure = self._employee_exposure(player_id, int(employee["id"]))
+            free = max(0, int(employee["deposit"]) - exposure)
+            covered_units = free // unit_cost
+            recommended_quantity = min(remaining, covered_units)
+            recommended_quantity -= recommended_quantity % 5
             result.append({
                 "id": int(employee["id"]),
                 "alias": employee["alias"],
                 "deposit": int(employee["deposit"]),
                 "exposure": exposure,
-                "free": max(0, int(employee["deposit"]) - exposure),
+                "free": free,
+                "recommended_quantity": recommended_quantity,
             })
         return batch, result
 

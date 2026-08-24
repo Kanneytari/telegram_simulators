@@ -69,3 +69,51 @@ def test_recruitment_uses_transport_levels(tmp_path):
     recruitment.update_draft(PLAYER_ID, "transport_required", 2)
     assert int(recruitment.ensure_draft(PLAYER_ID)["transport_required"]) == 2
     assert TRANSPORT[1][0] == "велосипед"
+
+
+
+def test_recommended_handoff_uses_free_deposit_and_rounds_to_five(tmp_path):
+    db, _, game, _ = make_system(tmp_path)
+    with db.connect() as conn:
+        courier = conn.execute(
+            "SELECT id FROM employees WHERE player_id=? AND role='courier' ORDER BY id LIMIT 1",
+            (PLAYER_ID,),
+        ).fetchone()
+        batch = conn.execute(
+            "SELECT id, unit_cost FROM batches WHERE player_id=? AND status='warehouse' ORDER BY id LIMIT 1",
+            (PLAYER_ID,),
+        ).fetchone()
+        assert courier and batch
+        employee_id = int(courier["id"])
+        batch_id = int(batch["id"])
+        unit_cost = int(batch["unit_cost"])
+        exposure = game._employee_exposure(PLAYER_ID, employee_id)
+        conn.execute("UPDATE employees SET deposit=? WHERE id=?", (exposure + unit_cost * 27, employee_id))
+        conn.execute("UPDATE batches SET remaining=18 WHERE id=?", (batch_id,))
+
+    current_batch, staff = game.retail_staff_for_batch(PLAYER_ID, batch_id)
+    employee = next(row for row in staff if int(row["id"]) == employee_id)
+    assert int(current_batch["remaining"]) == 18
+    assert int(employee["recommended_quantity"]) == 15
+
+
+def test_recommended_handoff_is_zero_when_deposit_covers_less_than_five(tmp_path):
+    db, _, game, _ = make_system(tmp_path)
+    with db.connect() as conn:
+        courier = conn.execute(
+            "SELECT id FROM employees WHERE player_id=? AND role='courier' ORDER BY id LIMIT 1",
+            (PLAYER_ID,),
+        ).fetchone()
+        batch = conn.execute(
+            "SELECT id, unit_cost FROM batches WHERE player_id=? AND status='warehouse' ORDER BY id LIMIT 1",
+            (PLAYER_ID,),
+        ).fetchone()
+        assert courier and batch
+        employee_id = int(courier["id"])
+        unit_cost = int(batch["unit_cost"])
+        exposure = game._employee_exposure(PLAYER_ID, employee_id)
+        conn.execute("UPDATE employees SET deposit=? WHERE id=?", (exposure + unit_cost * 4, employee_id))
+
+    _, staff = game.retail_staff_for_batch(PLAYER_ID, int(batch["id"]))
+    employee = next(row for row in staff if int(row["id"]) == employee_id)
+    assert int(employee["recommended_quantity"]) == 0

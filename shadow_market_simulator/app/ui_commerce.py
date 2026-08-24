@@ -65,12 +65,12 @@ def _procurement_products_keyboard(db, player_id: int, products) -> InlineKeyboa
         ).fetchone()[0])
     rows.append([InlineKeyboardButton(text=f"Склад · {batch_count}", callback_data="team:batches")])
     rows.append([
-        InlineKeyboardButton(text="Обновить", callback_data="menu:procurement"),
+        InlineKeyboardButton(text="Обновить", callback_data="menu:product"),
         InlineKeyboardButton(text="Меню", callback_data="menu:home"),
     ])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
-async def render_procurement_root(target: Message, db, game, player_id: int, *, flash: str | None = None) -> None:
+async def render_product_root(target: Message, db, game, player_id: int, *, flash: str | None = None) -> None:
     products = game.procurement_products(player_id)
     with db.connect() as conn:
         free_cash = game._free_cash_conn(conn, player_id) if hasattr(game, "_free_cash_conn") else int(
@@ -89,7 +89,7 @@ def _offers_keyboard(product_id: int, offers) -> InlineKeyboardMarkup:
             text=f"{_offer_marker(str(offer['market_profile']))}×{offer['quantity']} · {money(total)} · {quality}",
             callback_data=f"proc:offer:{offer['id']}",
         )])
-    rows.append(nav_row("menu:procurement", "← Товар"))
+    rows.append(nav_row("menu:product", "← Товар"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -98,7 +98,7 @@ async def render_procurement_product(target: Message, game, player_id: int, prod
     with game.db.connect() as conn:
         product = conn.execute("SELECT title FROM products WHERE id=? AND active=1", (product_id,)).fetchone()
     if not product:
-        await render_procurement_root(target, game.db, game, player_id, flash=flash)
+        await render_product_root(target, game.db, game, player_id, flash=flash)
         return
     body = f"<b>📦 {clean(product['title'])}</b>\n\nДоступно: {len(offers)} предложений."
     await present(target, notice(flash, body), _offers_keyboard(product_id, offers))
@@ -136,7 +136,7 @@ def _offer_keyboard(offer_id: int, product_id: int, selected, staff) -> InlineKe
 async def render_offer(target: Message, game, player_id: int, offer_id: int, employee_id: int | None = None) -> None:
     offer = game.procurement_offer(player_id, offer_id)
     if not offer:
-        await render_procurement_root(target, game.db, game, player_id, flash="Предложение уже исчезло с рынка.")
+        await render_product_root(target, game.db, game, player_id, flash="Предложение уже исчезло с рынка.")
         return
     typical = game.offer_typical_unit_cost(offer)
     delta = (float(offer["unit_cost"]) / typical - 1.0) * 100.0 if typical else 0.0
@@ -174,7 +174,7 @@ async def render_offer(target: Message, game, player_id: int, offer_id: int, emp
 async def render_offer_staff(target: Message, game, player_id: int, offer_id: int) -> None:
     offer = game.procurement_offer(player_id, offer_id)
     if not offer:
-        await render_procurement_root(target, game.db, game, player_id, flash="Предложение уже недоступно.")
+        await render_product_root(target, game.db, game, player_id, flash="Предложение уже недоступно.")
         return
     staff = game.warehouse_staff_for_offer(player_id, offer_id)
     rows = []
@@ -225,7 +225,7 @@ def _sales_root_keyboard(rows) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-async def render_sales_root(target: Message, db, game, simulation, player_id: int) -> None:
+async def render_storefront_root(target: Message, db, game, simulation, player_id: int) -> None:
     simulation.advance(player_id)
     rows = _sales_products(db, player_id)
     trust = game.customer_metrics(player_id)
@@ -272,7 +272,7 @@ async def render_sales_product(target: Message, db, player_id: int, product_id: 
         text=f"×{listing['pack_size']} · {money(listing['price'])} · доступно {int(listing['positions'])}",
         callback_data=f"sales:listing:{listing['id']}",
     )] for listing in listings]
-    rows.append(nav_row("menu:sales", "← Витрина"))
+    rows.append(nav_row("menu:storefront", "← Витрина"))
     await present(
         target,
         f"<b>{clean(product['title'])}</b>\n\n{published} ед. готовы к продаже · оценка {rating(avg, n)}",
@@ -326,7 +326,7 @@ def packaging_keyboard(rule) -> InlineKeyboardMarkup:
             InlineKeyboardButton(text=f"×{size} −10", callback_data=f"sales:packadj:{size}:-10"),
             InlineKeyboardButton(text=f"×{size} +10", callback_data=f"sales:packadj:{size}:10"),
         ])
-    rows.append(nav_row("menu:sales", "← Витрина"))
+    rows.append(nav_row("menu:storefront", "← Витрина"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -346,10 +346,10 @@ async def render_packaging(target: Message, game, player_id: int) -> None:
 def build_commerce_router(db, game, simulation) -> Router:
     router = Router(name="compact-commerce")
 
-    @router.callback_query(F.data == "menu:procurement")
+    @router.callback_query(F.data == "menu:product")
     async def procurement(callback: CallbackQuery) -> None:
         await callback.answer()
-        await render_procurement_root(callback.message, db, game, callback.from_user.id)
+        await render_product_root(callback.message, db, game, callback.from_user.id)
 
     @router.callback_query(F.data.startswith("proc:product:"))
     async def product(callback: CallbackQuery) -> None:
@@ -376,14 +376,14 @@ def build_commerce_router(db, game, simulation) -> Router:
         result = game.buy_offer_for_employee(callback.from_user.id, int(offer_raw), int(employee_raw))
         flash = result
         if product_id is None:
-            await render_procurement_root(callback.message, db, game, callback.from_user.id, flash=flash)
+            await render_product_root(callback.message, db, game, callback.from_user.id, flash=flash)
         else:
             await render_procurement_product(callback.message, game, callback.from_user.id, product_id, flash=flash)
 
-    @router.callback_query(F.data == "menu:sales")
+    @router.callback_query(F.data == "menu:storefront")
     async def sales(callback: CallbackQuery) -> None:
         await callback.answer()
-        await render_sales_root(callback.message, db, game, simulation, callback.from_user.id)
+        await render_storefront_root(callback.message, db, game, simulation, callback.from_user.id)
 
     @router.callback_query(F.data.startswith("sales:product:"))
     async def sales_product(callback: CallbackQuery) -> None:

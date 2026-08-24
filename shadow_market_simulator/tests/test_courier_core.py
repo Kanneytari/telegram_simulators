@@ -165,7 +165,7 @@ def test_fast_and_slow_couriers_get_materially_different_task_times(tmp_path):
             conn.execute(
                 """INSERT INTO employee_tasks(
                        player_id, employee_id, kind, quantity, completes_at, note
-                   ) VALUES (?, ?, 'prepare_positions', 36, ?, 'test')""",
+                   ) VALUES (?, ?, 'place_stashes', 36, ?, 'test')""",
                 (PLAYER_ID, employee_id, future),
             )
         simulation._process_tasks(conn, PLAYER_ID, utcnow())

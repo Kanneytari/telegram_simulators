@@ -241,7 +241,7 @@ class CourierCoreSimulationEngine(CustomerTrustSimulationEngine):
             """SELECT t.id, t.employee_id, t.quantity, m.planned_game_hours, m.effective_pace
                FROM employee_tasks t
                JOIN courier_task_metrics m ON m.task_id=t.id
-               WHERE t.player_id=? AND t.kind='prepare_positions' AND t.status='active'
+               WHERE t.player_id=? AND t.kind='place_stashes' AND t.status='active'
                  AND t.completes_at<=?""",
             (player_id, iso(now)),
         ).fetchall()
@@ -273,7 +273,7 @@ class CourierCoreSimulationEngine(CustomerTrustSimulationEngine):
                FROM employee_tasks t
                JOIN employees e ON e.id=t.employee_id
                LEFT JOIN courier_task_metrics m ON m.task_id=t.id
-               WHERE t.player_id=? AND t.kind='prepare_positions' AND t.status='active'
+               WHERE t.player_id=? AND t.kind='place_stashes' AND t.status='active'
                  AND e.role='courier' AND m.task_id IS NULL""",
             (player_id,),
         ).fetchall()

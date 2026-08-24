@@ -5,17 +5,17 @@ import random
 from datetime import timedelta
 
 from app.db import Database
-from app.delayed_disputes import DelayedDisputeGameService, DelayedDisputeSimulationEngine
+from app.procurement_market import ProcurementMarketGameService, ProcurementMarketSimulationEngine
 from app.simulation import iso, utcnow
 
 
 def make_game(tmp_path, speed: float = 1.0):
     db = Database(str(tmp_path / "game.db"))
     db.init()
-    simulation = DelayedDisputeSimulationEngine(db, speed=speed, rng=random.Random(51))
+    simulation = ProcurementMarketSimulationEngine(db, speed=speed, rng=random.Random(51))
     simulation.seed_catalog()
     simulation.ensure_player(1001, "tester")
-    game = DelayedDisputeGameService(db, simulation, rng=random.Random(52))
+    game = ProcurementMarketGameService(db, simulation, rng=random.Random(52))
     return db, simulation, game
 
 

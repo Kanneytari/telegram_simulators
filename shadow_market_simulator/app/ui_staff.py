@@ -283,7 +283,7 @@ async def render_more(target: Message, game, player_id: int, employee_id: int) -
     await present(target, f"<b>{clean(employee['alias'])} · ещё</b>", more_keyboard(employee_id))
 
 
-def batches_keyboard(rows, back_callback: str = "menu:procurement", back_text: str = "← Товар") -> InlineKeyboardMarkup:
+def batches_keyboard(rows, back_callback: str = "menu:product", back_text: str = "← Товар") -> InlineKeyboardMarkup:
     buttons = []
     for batch in rows:
         state = "получает" if batch["status"] == "receiving" else "готово"
@@ -312,58 +312,13 @@ async def render_batches(target: Message, game, player_id: int, employee_id: int
     keyboard = batches_keyboard(rows) if employee_id is None else batches_keyboard(rows, f"team:employee:{employee_id}", "← Профиль")
     await present(target, notice(flash, body), keyboard)
 
-def _recipient_label(employee: dict) -> str:
-    status = str(employee.get("status_text") or "свободен")
-    if status == "свободен":
-        status = "готов принять"
-    unsecured = max(0, int(employee.get("exposure", 0)) - int(employee["deposit"]))
-    risk = f" · 🔴 уже {money(unsecured)}" if unsecured else ""
-    return f"{employee['alias']} · {status}{risk}"
-
-
-async def render_batch(target: Message, game, player_id: int, batch_id: int, *, flash: str | None = None) -> None:
-    batch, staff = game.retail_staff_for_batch(player_id, batch_id)
-    if not batch:
-        await render_batches(target, game, player_id, flash="Партия недоступна.")
-        return
-    with game.db.connect() as conn:
-        product = conn.execute("SELECT title FROM products WHERE id=?", (batch["product_id"],)).fetchone()
-        responsible = conn.execute("SELECT alias FROM employees WHERE id=?", (batch["responsible_employee_id"],)).fetchone() if batch["responsible_employee_id"] else None
-        warehouse_count = int(conn.execute(
-            "SELECT COUNT(*) FROM employees WHERE player_id=? AND active=1 AND role='warehouse'",
-            (player_id,),
-        ).fetchone()[0])
-    enriched = {int(row["id"]): row for row in _employee_dicts(game, player_id)}
-    rows: list[list[InlineKeyboardButton]] = []
-    if batch["status"] == "warehouse":
-        for employee in staff:
-            data = dict(employee)
-            data.update({k: v for k, v in enriched.get(int(employee["id"]), {}).items() if k in {"status_text", "stress"}})
-            rows.append([InlineKeyboardButton(
-                text=_recipient_label(data),
-                callback_data=f"team:alloc:{batch_id}:{employee['id']}:{min(10, int(batch['remaining']))}",
-            )])
-        if warehouse_count > 1:
-            rows.append([InlineKeyboardButton(text="Сменить ответственного", callback_data=f"team:reassign:{batch_id}")])
-    rows.append(nav_row("team:batches", "← Партии"))
-    state = "принимается" if batch["status"] == "receiving" else "готова к передаче"
-    text = (
-        f"<b>{clean(product['title'])} · партия #{batch_id}</b>\n\n"
-        f"{int(batch['remaining'])} ед. · {money(int(batch['remaining'] * batch['unit_cost']))}\n"
-        f"Ответственный: {clean(responsible['alias']) if responsible else 'не назначен'} · {state}"
-    )
-    if batch["status"] == "warehouse":
-        text += "\n\nКому передать?"
-    await present(target, notice(flash, text), InlineKeyboardMarkup(inline_keyboard=rows))
-
-
 async def render_allocation(target: Message, game, player_id: int, batch_id: int, employee_id: int, quantity: int) -> None:
     batch, staff = game.retail_staff_for_batch(player_id, batch_id)
     employee = next((row for row in staff if int(row["id"]) == employee_id), None)
     if not batch or not employee or batch["status"] != "warehouse":
-        await render_batch(target, game, player_id, batch_id, flash="Партия или сотрудник уже недоступны.")
+        await render_batches(target, game, player_id, flash="Партия или сотрудник уже недоступны.")
         return
-    quantity = max(1, min(int(quantity), int(batch["remaining"])))
+    quantity = max(0, min(int(quantity), int(batch["remaining"])))
     value = quantity * int(batch["unit_cost"])
     after = int(employee["exposure"]) + value
     unsecured = max(0, after - int(employee["deposit"]))
@@ -375,19 +330,23 @@ async def render_allocation(target: Message, game, player_id: int, batch_id: int
             callback_data=f"team:alloc:{batch_id}:{employee_id}:{value}",
         ) for value in presets])
     rows.append([
-        InlineKeyboardButton(text="−5", callback_data=f"team:alloc:{batch_id}:{employee_id}:{max(1, quantity-5)}"),
+        InlineKeyboardButton(text="−5", callback_data=f"team:alloc:{batch_id}:{employee_id}:{max(0, quantity-5)}"),
         InlineKeyboardButton(text="+5", callback_data=f"team:alloc:{batch_id}:{employee_id}:{min(int(batch['remaining']), quantity+5)}"),
     ])
     if quantity != int(batch["remaining"]):
         rows.append([InlineKeyboardButton(text=f"Всё · {batch['remaining']} ед.", callback_data=f"team:alloc:{batch_id}:{employee_id}:{batch['remaining']}")])
-    rows.append([InlineKeyboardButton(text=f"Передать {quantity} ед.", callback_data=f"team:allocdo:{batch_id}:{employee_id}:{quantity}")])
+    if quantity > 0:
+        rows.append([InlineKeyboardButton(text=f"Передать {quantity} ед.", callback_data=f"team:allocdo:{batch_id}:{employee_id}:{quantity}")])
     rows.append(nav_row(f"team:batch:{batch_id}", "← Партия"))
     text = (
         f"<b>Передать {clean(employee['alias'])}</b>\n\n"
         f"Количество: <b>{quantity} ед.</b> · {money(value)}\n"
         f"После передачи: товар на руках {money(after)} · депозит {money(employee['deposit'])}"
     )
-    text += f"\n🔴 Не покрыто депозитом: {money(unsecured)}" if unsecured else "\n🟢 Полностью покрыто депозитом."
+    if quantity <= 0:
+        text += "\n\nСвободного залога недостаточно даже для 5 ед. Можно выбрать количество вручную, если готов оставить часть товара непокрытой."
+    else:
+        text += f"\n🔴 Не покрыто депозитом: {money(unsecured)}" if unsecured else "\n🟢 Полностью покрыто депозитом."
     await present(target, text, InlineKeyboardMarkup(inline_keyboard=rows))
 
 

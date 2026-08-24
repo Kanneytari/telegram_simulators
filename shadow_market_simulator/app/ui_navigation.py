@@ -20,8 +20,8 @@ def home_keyboard(opened: int, urgent: int, *, is_admin: bool = False) -> Inline
     rows = [
         [InlineKeyboardButton(text=inbox, callback_data="menu:inbox")],
         [
-            InlineKeyboardButton(text="📦 Товар", callback_data="menu:procurement"),
-            InlineKeyboardButton(text="🏷 Витрина", callback_data="menu:sales"),
+            InlineKeyboardButton(text="📦 Товар", callback_data="menu:product"),
+            InlineKeyboardButton(text="🏷 Витрина", callback_data="menu:storefront"),
         ],
         [
             InlineKeyboardButton(text="👥 Команда", callback_data="menu:team"),
