@@ -61,7 +61,7 @@ def test_main_menu_uses_product_and_storefront(tmp_path):
     assert "Баланс:" in text
     assert "Свободно:" in text
     assert "Передай товар закладчику" not in text
-    assert "<blockquote>Стафф уже на складе!\nНажми на кнопку 📦 Товар</blockquote>" in text
+    assert "<blockquote>Стафф уже на складе!\nНажми на кнопку [📦 Товар]</blockquote>" in text
 
 
 def test_free_status_means_no_tasks_or_stock(tmp_path):
@@ -153,7 +153,7 @@ def test_first_handoff_tutorial_guides_product_warehouse_and_batch(tmp_path):
     assert game.needs_first_handoff_tutorial(PLAYER_ID) is True
     target = Target()
     asyncio.run(render_product_root(target, db, game, PLAYER_ID))
-    assert "<blockquote>Нажми на кнопку 🚚 Склад</blockquote>" in target.text
+    assert "<blockquote>Нажми на кнопку [📦 Склад]</blockquote>" in target.text
     product_labels = button_texts(target.reply_markup)
     assert any("🚚 Склад" in label for label in product_labels)
     assert not any("Обновить" in label for label in product_labels)
@@ -170,7 +170,7 @@ def test_first_handoff_tutorial_guides_product_warehouse_and_batch(tmp_path):
     quantity = int(recipient["recommended_quantity"])
     assert quantity > 0
     asyncio.run(render_allocation(target, game, PLAYER_ID, batch_id, int(recipient["id"]), quantity))
-    assert f"<blockquote>Проверь количество и нажми кнопку «✅ Отправить {quantity} ед.».</blockquote>" in target.text
+    assert f"<blockquote>Проверь количество и нажми кнопку [✅ Отправить {quantity} ед.].</blockquote>" in target.text
     allocation_rows = [[button.text for button in row] for row in target.reply_markup.inline_keyboard]
     assert allocation_rows[0] == ["−5", f"📦 {quantity} ед.", "+5"]
     assert allocation_rows[1] == [f"✅ Отправить {quantity} ед."]
@@ -191,6 +191,6 @@ def test_first_handoff_tutorial_disappears_after_transfer(tmp_path):
     assert "Стафф уже на складе!" not in home
     target = Target()
     asyncio.run(render_product_root(target, db, game, PLAYER_ID))
-    assert "Нажми на кнопку 🚚 Склад" not in target.text
+    assert "Нажми на кнопку [📦 Склад]" not in target.text
     asyncio.run(render_batches(target, game, PLAYER_ID))
     assert "Выбери партию стаффа" not in target.text
