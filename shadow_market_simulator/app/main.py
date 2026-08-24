@@ -125,7 +125,7 @@ async def main() -> None:
     dispatcher.include_router(build_navigation_router(db, game, simulation, settings.admin_ids))
     dispatcher.include_router(build_commerce_router(db, game, simulation))
     dispatcher.include_router(build_staff_router(game, simulation, recruitment))
-    dispatcher.include_router(build_dispute_router(game))
+    dispatcher.include_router(build_dispute_router(db, game, simulation, settings.admin_ids))
     dispatcher.include_router(build_analytics_router(db, game, simulation))
     dispatcher.include_router(build_admin_router(db, simulation, recruitment, game, settings.admin_ids))
 
