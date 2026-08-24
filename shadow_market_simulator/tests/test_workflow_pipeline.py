@@ -17,7 +17,7 @@ def make_system(tmp_path):
     return db, simulation, game
 
 
-def test_starter_state_has_wholesale_stock_and_published_retail_positions(tmp_path):
+def test_starter_state_keeps_stock_with_wholesale_until_manual_distribution(tmp_path):
     db, _, game = make_system(tmp_path)
     with db.connect() as conn:
         wholesale = conn.execute(
@@ -28,7 +28,7 @@ def test_starter_state_has_wholesale_stock_and_published_retail_positions(tmp_pa
         ).fetchone()[0])
     assert wholesale is not None
     assert game._employee_exposure(1001, int(wholesale["id"])) > 0
-    assert published > 0
+    assert published == 0
 
 
 def test_purchase_may_exceed_deposit_and_creates_receiving_task(tmp_path):
@@ -161,19 +161,17 @@ def test_manual_firing_returns_remaining_deposit(tmp_path):
     assert balance_before - balance_after == deposit + wages
     assert employee_after["deposit"] == 0
     assert employee_after["active"] == 0
-
-
 def test_overexposed_dishonest_employee_can_abscond_and_deposit_is_forfeited(tmp_path):
     db, simulation, game = make_system(tmp_path)
     with db.connect() as conn:
-        retail = conn.execute(
-            "SELECT * FROM employees WHERE player_id=1001 AND role='courier' ORDER BY id LIMIT 1"
+        employee = conn.execute(
+            "SELECT * FROM employees WHERE player_id=1001 AND role='warehouse' ORDER BY id LIMIT 1"
         ).fetchone()
         conn.execute(
             "UPDATE employees SET deposit=1, honesty=0.0, loyalty=0.0, stress=100 WHERE id=?",
-            (retail["id"],),
+            (employee["id"],),
         )
-        before = game._employee_exposure(1001, int(retail["id"]))
+        before = game._employee_exposure(1001, int(employee["id"]))
         assert before > 1
 
     class ForcedRisk:
@@ -187,12 +185,12 @@ def test_overexposed_dishonest_employee_can_abscond_and_deposit_is_forfeited(tmp
     with db.connect() as conn:
         created = simulation._check_overexposure_risk(conn, 1001, 24, utcnow())
     with db.connect() as conn:
-        employee = conn.execute("SELECT * FROM employees WHERE id=?", (retail["id"],)).fetchone()
+        updated = conn.execute("SELECT * FROM employees WHERE id=?", (employee["id"],)).fetchone()
         event = conn.execute(
             "SELECT * FROM inbox WHERE player_id=1001 AND kind='employee_exit' AND priority='urgent' ORDER BY id DESC LIMIT 1"
         ).fetchone()
     assert created == 1
-    assert employee["active"] == 0
-    assert employee["deposit"] == 0
+    assert updated["active"] == 0
+    assert updated["deposit"] == 0
     assert event is not None
     assert "Потерянный товар вернуть нельзя" in event["body"]

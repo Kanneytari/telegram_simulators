@@ -5,16 +5,16 @@ from datetime import timedelta
 
 from app.db import Database
 from app.simulation import iso, utcnow
-from app.staff_insights import StaffInsightGameService, StaffInsightSimulationEngine
+from app.courier_management import CourierManagementGameService, CourierManagementSimulationEngine
 
 
 def make_system(tmp_path):
     db = Database(str(tmp_path / "game.db"))
     db.init()
-    simulation = StaffInsightSimulationEngine(db, speed=1.0, rng=random.Random(41))
+    simulation = CourierManagementSimulationEngine(db, speed=1.0, rng=random.Random(41))
     simulation.seed_catalog()
     simulation.ensure_player(1001, "tester")
-    game = StaffInsightGameService(db, simulation, rng=random.Random(42))
+    game = CourierManagementGameService(db, simulation, rng=random.Random(42))
     return db, simulation, game
 
 

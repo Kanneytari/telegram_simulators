@@ -34,9 +34,9 @@ def add_courier(db: Database, *, alias: str, pace: float, precision: float, resi
     with db.connect() as conn:
         cur = conn.execute(
             """INSERT INTO employees(
-                   player_id, alias, role, pay_per_job, deposit, has_car,
+                   player_id, alias, role, deposit, has_car,
                    reliability, attention, honesty, loyalty, stress
-               ) VALUES (?, ?, 'courier', 0, 50000, 0, ?, ?, ?, 0.60, ?)""",
+               ) VALUES (?, ?, 'courier', 50000, 0, ?, ?, ?, 0.60, ?)""",
             (PLAYER_ID, alias, pace, precision, integrity, stress),
         )
         employee_id = int(cur.lastrowid)

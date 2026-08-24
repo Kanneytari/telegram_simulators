@@ -43,10 +43,9 @@ def test_new_courier_uses_existing_shop_packaging_rule(tmp_path):
     with db.connect() as conn:
         conn.execute(
             """INSERT INTO employees(
-                   player_id, alias, role, pay_per_job, deposit,
-                   deposit_contribution_pct, has_car,
+                   player_id, alias, role, deposit, has_car,
                    reliability, attention, honesty, loyalty, stress
-               ) VALUES (?, 'Новый', 'courier', 0, 50000, 0, 0,
+               ) VALUES (?, 'Новый', 'courier', 50000, 0,
                          0.8, 0.8, 0.8, 0.7, 10)""",
             (PLAYER_ID,),
         )

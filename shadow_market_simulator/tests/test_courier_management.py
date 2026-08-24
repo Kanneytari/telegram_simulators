@@ -340,7 +340,7 @@ def test_reached_deposit_target_returns_to_team_standard_rate(tmp_path):
     assert int(order["employee_deposit_contribution"]) == expected
 
 
-def test_candidate_phone_is_visible_and_transfers_on_hire(tmp_path):
+def test_candidate_phone_profile_transfers_on_hire(tmp_path):
     db, _, game, recruitment = make_system(tmp_path)
     campaign = {
         "id": 999,
@@ -356,10 +356,11 @@ def test_candidate_phone_is_visible_and_transfers_on_hire(tmp_path):
             (PLAYER_ID,),
         ).fetchone()
         equipment = conn.execute(
-            "SELECT * FROM courier_candidate_equipment WHERE candidate_id=?",
+            "SELECT * FROM courier_candidate_profiles WHERE candidate_id=?",
             (candidate["id"],),
         ).fetchone()
-    assert "Телефон:" in candidate["summary"]
+    assert equipment is not None
+    assert int(equipment["phone_level"]) in {0, 1, 2}
     game.hire_candidate(PLAYER_ID, int(candidate["id"]))
     with db.connect() as conn:
         employee = conn.execute(
