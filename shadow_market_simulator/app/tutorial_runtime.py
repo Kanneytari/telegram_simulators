@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from . import procurement_market, simulation, tutorial
+from . import procurement_market, simulation, tutorial, ui_commerce
+from .ui_common import clean, money, notice, present
 
 
 def _instruction(state: dict) -> str:
@@ -98,6 +99,87 @@ def _install_copy_rules() -> None:
     simulation.SimulationEngine.ensure_player = ensure_player
 
 
+def _install_procurement_empty_state() -> None:
+    current_root = ui_commerce.render_product_root
+    if not getattr(current_root, "_nightshift_affordable_empty", False):
+
+        async def render_product_root(
+            target,
+            db,
+            game,
+            player_id: int,
+            *,
+            flash: str | None = None,
+        ) -> None:
+            products = game.procurement_products(player_id)
+            if products:
+                await current_root(target, db, game, player_id, flash=flash)
+                return
+            with db.connect() as conn:
+                free_cash = game._free_cash_conn(conn, player_id)
+            body = (
+                f"<b>📦 Товар</b>\n\n"
+                f"Свободно: <b>{money(free_cash)}</b>\n\n"
+                "Доступных предложений нет."
+            )
+            await present(
+                target,
+                notice(flash, body),
+                ui_commerce._procurement_products_keyboard(db, player_id, products),
+            )
+
+        render_product_root._nightshift_affordable_empty = True
+        ui_commerce.render_product_root = render_product_root
+
+    current_product = ui_commerce.render_procurement_product
+    if not getattr(current_product, "_nightshift_affordable_empty", False):
+
+        async def render_procurement_product(
+            target,
+            game,
+            player_id: int,
+            product_id: int,
+            *,
+            flash: str | None = None,
+        ) -> None:
+            offers = game.offers(player_id, product_id)
+            if offers:
+                await current_product(
+                    target,
+                    game,
+                    player_id,
+                    product_id,
+                    flash=flash,
+                )
+                return
+            with game.db.connect() as conn:
+                product = conn.execute(
+                    "SELECT title FROM products WHERE id=? AND active=1",
+                    (product_id,),
+                ).fetchone()
+            if not product:
+                await ui_commerce.render_product_root(
+                    target,
+                    game.db,
+                    game,
+                    player_id,
+                    flash=flash,
+                )
+                return
+            body = (
+                f"<b>📦 {clean(product['title'])}</b>\n\n"
+                "Доступных предложений нет."
+            )
+            await present(
+                target,
+                notice(flash, body),
+                ui_commerce._offers_keyboard(product_id, offers),
+            )
+
+        render_procurement_product._nightshift_affordable_empty = True
+        ui_commerce.render_procurement_product = render_procurement_product
+
+
 def _install_first_batch_quality_protection() -> None:
     current = procurement_market.ProcurementMarketGameService.buy_offer_for_employee
     if getattr(current, "_nightshift_tutorial_quality", False):
@@ -155,4 +237,5 @@ def _install_first_batch_quality_protection() -> None:
 def apply_tutorial_runtime_fixes() -> None:
     """Keep tutorial guidance non-blocking and normalize player-facing copy."""
     _install_copy_rules()
+    _install_procurement_empty_state()
     _install_first_batch_quality_protection()
