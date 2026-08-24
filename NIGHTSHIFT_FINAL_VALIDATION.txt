@@ -1,281 +1,7 @@
 === PYTEST ===
-.............................FFFFF...........F..............F..F........ [ 61%]
-............FF..FFF...................F.....F                            [100%]
+........................................................................ [ 62%]
+...............FF...........................                             [100%]
 =================================== FAILURES ===================================
-_______ test_fast_and_slow_couriers_get_materially_different_task_times ________
-
-tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_fast_and_slow_couriers_ge0')
-
-    def test_fast_and_slow_couriers_get_materially_different_task_times(tmp_path):
-        db, simulation, _, _ = make_system(tmp_path)
->       fast_id = add_courier(
-            db,
-            alias="Fast",
-            pace=0.97,
-            precision=0.76,
-            resilience=0.80,
-            integrity=0.90,
-            trait=TRAIT_OVERHEATS,
-        )
-
-tests/test_courier_core.py:144: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-
-db = <app.db.Database object at 0x7f40c42c52b0>
-
-    def add_courier(db: Database, *, alias: str, pace: float, precision: float, resilience: float, integrity: float, trait: str, stress: float = 10.0) -> int:
-        with db.connect() as conn:
->           cur = conn.execute(
-                """INSERT INTO employees(
-                       player_id, alias, role, pay_per_job, deposit, has_car,
-                       reliability, attention, honesty, loyalty, stress
-                   ) VALUES (?, ?, 'courier', 0, 50000, 0, ?, ?, ?, 0.60, ?)""",
-                (PLAYER_ID, alias, pace, precision, integrity, stress),
-            )
-E           sqlite3.OperationalError: table employees has no column named pay_per_job
-
-tests/test_courier_core.py:35: OperationalError
-___ test_stress_penalizes_fragile_courier_much_more_than_pressure_proof_one ____
-
-tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_stress_penalizes_fragile_0')
-
-    def test_stress_penalizes_fragile_courier_much_more_than_pressure_proof_one(tmp_path):
-        db, simulation, _, _ = make_system(tmp_path)
->       fragile_id = add_courier(
-            db,
-            alias="Fragile",
-            pace=0.88,
-            precision=0.90,
-            resilience=0.45,
-            integrity=0.95,
-            trait=TRAIT_SENSITIVE,
-            stress=90,
-        )
-
-tests/test_courier_core.py:186: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-
-db = <app.db.Database object at 0x7f40c42c55b0>
-
-    def add_courier(db: Database, *, alias: str, pace: float, precision: float, resilience: float, integrity: float, trait: str, stress: float = 10.0) -> int:
-        with db.connect() as conn:
->           cur = conn.execute(
-                """INSERT INTO employees(
-                       player_id, alias, role, pay_per_job, deposit, has_car,
-                       reliability, attention, honesty, loyalty, stress
-                   ) VALUES (?, ?, 'courier', 0, 50000, 0, ?, ?, ?, 0.60, ?)""",
-                (PLAYER_ID, alias, pace, precision, integrity, stress),
-            )
-E           sqlite3.OperationalError: table employees has no column named pay_per_job
-
-tests/test_courier_core.py:35: OperationalError
-_____ test_profile_reveals_history_gradually_without_exposing_hidden_trait _____
-
-tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_profile_reveals_history_g0')
-
-    def test_profile_reveals_history_gradually_without_exposing_hidden_trait(tmp_path):
-        db, _, game, _ = make_system(tmp_path)
->       employee_id = add_courier(
-            db,
-            alias="Observed",
-            pace=0.95,
-            precision=0.93,
-            resilience=0.85,
-            integrity=0.36,
-            trait="conceals",
-        )
-
-tests/test_courier_core.py:220: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-
-db = <app.db.Database object at 0x7f40c42c57f0>
-
-    def add_courier(db: Database, *, alias: str, pace: float, precision: float, resilience: float, integrity: float, trait: str, stress: float = 10.0) -> int:
-        with db.connect() as conn:
->           cur = conn.execute(
-                """INSERT INTO employees(
-                       player_id, alias, role, pay_per_job, deposit, has_car,
-                       reliability, attention, honesty, loyalty, stress
-                   ) VALUES (?, ?, 'courier', 0, 50000, 0, ?, ?, ?, 0.60, ?)""",
-                (PLAYER_ID, alias, pace, precision, integrity, stress),
-            )
-E           sqlite3.OperationalError: table employees has no column named pay_per_job
-
-tests/test_courier_core.py:35: OperationalError
-____ test_high_stress_can_cause_visible_work_breakdown_for_fragile_courier _____
-
-tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_high_stress_can_cause_vis0')
-
-    def test_high_stress_can_cause_visible_work_breakdown_for_fragile_courier(tmp_path):
-        db, simulation, _, _ = make_system(tmp_path)
->       employee_id = add_courier(
-            db,
-            alias="Breakdown",
-            pace=0.86,
-            precision=0.88,
-            resilience=0.40,
-            integrity=0.90,
-            trait=TRAIT_SENSITIVE,
-            stress=96,
-        )
-
-tests/test_courier_core.py:254: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-
-db = <app.db.Database object at 0x7f40c42c6750>
-
-    def add_courier(db: Database, *, alias: str, pace: float, precision: float, resilience: float, integrity: float, trait: str, stress: float = 10.0) -> int:
-        with db.connect() as conn:
->           cur = conn.execute(
-                """INSERT INTO employees(
-                       player_id, alias, role, pay_per_job, deposit, has_car,
-                       reliability, attention, honesty, loyalty, stress
-                   ) VALUES (?, ?, 'courier', 0, 50000, 0, ?, ?, ?, 0.60, ?)""",
-                (PLAYER_ID, alias, pace, precision, integrity, stress),
-            )
-E           sqlite3.OperationalError: table employees has no column named pay_per_job
-
-tests/test_courier_core.py:35: OperationalError
-_ test_customer_rating_differs_materially_between_precise_and_sloppy_couriers __
-
-tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_customer_rating_differs_m0')
-
-    def test_customer_rating_differs_materially_between_precise_and_sloppy_couriers(tmp_path):
-        db, simulation, _, _ = make_system(tmp_path)
->       precise_id = add_courier(
-            db,
-            alias="Precise",
-            pace=0.65,
-            precision=0.98,
-            resilience=0.90,
-            integrity=0.95,
-            trait=TRAIT_METICULOUS,
-        )
-
-tests/test_courier_core.py:290: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-
-db = <app.db.Database object at 0x7f40c42c6e40>
-
-    def add_courier(db: Database, *, alias: str, pace: float, precision: float, resilience: float, integrity: float, trait: str, stress: float = 10.0) -> int:
-        with db.connect() as conn:
->           cur = conn.execute(
-                """INSERT INTO employees(
-                       player_id, alias, role, pay_per_job, deposit, has_car,
-                       reliability, attention, honesty, loyalty, stress
-                   ) VALUES (?, ?, 'courier', 0, 50000, 0, ?, ?, ?, 0.60, ?)""",
-                (PLAYER_ID, alias, pace, precision, integrity, stress),
-            )
-E           sqlite3.OperationalError: table employees has no column named pay_per_job
-
-tests/test_courier_core.py:35: OperationalError
-____________ test_candidate_phone_is_visible_and_transfers_on_hire _____________
-
-tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_candidate_phone_is_visibl0')
-
-    def test_candidate_phone_is_visible_and_transfers_on_hire(tmp_path):
-        db, _, game, recruitment = make_system(tmp_path)
-        campaign = {
-            "id": 999,
-            "role": "courier",
-            "min_deposit": 0,
-            "car_required": 0,
-            "experience_required": 0,
-        }
-        with db.connect() as conn:
-            recruitment._create_candidate(conn, PLAYER_ID, campaign, CHANNELS["forums"], utcnow())
-            candidate = conn.execute(
-                "SELECT * FROM candidates WHERE player_id=? ORDER BY id DESC LIMIT 1",
-                (PLAYER_ID,),
-            ).fetchone()
->           equipment = conn.execute(
-                "SELECT * FROM courier_candidate_equipment WHERE candidate_id=?",
-                (candidate["id"],),
-            ).fetchone()
-E           sqlite3.OperationalError: no such table: courier_candidate_equipment
-
-tests/test_courier_management.py:358: OperationalError
-_______________ test_leave_request_uses_game_time_not_real_time ________________
-
-tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_leave_request_uses_game_t0')
-
-    def test_leave_request_uses_game_time_not_real_time(tmp_path):
-        db, _, game, recruitment = make_system(tmp_path)
-        recruitment.set_player_multiplier(1001, 60)
-        with db.connect() as conn:
-            employee = conn.execute(
-                "SELECT * FROM employees WHERE player_id=1001 ORDER BY id LIMIT 1"
-            ).fetchone()
-            cur = conn.execute(
-                """INSERT INTO inbox(player_id, kind, priority, title, body, payload_json)
-                   VALUES (1001, 'leave_request', 'normal', 'Пауза', 'test', ?)""",
-                (json.dumps({"employee_id": employee["id"]}),),
-            )
-            item_id = int(cur.lastrowid)
-        before = utcnow()
-        game.handle_inbox_action(1001, item_id, "approve")
-        with db.connect() as conn:
-            until = conn.execute(
-                "SELECT unavailable_until FROM employees WHERE id=?",
-                (employee["id"],),
-            ).fetchone()[0]
-        real_minutes = (parse_dt(until) - before).total_seconds() / 60
->       assert 5.8 <= real_minutes <= 6.2
-E       assert 5.8 <= 4.1733333333333336e-05
-
-tests/test_extended_systems.py:155: AssertionError
-______________ test_new_courier_uses_existing_shop_packaging_rule ______________
-
-tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_new_courier_uses_existing0')
-
-    def test_new_courier_uses_existing_shop_packaging_rule(tmp_path):
-        db, simulation, game = make_system(tmp_path)
-        game.adjust_global_packaging_rule(PLAYER_ID, 5, 10)
-        expected = game.global_packaging_rule(PLAYER_ID)
-    
-        with db.connect() as conn:
->           conn.execute(
-                """INSERT INTO employees(
-                       player_id, alias, role, pay_per_job, deposit,
-                       deposit_contribution_pct, has_car,
-                       reliability, attention, honesty, loyalty, stress
-                   ) VALUES (?, 'Новый', 'courier', 0, 50000, 0, 0,
-                             0.8, 0.8, 0.8, 0.7, 10)""",
-                (PLAYER_ID,),
-            )
-E           sqlite3.OperationalError: table employees has no column named pay_per_job
-
-tests/test_global_packaging.py:44: OperationalError
-______________ test_time_advance_creates_orders_and_updates_stock ______________
-
-tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_time_advance_creates_orde0')
-
-    def test_time_advance_creates_orders_and_updates_stock(tmp_path):
-        db, simulation, _ = make_game(tmp_path)
-        before = utcnow() - timedelta(hours=4)
-        with db.connect() as conn:
-            conn.execute("UPDATE shops SET last_simulated_at=? WHERE player_id=1001", (iso(before),))
-            initial_stock = conn.execute("SELECT SUM(remaining) FROM batches WHERE player_id=1001").fetchone()[0]
-        result = simulation.advance(1001, utcnow())
-        with db.connect() as conn:
-            orders = conn.execute("SELECT COUNT(*) FROM orders WHERE player_id=1001").fetchone()[0]
-            stock = conn.execute("SELECT SUM(remaining) FROM batches WHERE player_id=1001").fetchone()[0]
-        assert result.orders_created == orders
->       assert orders > 0
-E       assert 0 > 0
-
-tests/test_simulation.py:42: AssertionError
-____________ test_procurement_spends_cash_and_creates_ledger_entry _____________
-
-tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_procurement_spends_cash_a0')
-
-    def test_procurement_spends_cash_and_creates_ledger_entry(tmp_path):
-        db, _, game = make_game(tmp_path)
->       offer = game.offers(1001)[0]
-                ^^^^^^^^^^^
-E       AttributeError: 'GameService' object has no attribute 'offers'
-
-tests/test_simulation.py:48: AttributeError
 ____________ test_profile_separates_current_activity_from_inventory ____________
 
 tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_profile_separates_current0')
@@ -309,11 +35,14 @@ tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_profile_separates_curr
                 (courier["id"], batch["id"], allocation_id, batch["product_id"], iso(utcnow() + timedelta(hours=2))),
             )
     
->       text = game.employee_details(1001, courier["id"])
-               ^^^^^^^^^^^^^^^^^^^^^
-E       AttributeError: 'StaffInsightGameService' object has no attribute 'employee_details'
+        text = game.employee_details(1001, courier["id"])
+        assert "Статус: <b>готовит позиции" in text
+        assert "Задача: Подготовка позиций к публикации" in text
+        assert "на руках 10 ед." in text
+>       assert "Продуктивность" in text
+E       AssertionError: assert 'Продуктивность' in '<b>👤 Крот · Розничный сотрудник</b>\n\n<b>Сейчас</b>\nСтатус: <b>готовит позиции · ~2.0 ч</b>\nЗадача: Подготовка поз...ар</b>\nАмфетамин: на руках 10 ед.\n\n<b>История</b>\nЗаказов: 0\nСрывов работы: 0\nПотери: 0 ₽\nВсего заработано: 0 ₽'
 
-tests/test_staff_insights.py:65: AttributeError
+tests/test_staff_insights.py:69: AssertionError
 __________ test_publication_history_drives_productivity_and_inventory __________
 
 tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_publication_history_drive0')
@@ -353,102 +82,16 @@ tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_publication_history_dr
         assert event is not None
         assert event["positions"] == positions
     
->       text = game.employee_details(1001, courier["id"])
-               ^^^^^^^^^^^^^^^^^^^^^
-E       AttributeError: 'StaffInsightGameService' object has no attribute 'employee_details'
+        text = game.employee_details(1001, courier["id"])
+        assert "витрина" in text
+>       assert "Средняя: <b>" in text
+E       AssertionError: assert 'Средняя: <b>' in '<b>👤 Крот · Розничный сотрудник</b>\n\n<b>Сейчас</b>\nСтатус: <b>свободен</b>\nСостояние: 🟢 <b>в порядке</b>\n\n<b>Ра... работы: 0\nПотери: 0 ₽\nВсего заработано: 0 ₽\n\n🔴 Часть товара не покрыта депозитом. Риск серьёзного инцидента выше.'
 
-tests/test_staff_insights.py:107: AttributeError
-__________________ test_short_eta_is_safe_for_html_parse_mode __________________
-
-tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_short_eta_is_safe_for_htm0')
-
-    def test_short_eta_is_safe_for_html_parse_mode(tmp_path):
-        db, _, game = make_system(tmp_path)
-        with db.connect() as conn:
-            courier = conn.execute(
-                "SELECT id FROM employees WHERE player_id=1001 AND role='courier' ORDER BY id LIMIT 1"
-            ).fetchone()
-            batch = conn.execute(
-                "SELECT * FROM batches WHERE player_id=1001 AND remaining>=5 ORDER BY id LIMIT 1"
-            ).fetchone()
-            warehouse = conn.execute(
-                "SELECT id FROM employees WHERE player_id=1001 AND role='warehouse' ORDER BY id LIMIT 1"
-            ).fetchone()
-            cur = conn.execute(
-                """INSERT INTO retail_allocations(
-                       player_id, batch_id, wholesale_employee_id, retail_employee_id,
-                       product_id, quantity, unit_cost, quality, status, received_at
-                   ) VALUES (1001, ?, ?, ?, ?, 5, ?, ?, 'preparing', CURRENT_TIMESTAMP)""",
-                (batch["id"], warehouse["id"], courier["id"], batch["product_id"], batch["unit_cost"], batch["quality"]),
-            )
-            conn.execute(
-                """INSERT INTO employee_tasks(
-                       player_id, employee_id, kind, batch_id, allocation_id,
-                       product_id, quantity, completes_at, note
-                   ) VALUES (1001, ?, 'prepare_positions', ?, ?, ?, 5, ?, 'short eta')""",
-                (courier["id"], batch["id"], cur.lastrowid, batch["product_id"], iso(utcnow() + timedelta(minutes=20))),
-            )
-    
->       text = game.employee_details(1001, courier["id"])
-               ^^^^^^^^^^^^^^^^^^^^^
-E       AttributeError: 'StaffInsightGameService' object has no attribute 'employee_details'
-
-tests/test_staff_insights.py:140: AttributeError
-____ test_starter_state_has_wholesale_stock_and_published_retail_positions _____
-
-tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_starter_state_has_wholesa0')
-
-    def test_starter_state_has_wholesale_stock_and_published_retail_positions(tmp_path):
-        db, _, game = make_system(tmp_path)
-        with db.connect() as conn:
-            wholesale = conn.execute(
-                "SELECT * FROM employees WHERE player_id=1001 AND role='warehouse' AND active=1"
-            ).fetchone()
-            published = int(conn.execute(
-                "SELECT COALESCE(SUM(position_count),0) FROM retail_positions WHERE player_id=1001"
-            ).fetchone()[0])
-        assert wholesale is not None
-        assert game._employee_exposure(1001, int(wholesale["id"])) > 0
->       assert published > 0
-E       assert 0 > 0
-
-tests/test_workflow_pipeline.py:31: AssertionError
-___ test_overexposed_dishonest_employee_can_abscond_and_deposit_is_forfeited ___
-
-tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_overexposed_dishonest_emp0')
-
-    def test_overexposed_dishonest_employee_can_abscond_and_deposit_is_forfeited(tmp_path):
-        db, simulation, game = make_system(tmp_path)
-        with db.connect() as conn:
-            retail = conn.execute(
-                "SELECT * FROM employees WHERE player_id=1001 AND role='courier' ORDER BY id LIMIT 1"
-            ).fetchone()
-            conn.execute(
-                "UPDATE employees SET deposit=1, honesty=0.0, loyalty=0.0, stress=100 WHERE id=?",
-                (retail["id"],),
-            )
-            before = game._employee_exposure(1001, int(retail["id"]))
->           assert before > 1
-E           assert 0 > 1
-
-tests/test_workflow_pipeline.py:177: AssertionError
+tests/test_staff_insights.py:109: AssertionError
 =========================== short test summary info ============================
-FAILED tests/test_courier_core.py::test_fast_and_slow_couriers_get_materially_different_task_times - sqlite3.OperationalError: table employees has no column named pay_per_job
-FAILED tests/test_courier_core.py::test_stress_penalizes_fragile_courier_much_more_than_pressure_proof_one - sqlite3.OperationalError: table employees has no column named pay_per_job
-FAILED tests/test_courier_core.py::test_profile_reveals_history_gradually_without_exposing_hidden_trait - sqlite3.OperationalError: table employees has no column named pay_per_job
-FAILED tests/test_courier_core.py::test_high_stress_can_cause_visible_work_breakdown_for_fragile_courier - sqlite3.OperationalError: table employees has no column named pay_per_job
-FAILED tests/test_courier_core.py::test_customer_rating_differs_materially_between_precise_and_sloppy_couriers - sqlite3.OperationalError: table employees has no column named pay_per_job
-FAILED tests/test_courier_management.py::test_candidate_phone_is_visible_and_transfers_on_hire - sqlite3.OperationalError: no such table: courier_candidate_equipment
-FAILED tests/test_extended_systems.py::test_leave_request_uses_game_time_not_real_time - assert 5.8 <= 4.1733333333333336e-05
-FAILED tests/test_global_packaging.py::test_new_courier_uses_existing_shop_packaging_rule - sqlite3.OperationalError: table employees has no column named pay_per_job
-FAILED tests/test_simulation.py::test_time_advance_creates_orders_and_updates_stock - assert 0 > 0
-FAILED tests/test_simulation.py::test_procurement_spends_cash_and_creates_ledger_entry - AttributeError: 'GameService' object has no attribute 'offers'
-FAILED tests/test_staff_insights.py::test_profile_separates_current_activity_from_inventory - AttributeError: 'StaffInsightGameService' object has no attribute 'employee_details'
-FAILED tests/test_staff_insights.py::test_publication_history_drives_productivity_and_inventory - AttributeError: 'StaffInsightGameService' object has no attribute 'employee_details'
-FAILED tests/test_staff_insights.py::test_short_eta_is_safe_for_html_parse_mode - AttributeError: 'StaffInsightGameService' object has no attribute 'employee_details'
-FAILED tests/test_workflow_pipeline.py::test_starter_state_has_wholesale_stock_and_published_retail_positions - assert 0 > 0
-FAILED tests/test_workflow_pipeline.py::test_overexposed_dishonest_employee_can_abscond_and_deposit_is_forfeited - assert 0 > 1
-15 failed, 102 passed in 12.07s
+FAILED tests/test_staff_insights.py::test_profile_separates_current_activity_from_inventory - AssertionError: assert 'Продуктивность' in '<b>👤 Крот · Розничный сотрудник</b>\n\n<b>Сейчас</b>\nСтатус: <b>готовит позиции · ~2.0 ч</b>\nЗадача: Подготовка поз...ар</b>\nАмфетамин: на руках 10 ед.\n\n<b>История</b>\nЗаказов: 0\nСрывов работы: 0\nПотери: 0 ₽\nВсего заработано: 0 ₽'
+FAILED tests/test_staff_insights.py::test_publication_history_drives_productivity_and_inventory - AssertionError: assert 'Средняя: <b>' in '<b>👤 Крот · Розничный сотрудник</b>\n\n<b>Сейчас</b>\nСтатус: <b>свободен</b>\nСостояние: 🟢 <b>в порядке</b>\n\n<b>Ра... работы: 0\nПотери: 0 ₽\nВсего заработано: 0 ₽\n\n🔴 Часть товара не покрыта депозитом. Риск серьёзного инцидента выше.'
+2 failed, 114 passed in 13.56s
 PYTEST_EXIT=1
 
 === CURRENT ARCHITECTURE VALIDATOR ===
@@ -462,7 +105,25 @@ VALIDATOR_EXIT=0
 COMPILE_EXIT=0
 
 === RUFF UNUSED ===
-All checks passed!
-RUFF_EXIT=0
+F401 [*] `json` imported but unused
+ --> tests/test_extended_systems.py:3:8
+  |
+1 | from __future__ import annotations
+2 |
+3 | import json
+  |        ^^^^
+4 | import random
+5 | from datetime import timedelta
+  |
+help: Remove unused import: `json`
+  |
+2 |
+  - import json
+3 | import random
+  |
 
-SUMMARY pytest=1 validator=0 compile=0 ruff=0
+Found 1 error.
+[*] 1 fixable with the `--fix` option.
+RUFF_EXIT=1
+
+SUMMARY pytest=1 validator=0 compile=0 ruff=1
