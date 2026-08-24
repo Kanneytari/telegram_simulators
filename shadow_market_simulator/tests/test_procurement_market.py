@@ -1,4 +1,6 @@
 import random
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 
 from app.db import Database
@@ -209,3 +211,75 @@ def test_offer_specific_quality_is_used_on_purchase(tmp_path):
             "SELECT quality FROM batches WHERE player_id=1001 ORDER BY id DESC LIMIT 1"
         ).fetchone()
     assert float(batch["quality"]) >= 90.0
+
+
+def test_same_offer_cannot_create_two_batches_under_concurrent_callbacks(tmp_path):
+    db, _, game = make_game(tmp_path, seed=29)
+    with db.connect() as conn:
+        conn.execute("UPDATE shops SET balance=100000000, reserve_target=0 WHERE player_id=1001")
+        conn.execute(
+            "UPDATE employees SET deposit=0, wages_accrued=0 WHERE player_id=1001 AND active=1"
+        )
+        employee = conn.execute(
+            "SELECT id FROM employees WHERE player_id=1001 AND role='warehouse' AND active=1 LIMIT 1"
+        ).fetchone()
+        assert employee
+
+    offer = game.offers(1001, 1)[0]
+    offer_id = int(offer["id"])
+    employee_id = int(employee["id"])
+    total = int(offer["quantity"] * offer["unit_cost"])
+    with db.connect() as conn:
+        conn.execute(
+            "UPDATE supplier_offers SET offer_reliability=1.0 WHERE id=?",
+            (offer_id,),
+        )
+        balance_before = int(conn.execute(
+            "SELECT balance FROM shops WHERE player_id=1001"
+        ).fetchone()[0])
+        batches_before = int(conn.execute(
+            "SELECT COUNT(*) FROM batches WHERE player_id=1001"
+        ).fetchone()[0])
+
+    original_free_cash = game._free_cash_conn
+    barrier = threading.Barrier(2)
+    counter_lock = threading.Lock()
+    call_count = 0
+
+    def synchronized_free_cash(conn, player_id):
+        nonlocal call_count
+        value = original_free_cash(conn, player_id)
+        with counter_lock:
+            call_count += 1
+            should_wait = call_count <= 2
+        if should_wait:
+            barrier.wait(timeout=5)
+        return value
+
+    game._free_cash_conn = synchronized_free_cash
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(
+            lambda _: game.buy_offer_for_employee(1001, offer_id, employee_id),
+            range(2),
+        ))
+
+    assert sum(result.startswith("✅ Куплено") for result in results) == 1
+    assert sum(result == "Предложение уже недоступно." for result in results) == 1
+
+    with db.connect() as conn:
+        balance_after = int(conn.execute(
+            "SELECT balance FROM shops WHERE player_id=1001"
+        ).fetchone()[0])
+        batches_after = int(conn.execute(
+            "SELECT COUNT(*) FROM batches WHERE player_id=1001"
+        ).fetchone()[0])
+        ledger_count = int(conn.execute(
+            """SELECT COUNT(*) FROM ledger
+               WHERE player_id=1001 AND kind='procurement'
+                 AND reference_type='offer' AND reference_id=?""",
+            (offer_id,),
+        ).fetchone()[0])
+
+    assert balance_before - balance_after == total
+    assert batches_after - batches_before == 1
+    assert ledger_count == 1
