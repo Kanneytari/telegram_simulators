@@ -36,7 +36,7 @@ def rating(value: float, count: int = 1) -> str:
 
 def signed_pct_change(current: float, previous: float, neutral: float = 0.05) -> str:
     if previous == 0:
-        return "" if current == 0 else " +100%"
+        return "" if current == 0 else " · рост"
     change = (current - previous) / abs(previous)
     if abs(change) < neutral:
         return ""
