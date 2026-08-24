@@ -18,6 +18,7 @@ class FakeMessage:
     def __init__(self):
         self.text = None
         self.markup = None
+        self.photo = None
 
     async def edit_text(self, text, reply_markup=None):
         self.text = text
@@ -25,6 +26,13 @@ class FakeMessage:
 
     async def answer(self, text, reply_markup=None):
         self.text = text
+        self.markup = reply_markup
+
+    async def delete(self):
+        return None
+
+    async def answer_photo(self, photo, caption=None, reply_markup=None, **kwargs):
+        self.text = caption
         self.markup = reply_markup
 
 

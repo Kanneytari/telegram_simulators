@@ -14,7 +14,7 @@ from .courier_management import (
 )
 from .courier_model import condition_band, pace_band, relationship_band
 from .recruitment import CHANNELS, DURATION_OPTIONS
-from .ui_common import claim_tip, clean, money, nav_row, notice, pct, present, rating
+from .ui_common import claim_tip, clean, money, nav_row, notice, pct, present, rating, tutorial_hint
 
 
 class RenameEmployeeState(StatesGroup):
@@ -306,9 +306,11 @@ async def render_batches(target: Message, game, player_id: int, employee_id: int
                 ORDER BY CASE b.status WHEN 'warehouse' THEN 0 ELSE 1 END, b.id DESC""",
             params,
         ).fetchall()
-    body = f"<b>📦 Склад · {len(rows)}</b>"
+    body = f"<b>🚚 Склад · {len(rows)}</b>"
     if not rows:
         body += "\n\nНа складе нет активных партий."
+    elif employee_id is None and game.needs_first_handoff_tutorial(player_id):
+        body += "\n\n" + tutorial_hint("Выбери партию стаффа, которую хочешь передать закладчику.")
     keyboard = batches_keyboard(rows) if employee_id is None else batches_keyboard(rows, f"team:employee:{employee_id}", "← Профиль")
     await present(target, notice(flash, body), keyboard)
 
@@ -347,6 +349,11 @@ async def render_allocation(target: Message, game, player_id: int, batch_id: int
         text += "\n\nСвободного залога недостаточно даже для 5 ед. Можно выбрать количество вручную, если готов оставить часть товара непокрытой."
     else:
         text += f"\n🔴 Не покрыто депозитом: {money(unsecured)}" if unsecured else "\n🟢 Полностью покрыто депозитом."
+    if game.needs_first_handoff_tutorial(player_id):
+        if quantity > 0:
+            text += "\n\n" + tutorial_hint(f"Проверь количество и нажми кнопку «Передать {quantity} ед.».")
+        else:
+            text += "\n\n" + tutorial_hint("Выбери количество от 5 ед. или вернись и выбери другого закладчика.")
     await present(target, text, InlineKeyboardMarkup(inline_keyboard=rows))
 
 

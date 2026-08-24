@@ -440,6 +440,13 @@ class WorkflowSimulationEngine(OperationsSimulationEngine):
 
 class WorkflowGameService(OperationsGameService):
 
+    def needs_first_handoff_tutorial(self, player_id: int) -> bool:
+        with self.db.connect() as conn:
+            return conn.execute(
+                "SELECT 1 FROM retail_allocations WHERE player_id=? LIMIT 1",
+                (player_id,),
+            ).fetchone() is None
+
     def _task_status(self, player_id: int, employee_id: int) -> str:
         with self.db.connect() as conn:
             task = conn.execute(

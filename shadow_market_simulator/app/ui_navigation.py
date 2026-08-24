@@ -7,7 +7,7 @@ from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message, ReplyKeyboardRemove
 
 from .business_analytics import _comparison_ready, _order_metrics, _product_metrics, _window
-from .ui_common import clean, money, notice, present, signed_pct_change
+from .ui_common import clean, money, notice, present, signed_pct_change, tutorial_hint
 
 
 INBOX_PAGE_SIZE = 8
@@ -95,8 +95,8 @@ def _home_snapshot(db, game, simulation, player_id: int) -> tuple[str, int, int]
     next_step = ""
     if urgent:
         next_step = "→ 🔴 Разбери срочное сообщение во Входящих."
-    elif ready_batch:
-        next_step = "→ Партия получена. Передай товар закладчику."
+    elif ready_batch and game.needs_first_handoff_tutorial(player_id):
+        next_step = tutorial_hint("Стафф уже на складе!\nНажми на кнопку 📦 Товар")
 
     text = (
         f"<b>🌒 {clean(shop['name'])}</b>\n\n"

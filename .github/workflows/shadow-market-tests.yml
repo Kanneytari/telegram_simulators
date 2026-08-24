@@ -53,6 +53,7 @@ jobs:
               def __init__(self):
                   self.text = None
                   self.reply_markup = None
+                  self.photo = None
 
               async def edit_text(self, text, **kwargs):
                   self.text = text
@@ -60,6 +61,13 @@ jobs:
 
               async def answer(self, text, **kwargs):
                   self.text = text
+                  self.reply_markup = kwargs.get("reply_markup")
+
+              async def delete(self):
+                  return None
+
+              async def answer_photo(self, photo, caption=None, **kwargs):
+                  self.text = caption
                   self.reply_markup = kwargs.get("reply_markup")
 
           with tempfile.TemporaryDirectory() as tmp:
