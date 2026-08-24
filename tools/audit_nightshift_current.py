@@ -9,6 +9,38 @@ PROJECT = ROOT / "shadow_market_simulator"
 APP = PROJECT / "app"
 
 
+def method_owner(cls, name: str):
+    for base in cls.__mro__:
+        if name in base.__dict__:
+            return base
+    return None
+
+
+def print_method_ownership(cls) -> None:
+    print(f"\n=== METHOD OWNERSHIP {cls.__name__} ===")
+    for base in cls.__mro__:
+        if base is object:
+            continue
+        methods = sorted(
+            name
+            for name, value in base.__dict__.items()
+            if inspect.isfunction(value) or inspect.ismethoddescriptor(value)
+        )
+        if not methods:
+            continue
+        live = []
+        shadowed = []
+        for name in methods:
+            owner = method_owner(cls, name)
+            if owner is base:
+                live.append(name)
+            else:
+                shadowed.append(f"{name} -> {owner.__module__}.{owner.__name__}" if owner else name)
+        print(f"\n{base.__module__}.{base.__name__}")
+        print("  LIVE: " + (", ".join(live) if live else "none"))
+        print("  SHADOWED: " + (", ".join(shadowed) if shadowed else "none"))
+
+
 def main() -> None:
     import sys
     sys.path.insert(0, str(PROJECT))
@@ -22,6 +54,7 @@ def main() -> None:
                 continue
             source = inspect.getsourcefile(base)
             print(f"{base.__module__}.{base.__name__} :: {Path(source).name if source else '?'}")
+        print_method_ownership(cls)
 
     tokens = [
         "pay_per_job", "deposit_contribution_pct", "desired_pay", "offered_pay",
