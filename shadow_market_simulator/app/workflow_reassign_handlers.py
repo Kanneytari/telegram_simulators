@@ -4,6 +4,8 @@ from aiogram import F, Router
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
+from .courier_idle_handlers import recipient_button_text
+
 
 def build_workflow_reassign_router(game) -> Router:
     router = Router(name="wholesale-reassignment")
@@ -35,12 +37,14 @@ def build_workflow_reassign_router(game) -> Router:
         )
         rows = []
         if batch["status"] == "warehouse":
-            text += "\n\n<b>Передать рознице</b>\nВыбери сотрудника и затем количество."
+            text += (
+                "\n\n<b>Передать рознице</b>\n"
+                "Выбери сотрудника и затем количество.\n"
+                "🟢 — курьер полностью простаивает и прямо сейчас готов принять новую партию."
+            )
             for employee in retail_staff:
-                unsecured = max(0, int(employee["exposure"]) - int(employee["deposit"]))
-                extra = f" · 🔴 {unsecured:,} ₽" if unsecured else ""
                 rows.append([InlineKeyboardButton(
-                    text=f"{employee['alias']} · депозит {employee['deposit']:,} ₽{extra}",
+                    text=recipient_button_text(employee),
                     callback_data=f"workflow:alloc:{batch_id}:{employee['id']}:10",
                 )])
             rows.append([InlineKeyboardButton(text="🔁 Сменить оптового ответственного", callback_data=f"workflow:reassign:{batch_id}")])
