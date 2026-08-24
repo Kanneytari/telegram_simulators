@@ -1,0 +1,33 @@
+name: NIGHTSHIFT schema cleanup stage 7
+
+on:
+  push:
+    branches:
+      - refactor/nightshift-clean-architecture
+    paths:
+      - "tools/fix_nightshift_schema_stage7.py"
+      - ".github/workflows/nightshift-schema-stage7.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: ${{ !contains(github.event.head_commit.message, '[auto-stage7]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/nightshift-clean-architecture
+          fetch-depth: 0
+      - name: Fix fresh schema
+        run: python tools/fix_nightshift_schema_stage7.py
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add shadow_market_simulator/app/schema.sql
+          if ! git diff --cached --quiet; then
+            git commit -m "Fix current NIGHTSHIFT fresh schema [auto-stage7]"
+            git push origin HEAD:refactor/nightshift-clean-architecture
+          fi
