@@ -7,7 +7,7 @@ from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message, ReplyKeyboardRemove
 
 from .business_analytics import _comparison_ready, _order_metrics, _product_metrics, _window
-from .ui_common import clean, money, notice, present, signed_pct_change, tutorial_hint
+from .ui_common import clean, money, notice, present, signed_pct_change
 
 
 INBOX_PAGE_SIZE = 8
@@ -63,12 +63,6 @@ def _home_snapshot(db, game, simulation, player_id: int) -> tuple[str, int, int]
                ORDER BY stress DESC LIMIT 1""",
             (player_id,),
         ).fetchone()
-        ready_batch = conn.execute(
-            """SELECT id FROM batches
-               WHERE player_id=? AND status='warehouse' AND remaining>0
-               ORDER BY id LIMIT 1""",
-            (player_id,),
-        ).fetchone()
 
     opened = int(inbox["opened"] or 0)
     urgent = int(inbox["urgent"] or 0)
@@ -94,9 +88,7 @@ def _home_snapshot(db, game, simulation, player_id: int) -> tuple[str, int, int]
 
     next_step = ""
     if urgent:
-        next_step = "→ 🔴 Разбери срочное сообщение во Входящих."
-    elif ready_batch and game.needs_first_handoff_tutorial(player_id):
-        next_step = tutorial_hint("Стафф уже на складе!\nНажми на кнопку 📦 Товар")
+        next_step = "🔴 Разбери срочное сообщение во Входящих."
 
     text = (
         f"<b>🌒 {clean(shop['name'])}</b>\n\n"
@@ -151,9 +143,9 @@ def inbox_keyboard(items, page: int = 0, total: int | None = None) -> InlineKeyb
         ])
     paging: list[InlineKeyboardButton] = []
     if page > 0:
-        paging.append(InlineKeyboardButton(text="← Предыдущие", callback_data=f"inbox:page:{page-1}"))
+        paging.append(InlineKeyboardButton(text="Предыдущие", callback_data=f"inbox:page:{page-1}"))
     if (page + 1) * INBOX_PAGE_SIZE < total:
-        paging.append(InlineKeyboardButton(text="Следующие →", callback_data=f"inbox:page:{page+1}"))
+        paging.append(InlineKeyboardButton(text="Следующие", callback_data=f"inbox:page:{page+1}"))
     if paging:
         rows.append(paging)
     rows.append([
@@ -224,7 +216,7 @@ def inbox_item_keyboard(item, page: int = 0) -> InlineKeyboardMarkup:
         rows.append([InlineKeyboardButton(text="Профиль сотрудника", callback_data=f"team:employee:{employee_id}")])
     back = f"inbox:page:{page}" if page else "menu:inbox"
     rows.append([
-        InlineKeyboardButton(text="← Входящие", callback_data=back),
+        InlineKeyboardButton(text="Входящие", callback_data=back),
         InlineKeyboardButton(text="Меню", callback_data="menu:home"),
     ])
     return InlineKeyboardMarkup(inline_keyboard=rows)
@@ -243,7 +235,7 @@ def build_navigation_router(db, game, simulation, admin_ids: frozenset[int]) -> 
                 "<b>🌒 NIGHTSHIFT</b>\n\n"
                 "Ты управляешь магазином, который работает даже когда ты офлайн.\n\n"
                 "Закупай товар, распределяй его между сотрудниками, управляй витриной и разбирай проблемы.\n\n"
-                "<b>Товар → Склад → Закладчики → Витрина → Продажи</b>",
+                "<b>Товар. Склад. Закладчики. Витрина. Продажи.</b>",
                 reply_markup=ReplyKeyboardRemove(),
             )
         await render_home(message, db, game, simulation, admin_ids, message.from_user.id, edit=False)
