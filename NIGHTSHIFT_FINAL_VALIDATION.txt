@@ -43,7 +43,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f22a03ce7b0>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6d3ea2a0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -120,7 +120,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229faf0170>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6ccf84a0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -197,7 +197,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229faf0350>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6ccf9190>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -274,7 +274,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229facee10>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6cccf4d0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -351,7 +351,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229facd160>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6cccf1d0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -428,7 +428,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229fb4dd30>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6cd60140>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -505,7 +505,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229fb4c260>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6cd62210>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -582,7 +582,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229fb4f710>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6cd62d20>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -659,7 +659,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229fb4f500>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6cd61dc0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -736,7 +736,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229fb35040>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6cd42c90>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -813,7 +813,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229fb35850>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6cd417c0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -890,7 +890,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229fb36db0>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6cd43bf0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -967,7 +967,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f22a05bb380>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6cd4b800>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -1044,7 +1044,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229fb377a0>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6cd40e90>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -1112,7 +1112,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.compensation.CompensationSimulationEngine object at 0x7f229fb34e90>
+self = <app.compensation.CompensationSimulationEngine object at 0x7f9c6cd42570>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -1180,7 +1180,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.compensation.CompensationSimulationEngine object at 0x7f229fb4ea50>
+self = <app.compensation.CompensationSimulationEngine object at 0x7f9c6cd63830>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -1248,7 +1248,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.compensation.CompensationSimulationEngine object at 0x7f229fb36ba0>
+self = <app.compensation.CompensationSimulationEngine object at 0x7f9c6cd42570>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -1322,7 +1322,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_core.CourierCoreSimulationEngine object at 0x7f229faccf20>
+self = <app.courier_core.CourierCoreSimulationEngine object at 0x7f9c6ccce840>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -1396,7 +1396,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_core.CourierCoreSimulationEngine object at 0x7f229faceae0>
+self = <app.courier_core.CourierCoreSimulationEngine object at 0x7f9c6ccf4380>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -1470,7 +1470,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_core.CourierCoreSimulationEngine object at 0x7f229faf3800>
+self = <app.courier_core.CourierCoreSimulationEngine object at 0x7f9c6d5de6f0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -1544,7 +1544,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_core.CourierCoreSimulationEngine object at 0x7f229fb3e1b0>
+self = <app.courier_core.CourierCoreSimulationEngine object at 0x7f9c6cd4b620>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -1618,7 +1618,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_core.CourierCoreSimulationEngine object at 0x7f229fb3daf0>
+self = <app.courier_core.CourierCoreSimulationEngine object at 0x7f9c6cd4b470>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -1692,7 +1692,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_core.CourierCoreSimulationEngine object at 0x7f229fb3e5a0>
+self = <app.courier_core.CourierCoreSimulationEngine object at 0x7f9c6cd49160>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -1766,7 +1766,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_core.CourierCoreSimulationEngine object at 0x7f229fa37fe0>
+self = <app.courier_core.CourierCoreSimulationEngine object at 0x7f9c6cc3d5e0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -1840,7 +1840,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_core.CourierCoreSimulationEngine object at 0x7f229fa35370>
+self = <app.courier_core.CourierCoreSimulationEngine object at 0x7f9c6cc3f6e0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -1914,7 +1914,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_core.CourierCoreSimulationEngine object at 0x7f229fa34800>
+self = <app.courier_core.CourierCoreSimulationEngine object at 0x7f9c6cc3f530>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -1991,7 +1991,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229fa342f0>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6cc3ce90>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -2068,7 +2068,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229fa36f00>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6cc3ed50>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -2145,7 +2145,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229facdf70>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6d5de6f0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -2222,7 +2222,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229fb3c080>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6d3e9580>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -2299,7 +2299,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229fb3dc70>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6cd4bcb0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -2376,7 +2376,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229fb369f0>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6cd40530>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -2453,7 +2453,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229fa386b0>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6cc40800>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -2530,7 +2530,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229fa3bfe0>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6cc430e0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -2607,7 +2607,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229fa3a990>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6cc42de0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -2684,7 +2684,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f32d310>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c5b8770>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -2761,7 +2761,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f32d550>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c5b9b50>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -2832,7 +2832,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.customer_trust.CustomerTrustSimulationEngine object at 0x7f229f32e0c0>
+self = <app.customer_trust.CustomerTrustSimulationEngine object at 0x7f9c6c5b9be0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -2903,7 +2903,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.customer_trust.CustomerTrustSimulationEngine object at 0x7f229f32f6b0>
+self = <app.customer_trust.CustomerTrustSimulationEngine object at 0x7f9c6c5bb020>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -2974,7 +2974,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.customer_trust.CustomerTrustSimulationEngine object at 0x7f229f32e000>
+self = <app.customer_trust.CustomerTrustSimulationEngine object at 0x7f9c6c5ba270>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -3045,7 +3045,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.customer_trust.CustomerTrustSimulationEngine object at 0x7f229f32f5c0>
+self = <app.customer_trust.CustomerTrustSimulationEngine object at 0x7f9c6c5bb380>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -3110,7 +3110,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.delayed_disputes.DelayedDisputeSimulationEngine object at 0x7f229fa3bbc0>
+self = <app.delayed_disputes.DelayedDisputeSimulationEngine object at 0x7f9c6cc42ff0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -3175,7 +3175,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.delayed_disputes.DelayedDisputeSimulationEngine object at 0x7f229fb35fd0>
+self = <app.delayed_disputes.DelayedDisputeSimulationEngine object at 0x7f9c6cd40530>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -3240,7 +3240,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.delayed_disputes.DelayedDisputeSimulationEngine object at 0x7f229fb3ccb0>
+self = <app.delayed_disputes.DelayedDisputeSimulationEngine object at 0x7f9c6cd48050>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -3305,7 +3305,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.delayed_disputes.DelayedDisputeSimulationEngine object at 0x7f229f32d220>
+self = <app.delayed_disputes.DelayedDisputeSimulationEngine object at 0x7f9c6c5b97f0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -3373,7 +3373,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.compensation.CompensationSimulationEngine object at 0x7f229fa37ec0>
+self = <app.compensation.CompensationSimulationEngine object at 0x7f9c6cc3e0c0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -3441,7 +3441,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.compensation.CompensationSimulationEngine object at 0x7f229fa37380>
+self = <app.compensation.CompensationSimulationEngine object at 0x7f9c6cc3f320>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -3509,7 +3509,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.compensation.CompensationSimulationEngine object at 0x7f229f38eb10>
+self = <app.compensation.CompensationSimulationEngine object at 0x7f9c6c5bc200>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -3577,7 +3577,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.compensation.CompensationSimulationEngine object at 0x7f229f38cb30>
+self = <app.compensation.CompensationSimulationEngine object at 0x7f9c6c5be540>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -3645,7 +3645,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.compensation.CompensationSimulationEngine object at 0x7f229f38cd40>
+self = <app.compensation.CompensationSimulationEngine object at 0x7f9c6c5be060>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -3713,7 +3713,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.compensation.CompensationSimulationEngine object at 0x7f229f38f980>
+self = <app.compensation.CompensationSimulationEngine object at 0x7f9c6c5bcfb0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -3781,7 +3781,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.compensation.CompensationSimulationEngine object at 0x7f229f2f47d0>
+self = <app.compensation.CompensationSimulationEngine object at 0x7f9c6c658da0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -3858,7 +3858,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f2f4230>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c658740>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -3935,7 +3935,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f2f6420>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c65aa50>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -4012,7 +4012,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f2f4a10>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c659190>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -4089,7 +4089,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f2f7320>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c65b110>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -4166,7 +4166,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f2f4230>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c5bd250>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -4231,7 +4231,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.procurement_market.ProcurementMarketSimulationEngine object at 0x7f229f32d910>
+self = <app.procurement_market.ProcurementMarketSimulationEngine object at 0x7f9c6c5bb650>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -4296,7 +4296,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.procurement_market.ProcurementMarketSimulationEngine object at 0x7f229f2985c0>
+self = <app.procurement_market.ProcurementMarketSimulationEngine object at 0x7f9c6c624ce0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -4361,7 +4361,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.procurement_market.ProcurementMarketSimulationEngine object at 0x7f229f32e3c0>
+self = <app.procurement_market.ProcurementMarketSimulationEngine object at 0x7f9c6cfcdeb0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -4426,7 +4426,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.procurement_market.ProcurementMarketSimulationEngine object at 0x7f229f29b290>
+self = <app.procurement_market.ProcurementMarketSimulationEngine object at 0x7f9c6c627d70>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -4494,7 +4494,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.compensation.CompensationSimulationEngine object at 0x7f229f29a6c0>
+self = <app.compensation.CompensationSimulationEngine object at 0x7f9c6c627cb0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -4562,7 +4562,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.compensation.CompensationSimulationEngine object at 0x7f229f2bdfa0>
+self = <app.compensation.CompensationSimulationEngine object at 0x7f9c6c5cfb90>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -4630,7 +4630,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.compensation.CompensationSimulationEngine object at 0x7f229f2bdf70>
+self = <app.compensation.CompensationSimulationEngine object at 0x7f9c6c5cc4a0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -4698,7 +4698,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.compensation.CompensationSimulationEngine object at 0x7f229f2bcb30>
+self = <app.compensation.CompensationSimulationEngine object at 0x7f9c6c5cdc70>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -4766,7 +4766,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.compensation.CompensationSimulationEngine object at 0x7f229f2bc140>
+self = <app.compensation.CompensationSimulationEngine object at 0x7f9c6c5cd520>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -4834,7 +4834,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.compensation.CompensationSimulationEngine object at 0x7f229f2beba0>
+self = <app.compensation.CompensationSimulationEngine object at 0x7f9c6c5cd760>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -4911,7 +4911,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f2bd5e0>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c677fb0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -4988,7 +4988,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f2c0e90>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c676450>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -5065,7 +5065,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f2c1010>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c677e30>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -5142,7 +5142,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f2bf770>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c674140>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -5219,7 +5219,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f2bce30>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c5cfb00>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -5296,7 +5296,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f29a000>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6d5dea80>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -5373,7 +5373,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f2f5370>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c6262a0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -5435,7 +5435,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.staff_insights.StaffInsightSimulationEngine object at 0x7f229f2f6ff0>
+self = <app.staff_insights.StaffInsightSimulationEngine object at 0x7f9c6c6261e0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -5497,7 +5497,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.staff_insights.StaffInsightSimulationEngine object at 0x7f229f2c2480>
+self = <app.staff_insights.StaffInsightSimulationEngine object at 0x7f9c6c659160>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -5559,7 +5559,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.staff_insights.StaffInsightSimulationEngine object at 0x7f229f2c3aa0>
+self = <app.staff_insights.StaffInsightSimulationEngine object at 0x7f9c6c5bd250>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -5621,7 +5621,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.staff_insights.StaffInsightSimulationEngine object at 0x7f229f2c03e0>
+self = <app.staff_insights.StaffInsightSimulationEngine object at 0x7f9c6c659ee0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -5689,7 +5689,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.staff_relationships.StaffRelationshipSimulationEngine object at 0x7f229f5d9040>
+self = <app.staff_relationships.StaffRelationshipSimulationEngine object at 0x7f9c6c7876e0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -5757,7 +5757,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.staff_relationships.StaffRelationshipSimulationEngine object at 0x7f229f5dac90>
+self = <app.staff_relationships.StaffRelationshipSimulationEngine object at 0x7f9c6c7851f0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -5825,7 +5825,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.staff_relationships.StaffRelationshipSimulationEngine object at 0x7f229f5d8290>
+self = <app.staff_relationships.StaffRelationshipSimulationEngine object at 0x7f9c6c785850>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -5893,7 +5893,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.staff_relationships.StaffRelationshipSimulationEngine object at 0x7f229f611d90>
+self = <app.staff_relationships.StaffRelationshipSimulationEngine object at 0x7f9c6c6dad80>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -5961,7 +5961,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.compensation.CompensationSimulationEngine object at 0x7f229f612630>
+self = <app.compensation.CompensationSimulationEngine object at 0x7f9c6c6d9e20>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -6029,7 +6029,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.compensation.CompensationSimulationEngine object at 0x7f229f610ce0>
+self = <app.compensation.CompensationSimulationEngine object at 0x7f9c6c6db680>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -6097,7 +6097,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.compensation.CompensationSimulationEngine object at 0x7f229f6133e0>
+self = <app.compensation.CompensationSimulationEngine object at 0x7f9c6c6d9fa0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -6165,7 +6165,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.compensation.CompensationSimulationEngine object at 0x7f229f613410>
+self = <app.compensation.CompensationSimulationEngine object at 0x7f9c6c6d80b0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -6233,7 +6233,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.compensation.CompensationSimulationEngine object at 0x7f229f5da8d0>
+self = <app.compensation.CompensationSimulationEngine object at 0x7f9c6c6d8f50>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -6310,7 +6310,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f2f5880>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c6d8bf0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -6387,7 +6387,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f5d99d0>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c785130>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -6464,7 +6464,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f2bc590>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c7873b0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -6541,7 +6541,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f29a3f0>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c677830>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -6618,7 +6618,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f611d90>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c676ae0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -6695,7 +6695,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f5dfc50>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c771eb0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -6772,7 +6772,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f5ddc70>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c772cf0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -6849,7 +6849,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f5de210>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c771070>
 player_id = 99101, username = 'ui_tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -6926,7 +6926,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f5dd370>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c772420>
 player_id = 99101, username = 'ui_tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -6994,7 +6994,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.compensation.CompensationSimulationEngine object at 0x7f229f59e3c0>
+self = <app.compensation.CompensationSimulationEngine object at 0x7f9c6c6f27b0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -7071,7 +7071,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f59f1a0>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c6f36e0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -7148,7 +7148,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f59e360>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c6f1490>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -7225,7 +7225,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f5de0f0>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c771f40>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -7302,7 +7302,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f5def90>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c770c20>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -7379,7 +7379,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f2f5ee0>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c6755e0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -7456,7 +7456,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f610380>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c784770>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -7533,7 +7533,7 @@ app/nightshift.py:16: in ensure_player
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f229f2c3920>
+self = <app.courier_management.CourierManagementSimulationEngine object at 0x7f9c6c6d91c0>
 player_id = 1001, username = 'tester'
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
@@ -7674,7 +7674,7 @@ FAILED tests/test_workflow_pipeline.py::test_packaging_rule_always_sums_to_100 -
 FAILED tests/test_workflow_pipeline.py::test_role_change_requires_no_inventory_or_pending_assignment - sqlite3.OperationalError: no such column: rating
 FAILED tests/test_workflow_pipeline.py::test_manual_firing_returns_remaining_deposit - sqlite3.OperationalError: no such column: rating
 FAILED tests/test_workflow_pipeline.py::test_overexposed_dishonest_employee_can_abscond_and_deposit_is_forfeited - sqlite3.OperationalError: no such column: rating
-104 failed, 13 passed in 19.57s
+104 failed, 13 passed in 16.21s
 PYTEST_EXIT=1
 
 === CURRENT ARCHITECTURE VALIDATOR ===
