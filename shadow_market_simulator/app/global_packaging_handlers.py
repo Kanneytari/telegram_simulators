@@ -63,4 +63,22 @@ def build_global_packaging_router(game) -> Router:
             return
         await show(callback.message, callback.from_user.id)
 
+    @router.callback_query(F.data.startswith("workflow:packemployee:"))
+    @router.callback_query(F.data.startswith("workflow:packproduct:"))
+    async def legacy_pack_screen(callback: CallbackQuery) -> None:
+        await callback.answer()
+        await show(callback.message, callback.from_user.id)
+
+    @router.callback_query(F.data.startswith("workflow:packadj:"))
+    async def legacy_pack_adjust(callback: CallbackQuery) -> None:
+        await callback.answer()
+        try:
+            parts = (callback.data or "").split(":")
+            pack_size = int(parts[4])
+            delta = int(parts[5])
+            game.adjust_global_packaging_rule(callback.from_user.id, pack_size, delta)
+        except (ValueError, IndexError):
+            return
+        await show(callback.message, callback.from_user.id)
+
     return router
