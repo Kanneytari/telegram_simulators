@@ -10,12 +10,14 @@ from aiogram.enums import ParseMode
 from .action_handlers import build_action_router
 from .analytics_handlers import build_analytics_router
 from .analytics_log import AnalyticsLogger, AnalyticsLoggingMiddleware
-from .catalog_extension import ExpandedCatalogSimulationEngine
 from .config import load_settings
 from .db import Database
 from .deposit_share_handlers import build_deposit_share_router
 from .dispute_handlers import build_dispute_router
+from .employee_profile_handlers import build_employee_profile_router
 from .extended_handlers import build_extended_router
+from .global_packaging import GlobalPackagingGameService, GlobalPackagingSimulationEngine
+from .global_packaging_handlers import build_global_packaging_router
 from .handlers import build_router
 from .inbox_close_handlers import build_inbox_close_router
 from .inbox_lifecycle import install_inbox_lifecycle
@@ -26,7 +28,6 @@ from .product_review_handlers import build_product_review_router
 from .recruitment_deposit_cap import RetailDepositCappedRecruitmentService
 from .recruitment_handlers import build_recruitment_router
 from .simulation import iso, utcnow
-from .staff_idle import IdleAwareGameService
 from .storefront_handlers import build_storefront_router
 from .time_handlers import build_time_router
 from .workflow_allocation_handlers import build_workflow_allocation_router
@@ -38,8 +39,8 @@ from .workflow_reassign_handlers import build_workflow_reassign_router
 async def notification_loop(
     bot: Bot,
     db: Database,
-    simulation: ExpandedCatalogSimulationEngine,
-    game: IdleAwareGameService,
+    simulation: GlobalPackagingSimulationEngine,
+    game: GlobalPackagingGameService,
     recruitment: RetailDepositCappedRecruitmentService,
     analytics: AnalyticsLogger,
     interval: int,
@@ -87,9 +88,9 @@ async def main() -> None:
 
     db = Database(settings.db_path)
     db.init()
-    simulation = ExpandedCatalogSimulationEngine(db, speed=settings.simulation_speed)
+    simulation = GlobalPackagingSimulationEngine(db, speed=settings.simulation_speed)
     simulation.seed_catalog()
-    game = IdleAwareGameService(db, simulation)
+    game = GlobalPackagingGameService(db, simulation)
     recruitment = RetailDepositCappedRecruitmentService(db, speed=settings.simulation_speed)
     install_inbox_lifecycle(db)
 
@@ -104,12 +105,15 @@ async def main() -> None:
     dispatcher.callback_query.outer_middleware(AnalyticsLoggingMiddleware(analytics))
 
     dispatcher.include_router(build_workflow_dashboard_router(db, game, simulation, settings.admin_ids))
+    # Team-wide packaging owns team:packrules before the legacy per-employee routes.
+    dispatcher.include_router(build_global_packaging_router(game))
     # This router owns the live batch screen, including recipient markers and
     # wholesale-responsibility reassignment.
     dispatcher.include_router(build_workflow_reassign_router(game))
     dispatcher.include_router(build_workflow_allocation_router(game))
-    # Must be before the legacy workflow employee-profile handler so the profile can
-    # expose the deposit-share negotiation entry point.
+    # Own employee profiles before the older profile handlers so couriers no longer
+    # expose individual packaging controls.
+    dispatcher.include_router(build_employee_profile_router(game))
     dispatcher.include_router(build_deposit_share_router(game))
     dispatcher.include_router(build_workflow_router(game))
     dispatcher.include_router(build_procurement_router(game))
