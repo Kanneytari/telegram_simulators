@@ -13,11 +13,10 @@ from . import (
     simulation,
     ui_commerce,
     ui_navigation,
-    ui_staff_handlers,
     workflow,
 )
-from .simulation import clamp, iso, utcnow
-from .ui_common import clean, money, present, tutorial_hint
+from .simulation import iso, utcnow
+from .ui_common import clean, money, present, rating, tutorial_hint
 
 
 STARTING_FREE_CASH = 500_000
@@ -35,6 +34,13 @@ STAGE_REVIEW = "review"
 STAGE_DISPUTE = "dispute"
 STAGE_TEAM = "team"
 STAGE_COMPLETE = "complete"
+
+WAIT_STAGES = {
+    STAGE_PICKUP_WAIT,
+    STAGE_HANDOFF_WAIT,
+    STAGE_PREP_WAIT,
+    STAGE_SALE_WAIT,
+}
 
 
 def _ensure_schema_conn(conn) -> None:
@@ -123,108 +129,167 @@ def _free_cash(game, player_id: int) -> int:
     return int(shop["balance"]) - int(shop["reserve_target"]) - deposits
 
 
-def _skip_markup() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="⏩ Пропустить ожидание", callback_data="tutorial:skip")],
-            [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:home")],
-        ]
-    )
-
-
-def _tutorial_home_markup(stage: str) -> InlineKeyboardMarkup:
+def _instruction(state: dict) -> str:
+    stage = state["stage"]
+    data = state["data"]
     if stage == STAGE_PROCUREMENT:
-        rows = [[InlineKeyboardButton(text="📦 Выбрать товар", callback_data="menu:product")]]
-    elif stage in {STAGE_PICKUP_WAIT, STAGE_HANDOFF_WAIT, STAGE_PREP_WAIT, STAGE_SALE_WAIT}:
-        rows = [[InlineKeyboardButton(text="⏩ Пропустить ожидание", callback_data="tutorial:skip")]]
-    elif stage == STAGE_HANDOFF:
-        rows = [[InlineKeyboardButton(text="📦 Открыть склад", callback_data="team:batches")]]
-    elif stage == STAGE_PRICE:
-        rows = [[InlineKeyboardButton(text="🏷 Открыть витрину", callback_data="menu:storefront")]]
+        return (
+            "Склад пуст. Нажми 📦 Товар и выбери, что купить. Сравни цену, качество и надёжность поставки. "
+            "В дальнейшем любая закупка может оказаться неудачной."
+        )
+    if stage == STAGE_PICKUP_WAIT:
+        return (
+            "Складмен забирает товар. Обычно это занимает игровое время. Можешь заниматься другими делами, "
+            "дождаться окончания или нажать ⏩ Пропустить ожидание."
+        )
+    if stage == STAGE_HANDOFF:
+        return (
+            "Вернись в меню, нажми 📦 Товар → 📦 Склад, открой партию и выбери закладчика, которому передашь стафф."
+        )
+    if stage == STAGE_HANDOFF_WAIT:
+        return (
+            "Складмен передаёт товар закладчику. Можешь продолжать заниматься магазином, дождаться окончания "
+            "или нажать ⏩ Пропустить ожидание."
+        )
+    if stage == STAGE_PREP_WAIT:
+        return (
+            "Закладчик готовит товар к витрине. Можешь дождаться окончания или нажать ⏩ Пропустить ожидание."
+        )
+    if stage == STAGE_PRICE:
+        return (
+            "Вернись в меню, нажми 🏷 Витрина, выбери товар, затем выбери фасовку и измени цену. "
+            "Цена влияет на спрос и ожидания покупателей."
+        )
+    if stage == STAGE_SALE_WAIT:
+        return (
+            "Теперь дождись первой продажи. Можешь продолжать играть как обычно или нажать ⏩ Пропустить ожидание."
+        )
+    if stage == STAGE_REVIEW:
+        order_id = data.get("order_id")
+        suffix = f" #{order_id}" if order_id else ""
+        return (
+            f"Первый заказ{suffix} прошёл. Выручка ещё не равна чистой прибыли: есть себестоимость и выплаты команде. "
+            "После продаж появляются оценки товара и закладчика. Нажми «Продолжить обучение», чтобы познакомиться с диспутами."
+        )
+    if stage == STAGE_DISPUTE:
+        return (
+            "Открой 📨 Входящие и разбери диспут. Можно запросить пояснение сотрудника, изучить контекст и решить, "
+            "компенсировать заказ или отказать."
+        )
+    if stage == STAGE_TEAM:
+        return (
+            "Теперь посмотри 👥 Команду, найм и условия оплаты, а также 🏷 Фасовки, 📊 Аналитику и 📨 Входящие. "
+            "Все обычные разделы доступны. Когда закончишь — заверши обучение."
+        )
+    return "Обучение завершено."
+
+
+def _append_tutorial_action(markup: InlineKeyboardMarkup, state: dict) -> InlineKeyboardMarkup:
+    rows = [list(row) for row in markup.inline_keyboard]
+    stage = state["stage"]
+    extra: list[InlineKeyboardButton] = []
+    if stage in WAIT_STAGES:
+        extra.append(
+            InlineKeyboardButton(
+                text="⏩ Пропустить ожидание",
+                callback_data="tutorial:skip",
+            )
+        )
     elif stage == STAGE_REVIEW:
-        rows = [[InlineKeyboardButton(text="Продолжить обучение", callback_data="tutorial:continue")]]
-    elif stage == STAGE_DISPUTE:
-        rows = [[InlineKeyboardButton(text="⚖️ Разобрать диспут", callback_data="tutorial:open_dispute")]]
+        extra.append(
+            InlineKeyboardButton(
+                text="Продолжить обучение",
+                callback_data="tutorial:continue",
+            )
+        )
     elif stage == STAGE_TEAM:
-        rows = [
-            [InlineKeyboardButton(text="👥 Открыть команду", callback_data="menu:team")],
-            [InlineKeyboardButton(text="✅ Завершить обучение", callback_data="tutorial:finish")],
-        ]
-    else:
-        rows = [[InlineKeyboardButton(text="🏠 Меню", callback_data="menu:home")]]
+        extra.append(
+            InlineKeyboardButton(
+                text="✅ Завершить обучение",
+                callback_data="tutorial:finish",
+            )
+        )
+    if extra:
+        rows.insert(0, extra)
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-def _home_text(game, player_id: int, state: dict) -> str:
-    with game.db.connect() as conn:
-        shop = conn.execute(
-            "SELECT * FROM shops WHERE player_id=?",
-            (player_id,),
+def _active_task_for_stage(conn, player_id: int, state: dict):
+    data = state["data"]
+    if state["stage"] == STAGE_PICKUP_WAIT:
+        return conn.execute(
+            """SELECT * FROM employee_tasks
+               WHERE player_id=? AND kind='receive_batch' AND batch_id=? AND status='active'
+               ORDER BY id DESC LIMIT 1""",
+            (player_id, int(data.get("batch_id", 0))),
         ).fetchone()
-    header = (
-        f"<b>🌒 {clean(shop['name'])}</b>\n\n"
-        f"Баланс: <b>{money(shop['balance'])}</b>\n"
-        f"Свободно: <b>{money(_free_cash(game, player_id))}</b>"
-    )
+    if state["stage"] == STAGE_HANDOFF_WAIT:
+        return conn.execute(
+            """SELECT * FROM employee_tasks
+               WHERE player_id=? AND kind='handoff' AND allocation_id=? AND status='active'
+               ORDER BY id DESC LIMIT 1""",
+            (player_id, int(data.get("allocation_id", 0))),
+        ).fetchone()
+    if state["stage"] == STAGE_PREP_WAIT:
+        return conn.execute(
+            """SELECT * FROM employee_tasks
+               WHERE player_id=? AND kind='place_stashes' AND allocation_id=? AND status='active'
+               ORDER BY id DESC LIMIT 1""",
+            (player_id, int(data.get("allocation_id", 0))),
+        ).fetchone()
+    return None
+
+
+def sync_tutorial_state(db, player_id: int) -> dict | None:
+    state = tutorial_state(db, player_id)
+    if not state or not state["active"]:
+        return state
+
     stage = state["stage"]
     data = state["data"]
+    next_stage: str | None = None
+    next_data: dict = {}
 
-    if stage == STAGE_PROCUREMENT:
-        quote = (
-            "Начнём с нуля. Склад пустой, зато у тебя есть деньги на первую закупку. "
-            "Выбери стафф сам. Цена, качество и надёжность поставки отличаются. "
-            "В дальнейшем любая сделка может оказаться неудачной."
-        )
-    elif stage == STAGE_PICKUP_WAIT:
-        quote = (
-            "Складмен поехал за партией. Обычно получение товара занимает игровое время. "
-            "Во время обучения ожидание можно пропускать кнопкой ниже."
-        )
-    elif stage == STAGE_HANDOFF:
-        quote = (
-            "Партия у складмена. Пока товар лежит у него, он не продаётся. "
-            "Передай часть партии закладчику, который подготовит её к витрине."
-        )
-    elif stage == STAGE_HANDOFF_WAIT:
-        quote = (
-            "Складмен готовит мастер-клад. В обычной игре это занимает время и держит сотрудника занятым."
-        )
-    elif stage == STAGE_PREP_WAIT:
-        quote = (
-            "Закладчик получил товар и готовит его к витрине. Его темп, состояние и оснащение влияют на работу."
-        )
-    elif stage == STAGE_PRICE:
-        quote = (
-            "Товар появился на витрине. Теперь реши, по какой цене продавать. "
-            "Высокая цена увеличивает прибыль с заказа, но снижает спрос и повышает ожидания покупателей."
-        )
-    elif stage == STAGE_SALE_WAIT:
-        quote = (
-            "Цена выставлена. Продажи происходят со временем, а не сразу после публикации товара. "
-            "Для обучения первую продажу можно промотать."
-        )
-    elif stage == STAGE_REVIEW:
-        order_id = data.get("order_id")
-        suffix = f" #{order_id}" if order_id else ""
-        quote = (
-            f"Первый заказ{suffix} прошёл. Выручка ещё не равна чистой прибыли: "
-            "есть себестоимость товара и выплаты сотрудникам. После заказов появляются оценки товара "
-            "и закладчика, а их история влияет на дальнейший бизнес."
-        )
-    elif stage == STAGE_DISPUTE:
-        quote = (
-            "Не каждый заказ заканчивается спокойно. Иногда клиент открывает диспут. "
-            "Можно запросить пояснение сотрудника, изучить контекст и решить, компенсировать заказ или отказать."
-        )
-    elif stage == STAGE_TEAM:
-        quote = (
-            "Последний важный блок — команда. У сотрудников накапливается реальная статистика: темп, оценки, "
-            "нагрузка, отношения, депозит и потери. Здесь же находятся найм, условия оплаты, отдых, развитие и увольнение. "
-            "Сравнивай людей по истории работы, а не по одной операции."
-        )
-    else:
-        quote = "Обучение завершено."
-    return header + "\n\n" + tutorial_hint(quote)
+    with db.connect() as conn:
+        if stage == STAGE_PICKUP_WAIT:
+            batch = conn.execute(
+                "SELECT status FROM batches WHERE id=? AND player_id=?",
+                (int(data.get("batch_id", 0)), player_id),
+            ).fetchone()
+            if batch and batch["status"] == "warehouse":
+                next_stage = STAGE_HANDOFF
+
+        elif stage in {STAGE_HANDOFF_WAIT, STAGE_PREP_WAIT}:
+            allocation = conn.execute(
+                "SELECT status, product_id FROM retail_allocations WHERE id=? AND player_id=?",
+                (int(data.get("allocation_id", 0)), player_id),
+            ).fetchone()
+            if allocation:
+                if allocation["status"] == "published":
+                    next_stage = STAGE_PRICE
+                    next_data["product_id"] = int(allocation["product_id"])
+                elif stage == STAGE_HANDOFF_WAIT and allocation["status"] == "preparing":
+                    next_stage = STAGE_PREP_WAIT
+
+        elif stage == STAGE_SALE_WAIT:
+            floor = int(data.get("order_floor", 0) or 0)
+            order = conn.execute(
+                """SELECT id, product_id FROM orders
+                   WHERE player_id=? AND id>?
+                   ORDER BY id LIMIT 1""",
+                (player_id, floor),
+            ).fetchone()
+            if order:
+                next_stage = STAGE_REVIEW
+                next_data.update(
+                    order_id=int(order["id"]),
+                    product_id=int(order["product_id"]),
+                )
+
+    if next_stage:
+        _set_stage(db, player_id, next_stage, **next_data)
+        return tutorial_state(db, player_id)
+    return state
 
 
 def _install_new_player_setup() -> None:
@@ -267,153 +332,71 @@ def _install_new_player_setup() -> None:
     simulation.SimulationEngine.ensure_player = ensure_player
 
 
-def _install_tutorial_offer_filter() -> None:
-    original = procurement_market.ProcurementMarketGameService.offers
-    if getattr(original, "_nightshift_tutorial", False):
-        return
-
-    def offers(self, player_id: int, product_id: int | None = None):
-        rows = list(original(self, player_id, product_id))
-        state = tutorial_state(self.db, player_id)
-        if not state or not state["active"] or state["stage"] != STAGE_PROCUREMENT:
-            return rows
-        free = _free_cash(self, player_id)
-        return [
-            row
-            for row in rows
-            if int(row["quantity"]) * int(row["unit_cost"]) <= free
-        ]
-
-    offers._nightshift_tutorial = True
-    procurement_market.ProcurementMarketGameService.offers = offers
-
-
 def _install_first_purchase_protection() -> None:
-    original = workflow.WorkflowGameService.buy_offer_for_employee
+    original = procurement_market.ProcurementMarketGameService.buy_offer_for_employee
     if getattr(original, "_nightshift_tutorial", False):
         return
 
-    def buy_offer_for_employee(self, player_id: int, offer_id: int, employee_id: int) -> str:
+    def buy_offer_for_employee(
+        self,
+        player_id: int,
+        offer_id: int,
+        employee_id: int,
+    ) -> str:
         state = tutorial_state(self.db, player_id)
         if not state or not state["active"] or state["stage"] != STAGE_PROCUREMENT:
             return original(self, player_id, offer_id, employee_id)
 
-        now = utcnow()
         with self.db.connect() as conn:
             offer = conn.execute(
-                """SELECT o.*, s.title supplier_title, p.title product_title,
-                          COALESCE(o.offer_quality_mean, s.quality_mean) resolved_quality_mean,
-                          COALESCE(o.offer_quality_sigma, s.quality_sigma) resolved_quality_sigma
-                   FROM supplier_offers o
-                   JOIN suppliers s ON s.id=o.supplier_id
-                   JOIN products p ON p.id=o.product_id
-                   WHERE o.id=? AND o.player_id=? AND o.status='open'""",
+                """SELECT product_id, offer_reliability
+                   FROM supplier_offers
+                   WHERE id=? AND player_id=? AND status='open'""",
                 (offer_id, player_id),
             ).fetchone()
-            employee = conn.execute(
-                """SELECT * FROM employees
-                   WHERE id=? AND player_id=? AND active=1 AND role='warehouse'""",
-                (employee_id, player_id),
-            ).fetchone()
             if not offer:
-                return "Предложение уже недоступно."
-            if not employee:
-                return "Складмен больше недоступен."
-
-            total = int(offer["quantity"]) * int(offer["unit_cost"])
-            if _free_cash(self, player_id) < total:
-                return f"Недостаточно свободных денег. Нужно {total:,} ₽."
-
-            quality = clamp(
-                self.rng.gauss(
-                    float(offer["resolved_quality_mean"]),
-                    float(offer["resolved_quality_sigma"]),
-                ),
-                60.0,
-                99.0,
-            )
+                return original(self, player_id, offer_id, employee_id)
+            old_reliability = offer["offer_reliability"]
             conn.execute(
-                "UPDATE shops SET balance=balance-? WHERE player_id=?",
-                (total, player_id),
-            )
-            cur = conn.execute(
-                """INSERT INTO batches(
-                       player_id, supplier_id, product_id, responsible_employee_id,
-                       quantity, remaining, unit_cost, quality, status
-                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'receiving')""",
-                (
-                    player_id,
-                    offer["supplier_id"],
-                    offer["product_id"],
-                    employee_id,
-                    offer["quantity"],
-                    offer["quantity"],
-                    offer["unit_cost"],
-                    quality,
-                ),
-            )
-            batch_id = int(cur.lastrowid)
-            game_hours = (
-                1.5
-                + int(offer["quantity"]) / 100.0 * 0.8
-                + self.rng.uniform(0.2, 1.0)
-            )
-            conn.execute(
-                """INSERT INTO employee_tasks(
-                       player_id, employee_id, kind, batch_id, product_id, quantity,
-                       completes_at, note
-                   ) VALUES (?, ?, 'receive_batch', ?, ?, ?, ?, ?)""",
-                (
-                    player_id,
-                    employee_id,
-                    batch_id,
-                    offer["product_id"],
-                    offer["quantity"],
-                    iso(
-                        now
-                        + timedelta(
-                            hours=game_hours
-                            / self.simulation.effective_speed(player_id)
-                        )
-                    ),
-                    f"Приём партии {offer['product_title']}",
-                ),
-            )
-            conn.execute(
-                """INSERT INTO ledger(player_id, amount, kind, reference_type, reference_id, note)
-                   VALUES (?, ?, 'procurement', 'offer', ?, ?)""",
-                (
-                    player_id,
-                    -total,
-                    offer_id,
-                    f"Партия #{batch_id}: {offer['product_title']} · ответственный {employee['alias']}",
-                ),
-            )
-            conn.execute(
-                "UPDATE supplier_offers SET status='bought' WHERE id=?",
+                "UPDATE supplier_offers SET offer_reliability=1.0 WHERE id=?",
                 (offer_id,),
             )
 
-        _set_stage(
-            self.db,
-            player_id,
-            STAGE_PICKUP_WAIT,
-            batch_id=batch_id,
-            product_id=int(offer["product_id"]),
-            warehouse_employee_id=employee_id,
-        )
-        return (
-            "<b>✅ Куплено</b>\n\n"
-            f"{clean(offer['product_title'])} · {int(offer['quantity'])} ед. · {money(total)}\n"
-            f"🚚 {clean(employee['alias'])} поехал за партией.\n\n"
-            + tutorial_hint(
-                "Поставка занимает время. В дальнейшем любая закупка — это риск, поэтому сравнивай цену, "
-                "качество и надёжность поставщика."
+        try:
+            result = original(self, player_id, offer_id, employee_id)
+        finally:
+            with self.db.connect() as conn:
+                conn.execute(
+                    "UPDATE supplier_offers SET offer_reliability=? WHERE id=?",
+                    (old_reliability, offer_id),
+                )
+
+        if not result.startswith("✅ Куплено"):
+            return result
+
+        with self.db.connect() as conn:
+            batch = conn.execute(
+                """SELECT id, product_id FROM batches
+                   WHERE player_id=? AND responsible_employee_id=? AND status='receiving'
+                   ORDER BY id DESC LIMIT 1""",
+                (player_id, employee_id),
+            ).fetchone()
+        if batch:
+            _set_stage(
+                self.db,
+                player_id,
+                STAGE_PICKUP_WAIT,
+                batch_id=int(batch["id"]),
+                product_id=int(batch["product_id"]),
+                warehouse_employee_id=employee_id,
             )
-        )
+            result += "\n\n" + tutorial_hint(
+                "Складмен забирает товар. Обычно это занимает время. Можешь продолжать играть или вернуться в меню и нажать ⏩ Пропустить ожидание."
+            )
+        return result
 
     buy_offer_for_employee._nightshift_tutorial = True
-    workflow.WorkflowGameService.buy_offer_for_employee = buy_offer_for_employee
+    procurement_market.ProcurementMarketGameService.buy_offer_for_employee = buy_offer_for_employee
 
 
 def _install_handoff_progress() -> None:
@@ -435,7 +418,7 @@ def _install_handoff_progress() -> None:
             retail_employee_id,
             quantity,
         )
-        state = tutorial_state(self.db, player_id)
+        state = sync_tutorial_state(self.db, player_id)
         if not state or not state["active"] or state["stage"] != STAGE_HANDOFF:
             return result
         with self.db.connect() as conn:
@@ -453,6 +436,9 @@ def _install_handoff_progress() -> None:
                 batch_id=batch_id,
                 allocation_id=int(allocation["id"]),
                 retail_employee_id=retail_employee_id,
+            )
+            result += "\n\n" + tutorial_hint(
+                "Передача занимает время. Можешь продолжать играть или вернуться в меню и нажать ⏩ Пропустить ожидание."
             )
         return result
 
@@ -474,18 +460,26 @@ def _install_price_progress() -> None:
         percent: int,
     ) -> str:
         result = original(self, player_id, listing_id, percent)
-        state = tutorial_state(self.db, player_id)
+        state = sync_tutorial_state(self.db, player_id)
         if (
             state
             and state["active"]
             and state["stage"] == STAGE_PRICE
             and result.startswith("Цена изменена")
         ):
+            with self.db.connect() as conn:
+                floor = int(
+                    conn.execute(
+                        "SELECT COALESCE(MAX(id),0) FROM orders WHERE player_id=?",
+                        (player_id,),
+                    ).fetchone()[0]
+                )
             _set_stage(
                 self.db,
                 player_id,
                 STAGE_SALE_WAIT,
                 listing_id=listing_id,
+                order_floor=floor,
             )
         return result
 
@@ -532,19 +526,9 @@ def _install_random_event_protection() -> None:
                     ).fetchone()
                 if owner:
                     state = tutorial_state(self.db, int(owner["player_id"]))
-                    if (
-                        state
-                        and state["active"]
-                        and state["stage"] == STAGE_SALE_WAIT
-                    ):
+                    if state and state["active"] and state["stage"] == STAGE_SALE_WAIT:
                         return 0.0
-            return original_dispute(
-                self,
-                client,
-                employee,
-                quality,
-                modifier,
-            )
+            return original_dispute(self, client, employee, quality, modifier)
 
         protected_dispute._nightshift_tutorial = True
         courier_core.CourierCoreSimulationEngine._dispute_probability = protected_dispute
@@ -588,43 +572,279 @@ def _install_handoff_tutorial_flag() -> None:
         return
 
     def needs_first_handoff_tutorial(self, player_id: int) -> bool:
-        state = tutorial_state(self.db, player_id)
-        if state and state["active"]:
-            return state["stage"] == STAGE_HANDOFF
+        state = sync_tutorial_state(self.db, player_id)
+        if state and state["active"] and state["stage"] == STAGE_HANDOFF:
+            return True
         return original(self, player_id)
 
     needs_first_handoff_tutorial._nightshift_tutorial = True
     workflow.WorkflowGameService.needs_first_handoff_tutorial = needs_first_handoff_tutorial
 
 
-def _active_task_for_stage(conn, player_id: int, state: dict):
-    data = state["data"]
-    if state["stage"] == STAGE_PICKUP_WAIT:
-        return conn.execute(
-            """SELECT * FROM employee_tasks
-               WHERE player_id=? AND kind='receive_batch' AND batch_id=? AND status='active'
-               ORDER BY id DESC LIMIT 1""",
-            (player_id, int(data.get("batch_id", 0))),
-        ).fetchone()
-    if state["stage"] == STAGE_HANDOFF_WAIT:
-        return conn.execute(
-            """SELECT * FROM employee_tasks
-               WHERE player_id=? AND kind='handoff' AND allocation_id=? AND status='active'
-               ORDER BY id DESC LIMIT 1""",
-            (player_id, int(data.get("allocation_id", 0))),
-        ).fetchone()
-    if state["stage"] == STAGE_PREP_WAIT:
-        return conn.execute(
-            """SELECT * FROM employee_tasks
-               WHERE player_id=? AND kind='place_stashes' AND allocation_id=? AND status='active'
-               ORDER BY id DESC LIMIT 1""",
-            (player_id, int(data.get("allocation_id", 0))),
-        ).fetchone()
-    return None
+def _install_soft_guidance_renderers() -> None:
+    original_home = ui_navigation.render_home
+    if not getattr(original_home, "_nightshift_tutorial_soft", False):
+
+        async def render_home(
+            target,
+            db,
+            game,
+            simulation_engine,
+            admin_ids,
+            player_id: int,
+            *,
+            edit: bool = True,
+        ) -> None:
+            text, opened, urgent = ui_navigation._home_snapshot(
+                db,
+                game,
+                simulation_engine,
+                player_id,
+            )
+            state = sync_tutorial_state(db, player_id)
+            markup = ui_navigation.home_keyboard(
+                opened,
+                urgent,
+                is_admin=player_id in admin_ids,
+            )
+            if state and state["active"]:
+                text += "\n\n" + tutorial_hint(_instruction(state))
+                markup = _append_tutorial_action(markup, state)
+            await present(target, text, markup, edit=edit)
+
+        render_home._nightshift_tutorial_soft = True
+        ui_navigation.render_home = render_home
+
+    original_product_root = ui_commerce.render_product_root
+    if not getattr(original_product_root, "_nightshift_tutorial_soft", False):
+
+        async def render_product_root(
+            target,
+            db,
+            game,
+            player_id: int,
+            *,
+            flash: str | None = None,
+        ) -> None:
+            state = sync_tutorial_state(db, player_id)
+            if not state or not state["active"] or state["stage"] != STAGE_PROCUREMENT:
+                await original_product_root(target, db, game, player_id, flash=flash)
+                return
+            products = game.procurement_products(player_id)
+            body = (
+                f"<b>📦 Товар</b>\n\nСвободно: <b>{money(_free_cash(game, player_id))}</b>\n\n"
+                + tutorial_hint("Выбери товар для первой закупки.")
+            )
+            if flash:
+                body = f"{flash}\n\n{body}"
+            await present(
+                target,
+                body,
+                ui_commerce._procurement_products_keyboard(db, player_id, products),
+            )
+
+        render_product_root._nightshift_tutorial_soft = True
+        ui_commerce.render_product_root = render_product_root
+
+    original_procurement_product = ui_commerce.render_procurement_product
+    if not getattr(original_procurement_product, "_nightshift_tutorial_soft", False):
+
+        async def render_procurement_product(
+            target,
+            game,
+            player_id: int,
+            product_id: int,
+            *,
+            flash: str | None = None,
+        ) -> None:
+            state = sync_tutorial_state(game.db, player_id)
+            if not state or not state["active"] or state["stage"] != STAGE_PROCUREMENT:
+                await original_procurement_product(
+                    target,
+                    game,
+                    player_id,
+                    product_id,
+                    flash=flash,
+                )
+                return
+            offers = game.offers(player_id, product_id)
+            with game.db.connect() as conn:
+                product = conn.execute(
+                    "SELECT title FROM products WHERE id=? AND active=1",
+                    (product_id,),
+                ).fetchone()
+            if not product:
+                await render_product_root(target, game.db, game, player_id, flash=flash)
+                return
+            body = (
+                f"<b>📦 {clean(product['title'])}</b>\n\n"
+                f"Доступно: {len(offers)} предложений.\n\n"
+                + tutorial_hint("Выбери предложение.")
+            )
+            if flash:
+                body = f"{flash}\n\n{body}"
+            await present(target, body, ui_commerce._offers_keyboard(product_id, offers))
+
+        render_procurement_product._nightshift_tutorial_soft = True
+        ui_commerce.render_procurement_product = render_procurement_product
+
+    original_storefront = ui_commerce.render_storefront_root
+    if not getattr(original_storefront, "_nightshift_tutorial_soft", False):
+
+        async def render_storefront_root(
+            target,
+            db,
+            game,
+            simulation_engine,
+            player_id: int,
+        ) -> None:
+            state = sync_tutorial_state(db, player_id)
+            if not state or not state["active"] or state["stage"] not in {STAGE_PRICE, STAGE_SALE_WAIT}:
+                await original_storefront(
+                    target,
+                    db,
+                    game,
+                    simulation_engine,
+                    player_id,
+                )
+                return
+            simulation_engine.advance(player_id)
+            state = sync_tutorial_state(db, player_id)
+            rows = ui_commerce._sales_products(db, player_id)
+            trust = game.customer_metrics(player_id)
+            text = (
+                "<b>🏷 Витрина</b>\n\n"
+                f"Доверие: {trust['trust_score']:.0f}/100\n"
+                f"Наценка до ~+{trust['premium_allowance'] * 100:.0f}% обычно не снижает спрос."
+            )
+            if state and state["active"] and state["stage"] == STAGE_PRICE:
+                text += "\n\n" + tutorial_hint("Выбери товар.")
+            elif state and state["active"] and state["stage"] == STAGE_SALE_WAIT:
+                text += "\n\n" + tutorial_hint(
+                    "Теперь дождись первой продажи. Можешь продолжать играть как обычно или вернуться в меню и нажать ⏩ Пропустить ожидание."
+                )
+            markup = ui_commerce._sales_root_keyboard(rows)
+            if state and state["active"]:
+                markup = _append_tutorial_action(markup, state)
+            await present(target, text, markup)
+
+        render_storefront_root._nightshift_tutorial_soft = True
+        ui_commerce.render_storefront_root = render_storefront_root
+
+    original_sales_product = ui_commerce.render_sales_product
+    if not getattr(original_sales_product, "_nightshift_tutorial_soft", False):
+
+        async def render_sales_product(
+            target,
+            db,
+            player_id: int,
+            product_id: int,
+        ) -> None:
+            state = sync_tutorial_state(db, player_id)
+            if not state or not state["active"] or state["stage"] != STAGE_PRICE:
+                await original_sales_product(target, db, player_id, product_id)
+                return
+            product, listings, published, avg, n = ui_commerce._product_listings(
+                db,
+                player_id,
+                product_id,
+            )
+            if not product:
+                return
+            rows = [
+                [
+                    InlineKeyboardButton(
+                        text=f"×{listing['pack_size']} · {money(listing['price'])} · доступно {int(listing['positions'])}",
+                        callback_data=f"sales:listing:{listing['id']}",
+                    )
+                ]
+                for listing in listings
+            ]
+            rows.append(
+                [
+                    InlineKeyboardButton(
+                        text="← Витрина",
+                        callback_data="menu:storefront",
+                    )
+                ]
+            )
+            text = (
+                f"<b>{clean(product['title'])}</b>\n\n"
+                f"{published} ед. готовы к продаже · оценка {rating(avg, n)}\n\n"
+                + tutorial_hint("Выбери фасовку.")
+            )
+            await present(
+                target,
+                text,
+                InlineKeyboardMarkup(inline_keyboard=rows),
+            )
+
+        render_sales_product._nightshift_tutorial_soft = True
+        ui_commerce.render_sales_product = render_sales_product
+
+    original_listing = ui_commerce.render_listing
+    if not getattr(original_listing, "_nightshift_tutorial_soft", False):
+
+        async def render_listing(
+            target,
+            db,
+            game,
+            player_id: int,
+            listing_id: int,
+        ) -> None:
+            state = sync_tutorial_state(db, player_id)
+            if not state or not state["active"] or state["stage"] not in {STAGE_PRICE, STAGE_SALE_WAIT}:
+                await original_listing(target, db, game, player_id, listing_id)
+                return
+            row = ui_commerce._listing_context(db, player_id, listing_id)
+            if not row:
+                return
+            trust = game.customer_metrics(player_id)
+            unit_price = float(row["price"]) / max(1, int(row["pack_size"]))
+            delta = (unit_price / float(row["base_market_price"]) - 1.0) * 100.0
+            allowance = float(trust["premium_allowance"]) * 100.0
+            status = "нормально" if delta <= allowance + 0.01 else "спрос будет снижаться"
+            text = (
+                f"<b>{clean(row['title'])} · ×{row['pack_size']}</b>\n\n"
+                f"Цена: <b>{money(row['price'])}</b> · рынок ~{money(row['base_market_price'] * row['pack_size'])}\n"
+                f"Наценка: {delta:+.0f}%\n\n"
+                f"При текущем доверии до ~+{allowance:.0f}% переносится нормально · <b>{status}</b>.\n\n"
+                f"Доступно: {int(row['positions'])}"
+            )
+            if state["stage"] == STAGE_PRICE:
+                text += "\n\n" + tutorial_hint("Измени цену на −5% или +5%.")
+            else:
+                text += "\n\n" + tutorial_hint(
+                    "Цена выставлена. Теперь дождись первой продажи или нажми ⏩ Пропустить ожидание."
+                )
+            rows = [
+                [
+                    InlineKeyboardButton(
+                        text="−5%",
+                        callback_data=f"sales:price:{listing_id}:-5",
+                    ),
+                    InlineKeyboardButton(
+                        text="+5%",
+                        callback_data=f"sales:price:{listing_id}:5",
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(
+                        text=f"← {str(row['title'])[:18]}",
+                        callback_data=f"sales:product:{row['product_id']}",
+                    )
+                ],
+            ]
+            markup = InlineKeyboardMarkup(inline_keyboard=rows)
+            markup = _append_tutorial_action(markup, state)
+            await present(target, text, markup)
+
+        render_listing._nightshift_tutorial_soft = True
+        ui_commerce.render_listing = render_listing
 
 
 def skip_tutorial_wait(game, simulation_engine, player_id: int) -> str:
-    state = tutorial_state(game.db, player_id)
+    state = sync_tutorial_state(game.db, player_id)
     if not state or not state["active"]:
         return "Обучение уже завершено."
 
@@ -634,9 +854,6 @@ def skip_tutorial_wait(game, simulation_engine, player_id: int) -> str:
         STAGE_PREP_WAIT,
     }:
         now = utcnow()
-        next_stage: str | None = None
-        next_data: dict = {}
-        message = "Задача ещё не готова к следующему этапу."
         with game.db.connect() as conn:
             task = _active_task_for_stage(conn, player_id, state)
             if task:
@@ -645,36 +862,10 @@ def skip_tutorial_wait(game, simulation_engine, player_id: int) -> str:
                     (iso(now - timedelta(seconds=1)), int(task["id"])),
                 )
                 simulation_engine._process_tasks(conn, player_id, now)
-
-            if state["stage"] == STAGE_PICKUP_WAIT:
-                batch = conn.execute(
-                    "SELECT status FROM batches WHERE id=? AND player_id=?",
-                    (int(state["data"].get("batch_id", 0)), player_id),
-                ).fetchone()
-                if batch and batch["status"] == "warehouse":
-                    next_stage = STAGE_HANDOFF
-                    message = "Партия получена."
-            elif state["stage"] == STAGE_HANDOFF_WAIT:
-                allocation = conn.execute(
-                    "SELECT status FROM retail_allocations WHERE id=? AND player_id=?",
-                    (int(state["data"].get("allocation_id", 0)), player_id),
-                ).fetchone()
-                if allocation and allocation["status"] == "preparing":
-                    next_stage = STAGE_PREP_WAIT
-                    message = "Передача завершена. Закладчик начал подготовку."
-            else:
-                allocation = conn.execute(
-                    "SELECT status, product_id FROM retail_allocations WHERE id=? AND player_id=?",
-                    (int(state["data"].get("allocation_id", 0)), player_id),
-                ).fetchone()
-                if allocation and allocation["status"] == "published":
-                    next_stage = STAGE_PRICE
-                    next_data["product_id"] = int(allocation["product_id"])
-                    message = "Товар появился на витрине."
-
-        if next_stage:
-            _set_stage(game.db, player_id, next_stage, **next_data)
-        return message
+        updated = sync_tutorial_state(game.db, player_id)
+        if updated and updated["stage"] != state["stage"]:
+            return "Ожидание пропущено."
+        return "Задача ещё не готова к следующему этапу."
 
     if state["stage"] == STAGE_SALE_WAIT:
         listing_id = int(state["data"].get("listing_id", 0) or 0)
@@ -706,7 +897,7 @@ def skip_tutorial_wait(game, simulation_engine, player_id: int) -> str:
                     (player_id,),
                 ).fetchone()
             if not listing:
-                return "На витрине пока нет доступной позиции для продажи."
+                return "На витрине пока нет товара для продажи."
             before = int(
                 conn.execute(
                     "SELECT COALESCE(MAX(id),0) FROM orders WHERE player_id=?",
@@ -722,7 +913,7 @@ def skip_tutorial_wait(game, simulation_engine, player_id: int) -> str:
             if result is None:
                 return "Пока не удалось создать первый заказ."
             order = conn.execute(
-                """SELECT * FROM orders
+                """SELECT id, product_id FROM orders
                    WHERE player_id=? AND id>?
                    ORDER BY id DESC LIMIT 1""",
                 (player_id, before),
@@ -736,7 +927,7 @@ def skip_tutorial_wait(game, simulation_engine, player_id: int) -> str:
                 product_id=int(order["product_id"]),
                 listing_id=int(listing["id"]),
             )
-            return "Первый заказ завершён."
+            return "Первая продажа завершена."
 
     return "Сейчас нечего проматывать."
 
@@ -746,7 +937,7 @@ def create_tutorial_dispute(
     simulation_engine,
     player_id: int,
 ) -> tuple[int, int] | None:
-    state = tutorial_state(game.db, player_id)
+    state = sync_tutorial_state(game.db, player_id)
     if not state or not state["active"] or state["stage"] != STAGE_REVIEW:
         return None
     order_id = int(state["data"].get("order_id", 0) or 0)
@@ -849,321 +1040,15 @@ def create_tutorial_dispute(
     return dispute_id, inbox_id
 
 
-def _install_tutorial_renderers() -> None:
-    original_home = ui_navigation.render_home
-    if not getattr(original_home, "_nightshift_tutorial", False):
-
-        async def render_home(
-            target,
-            db,
-            game,
-            simulation_engine,
-            admin_ids,
-            player_id: int,
-            *,
-            edit: bool = True,
-        ) -> None:
-            state = tutorial_state(db, player_id)
-            if not state or not state["active"]:
-                await original_home(
-                    target,
-                    db,
-                    game,
-                    simulation_engine,
-                    admin_ids,
-                    player_id,
-                    edit=edit,
-                )
-                return
-            await present(
-                target,
-                _home_text(game, player_id, state),
-                _tutorial_home_markup(state["stage"]),
-                edit=edit,
-            )
-
-        render_home._nightshift_tutorial = True
-        ui_navigation.render_home = render_home
-
-    original_product_root = ui_commerce.render_product_root
-    if not getattr(original_product_root, "_nightshift_tutorial", False):
-
-        async def render_product_root(
-            target,
-            db,
-            game,
-            player_id: int,
-            *,
-            flash: str | None = None,
-        ) -> None:
-            state = tutorial_state(db, player_id)
-            if not state or not state["active"] or state["stage"] != STAGE_PROCUREMENT:
-                await original_product_root(
-                    target,
-                    db,
-                    game,
-                    player_id,
-                    flash=flash,
-                )
-                return
-            products = game.procurement_products(player_id)
-            body = (
-                f"<b>📦 Товар</b>\n\nСвободно: <b>{money(_free_cash(game, player_id))}</b>\n\n"
-                + tutorial_hint(
-                    "Выбери стафф для первой закупки. Сравни предложения по цене, качеству и надёжности."
-                )
-            )
-            if flash:
-                body = f"{flash}\n\n{body}"
-            await present(
-                target,
-                body,
-                ui_commerce._procurement_products_keyboard(db, player_id, products),
-            )
-
-        render_product_root._nightshift_tutorial = True
-        ui_commerce.render_product_root = render_product_root
-
-    original_proc_product = ui_commerce.render_procurement_product
-    if not getattr(original_proc_product, "_nightshift_tutorial", False):
-
-        async def render_procurement_product(
-            target,
-            game,
-            player_id: int,
-            product_id: int,
-            *,
-            flash: str | None = None,
-        ) -> None:
-            state = tutorial_state(game.db, player_id)
-            if not state or not state["active"] or state["stage"] != STAGE_PICKUP_WAIT:
-                await original_proc_product(
-                    target,
-                    game,
-                    player_id,
-                    product_id,
-                    flash=flash,
-                )
-                return
-            text = flash or "Партия куплена."
-            text += "\n\n" + tutorial_hint(
-                "Складмен получает товар. В обычной игре это занимает время. Сейчас промотай ожидание."
-            )
-            await present(target, text, _skip_markup())
-
-        render_procurement_product._nightshift_tutorial = True
-        ui_commerce.render_procurement_product = render_procurement_product
-
-    original_batch = ui_staff_handlers.render_batch
-    if not getattr(original_batch, "_nightshift_tutorial", False):
-
-        async def render_batch(
-            target,
-            game,
-            player_id: int,
-            batch_id: int,
-            *,
-            flash: str | None = None,
-        ) -> None:
-            state = tutorial_state(game.db, player_id)
-            if state and state["active"] and state["stage"] in {
-                STAGE_HANDOFF_WAIT,
-                STAGE_PREP_WAIT,
-            }:
-                if state["stage"] == STAGE_HANDOFF_WAIT:
-                    quote = (
-                        "Складмен готовит мастер-клад. Промотай ожидание, чтобы передача завершилась."
-                    )
-                else:
-                    quote = (
-                        "Закладчик готовит товар к витрине. Промотай этот этап, чтобы товар появился в продаже."
-                    )
-                text = (f"{flash}\n\n" if flash else "") + tutorial_hint(quote)
-                await present(target, text, _skip_markup())
-                return
-            await original_batch(
-                target,
-                game,
-                player_id,
-                batch_id,
-                flash=flash,
-            )
-
-        render_batch._nightshift_tutorial = True
-        ui_staff_handlers.render_batch = render_batch
-
-    original_storefront = ui_commerce.render_storefront_root
-    if not getattr(original_storefront, "_nightshift_tutorial", False):
-
-        async def render_storefront_root(
-            target,
-            db,
-            game,
-            simulation_engine,
-            player_id: int,
-        ) -> None:
-            state = tutorial_state(db, player_id)
-            if not state or not state["active"] or state["stage"] != STAGE_PRICE:
-                await original_storefront(
-                    target,
-                    db,
-                    game,
-                    simulation_engine,
-                    player_id,
-                )
-                return
-            rows = ui_commerce._sales_products(db, player_id)
-            trust = game.customer_metrics(player_id)
-            text = (
-                "<b>🏷 Витрина</b>\n\n"
-                f"Доверие: {trust['trust_score']:.0f}/100\n\n"
-                + tutorial_hint(
-                    "Товар готов к продаже. Открой позицию и измени цену хотя бы на один шаг. "
-                    "Чем выше цена, тем выше прибыль с заказа, но тем требовательнее покупатель."
-                )
-            )
-            await present(
-                target,
-                text,
-                ui_commerce._sales_root_keyboard(rows),
-            )
-
-        render_storefront_root._nightshift_tutorial = True
-        ui_commerce.render_storefront_root = render_storefront_root
-
-    original_sales_product = ui_commerce.render_sales_product
-    if not getattr(original_sales_product, "_nightshift_tutorial", False):
-
-        async def render_sales_product(
-            target,
-            db,
-            player_id: int,
-            product_id: int,
-        ) -> None:
-            state = tutorial_state(db, player_id)
-            if not state or not state["active"] or state["stage"] != STAGE_PRICE:
-                await original_sales_product(target, db, player_id, product_id)
-                return
-            product, listings, published, _avg, _n = ui_commerce._product_listings(
-                db,
-                player_id,
-                product_id,
-            )
-            if not product:
-                return
-            rows = [
-                [
-                    InlineKeyboardButton(
-                        text=(
-                            f"×{listing['pack_size']} · {money(listing['price'])} · "
-                            f"доступно {int(listing['positions'])}"
-                        ),
-                        callback_data=f"sales:listing:{listing['id']}",
-                    )
-                ]
-                for listing in listings
-                if int(listing["positions"]) > 0
-            ]
-            rows.append(
-                [InlineKeyboardButton(text="← Витрина", callback_data="menu:storefront")]
-            )
-            text = (
-                f"<b>{clean(product['title'])}</b>\n\n"
-                f"{published} ед. готовы к продаже\n\n"
-                + tutorial_hint("Выбери фасовку, у которой уже есть готовый товар.")
-            )
-            await present(
-                target,
-                text,
-                InlineKeyboardMarkup(inline_keyboard=rows),
-            )
-
-        render_sales_product._nightshift_tutorial = True
-        ui_commerce.render_sales_product = render_sales_product
-
-    original_listing = ui_commerce.render_listing
-    if not getattr(original_listing, "_nightshift_tutorial", False):
-
-        async def render_listing(
-            target,
-            db,
-            game,
-            player_id: int,
-            listing_id: int,
-        ) -> None:
-            state = tutorial_state(db, player_id)
-            if state and state["active"] and state["stage"] == STAGE_SALE_WAIT:
-                row = ui_commerce._listing_context(db, player_id, listing_id)
-                price = money(row["price"]) if row else ""
-                text = (
-                    f"<b>Цена выставлена{f': {price}' if price else ''}</b>\n\n"
-                    + tutorial_hint(
-                        "Теперь нужно дождаться покупателя. Для первого заказа промотай ожидание."
-                    )
-                )
-                await present(target, text, _skip_markup())
-                return
-            if not state or not state["active"] or state["stage"] != STAGE_PRICE:
-                await original_listing(target, db, game, player_id, listing_id)
-                return
-            row = ui_commerce._listing_context(db, player_id, listing_id)
-            if not row:
-                return
-            trust = game.customer_metrics(player_id)
-            unit_price = float(row["price"]) / max(1, int(row["pack_size"]))
-            delta = (
-                unit_price / float(row["base_market_price"]) - 1.0
-            ) * 100.0
-            allowance = float(trust["premium_allowance"]) * 100.0
-            text = (
-                f"<b>{clean(row['title'])} · ×{row['pack_size']}</b>\n\n"
-                f"Цена: <b>{money(row['price'])}</b> · "
-                f"рынок ~{money(row['base_market_price'] * row['pack_size'])}\n"
-                f"Наценка: {delta:+.0f}%\n\n"
-                + tutorial_hint(
-                    f"При текущем доверии около +{allowance:.0f}% к рынку переносится спокойнее. "
-                    "Измени цену на −5% или +5% и посмотри, как это будет работать дальше."
-                )
-            )
-            await present(
-                target,
-                text,
-                InlineKeyboardMarkup(
-                    inline_keyboard=[
-                        [
-                            InlineKeyboardButton(
-                                text="−5%",
-                                callback_data=f"sales:price:{listing_id}:-5",
-                            ),
-                            InlineKeyboardButton(
-                                text="+5%",
-                                callback_data=f"sales:price:{listing_id}:5",
-                            ),
-                        ],
-                        [
-                            InlineKeyboardButton(
-                                text="← Назад",
-                                callback_data=f"sales:product:{row['product_id']}",
-                            )
-                        ],
-                    ]
-                ),
-            )
-
-        render_listing._nightshift_tutorial = True
-        ui_commerce.render_listing = render_listing
-
-
 def apply_tutorial_updates() -> None:
     _install_new_player_setup()
-    _install_tutorial_offer_filter()
     _install_first_purchase_protection()
     _install_handoff_progress()
     _install_price_progress()
     _install_random_event_protection()
     _install_dispute_progress()
     _install_handoff_tutorial_flag()
-    _install_tutorial_renderers()
+    _install_soft_guidance_renderers()
 
 
 def build_tutorial_router(db, game, simulation_engine) -> Router:
@@ -1177,28 +1062,6 @@ def build_tutorial_router(db, game, simulation_engine) -> Router:
             callback.from_user.id,
         )
         await callback.answer(result[:180])
-        state = tutorial_state(db, callback.from_user.id)
-        if not state or not state["active"]:
-            return
-        if state["stage"] == STAGE_HANDOFF:
-            batch_id = int(state["data"].get("batch_id", 0) or 0)
-            if batch_id:
-                await ui_staff_handlers.render_batch(
-                    callback.message,
-                    game,
-                    callback.from_user.id,
-                    batch_id,
-                )
-                return
-        if state["stage"] == STAGE_PRICE:
-            await ui_commerce.render_storefront_root(
-                callback.message,
-                db,
-                game,
-                simulation_engine,
-                callback.from_user.id,
-            )
-            return
         await ui_navigation.render_home(
             callback.message,
             db,
@@ -1239,7 +1102,6 @@ def build_tutorial_router(db, game, simulation_engine) -> Router:
                 callback.from_user.id,
             )
             return
-
         from .ui_disputes import render_dispute
 
         dispute_id = int(state["data"].get("dispute_id", 0) or 0)
