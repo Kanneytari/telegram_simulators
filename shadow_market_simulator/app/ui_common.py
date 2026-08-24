@@ -11,6 +11,7 @@ _THOUSANDS_COMMA = re.compile(r"(?<=\d),(?=\d{3}(?:\D|$))")
 _TUTORIAL_BUTTON_MENTION = re.compile(
     r"(?i)(\bкнопк\w*\s+)(?:«([^»]+)»|\[([^\]]+)\]|([^\n.!?]+))"
 )
+_TUTORIAL_SENTENCE_BREAK = re.compile(r"(?<=[.!?]) (?=[A-ZА-ЯЁ0-9\[])")
 
 
 def money(value: int | float) -> str:
@@ -59,8 +60,14 @@ def _normalize_tutorial_button_mentions(text: str) -> str:
     return _TUTORIAL_BUTTON_MENTION.sub(replace, text)
 
 
+def _format_tutorial_blocks(text: str) -> str:
+    text = _TUTORIAL_SENTENCE_BREAK.sub("\n\n", text.strip())
+    return re.sub(r"\n{3,}", "\n\n", text)
+
+
 def tutorial_hint(text: str) -> str:
-    return f"<blockquote>{clean(_normalize_tutorial_button_mentions(text))}</blockquote>"
+    normalized = _normalize_tutorial_button_mentions(text)
+    return f"<blockquote>{clean(_format_tutorial_blocks(normalized))}</blockquote>"
 
 
 def normalize_text(text: str) -> str:
