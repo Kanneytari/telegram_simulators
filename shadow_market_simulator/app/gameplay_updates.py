@@ -19,6 +19,7 @@ UPDATED_PRODUCTS = (
 )
 
 PROCUREMENT_BATCH_SIZES = (50, 100, 250, 500, 1000)
+MINIMUM_PROCUREMENT_BATCH_SIZE = 50
 VOLUME_DISCOUNTS = {
     50: 1.00,
     100: 0.93,
@@ -90,7 +91,15 @@ def _seed_market_conn(self, conn, player_id: int, now) -> None:
         ).fetchall()
     ]
     for product_id in products:
-        for _ in range(5):
+        _create_market_offer_conn(
+            self,
+            conn,
+            player_id,
+            product_id,
+            MINIMUM_PROCUREMENT_BATCH_SIZE,
+            now,
+        )
+        for _ in range(4):
             _create_market_offer_conn(
                 self,
                 conn,
@@ -125,14 +134,15 @@ def _ensure_market_bounds_conn(self, conn, player_id: int, now) -> None:
         ).fetchall()
     ]
     for product_id in products:
-        rows = list(
-            conn.execute(
-                """SELECT id FROM supplier_offers
+        rows = [
+            dict(row)
+            for row in conn.execute(
+                """SELECT id, quantity FROM supplier_offers
                    WHERE player_id=? AND product_id=? AND status='open'
                    ORDER BY id""",
                 (player_id, product_id),
             ).fetchall()
-        )
+        ]
         if len(rows) > 5:
             for row in rows[5:]:
                 conn.execute(
@@ -141,21 +151,44 @@ def _ensure_market_bounds_conn(self, conn, player_id: int, now) -> None:
                 )
             rows = rows[:5]
         while len(rows) < 5:
+            quantity = self.rng.choice(PROCUREMENT_BATCH_SIZES)
             offer_id = _create_market_offer_conn(
                 self,
                 conn,
                 player_id,
                 product_id,
-                self.rng.choice(PROCUREMENT_BATCH_SIZES),
+                quantity,
                 now,
             )
-            rows.append({"id": offer_id})
+            rows.append({"id": offer_id, "quantity": quantity})
+
+        if not any(
+            int(row["quantity"]) == MINIMUM_PROCUREMENT_BATCH_SIZE
+            for row in rows
+        ):
+            victim = rows[-1]
+            conn.execute(
+                "UPDATE supplier_offers SET status='rotated' WHERE id=?",
+                (int(victim["id"]),),
+            )
+            offer_id = _create_market_offer_conn(
+                self,
+                conn,
+                player_id,
+                product_id,
+                MINIMUM_PROCUREMENT_BATCH_SIZE,
+                now,
+            )
+            rows[-1] = {
+                "id": offer_id,
+                "quantity": MINIMUM_PROCUREMENT_BATCH_SIZE,
+            }
 
 
 def _rotate_market_once_conn(self, conn, player_id: int, now) -> int:
     rows = list(
         conn.execute(
-            """SELECT o.id, o.product_id
+            """SELECT o.id, o.product_id, o.quantity
                FROM supplier_offers o
                JOIN products p ON p.id=o.product_id
                WHERE o.player_id=? AND o.status='open' AND p.active=1""",
@@ -168,6 +201,21 @@ def _rotate_market_once_conn(self, conn, player_id: int, now) -> int:
     count = min(len(rows), self.rng.randint(1, 2))
     selected = self.rng.sample(rows, k=count)
     for row in selected:
+        product_id = int(row["product_id"])
+        minimum_count = int(
+            conn.execute(
+                """SELECT COUNT(*) FROM supplier_offers
+                   WHERE player_id=? AND product_id=? AND status='open'
+                     AND quantity=?""",
+                (player_id, product_id, MINIMUM_PROCUREMENT_BATCH_SIZE),
+            ).fetchone()[0]
+        )
+        replacement_quantity = (
+            MINIMUM_PROCUREMENT_BATCH_SIZE
+            if int(row["quantity"]) == MINIMUM_PROCUREMENT_BATCH_SIZE
+            and minimum_count <= 1
+            else self.rng.choice(PROCUREMENT_BATCH_SIZES)
+        )
         conn.execute(
             "UPDATE supplier_offers SET status='rotated' WHERE id=?",
             (int(row["id"]),),
@@ -176,8 +224,8 @@ def _rotate_market_once_conn(self, conn, player_id: int, now) -> int:
             self,
             conn,
             player_id,
-            int(row["product_id"]),
-            self.rng.choice(PROCUREMENT_BATCH_SIZES),
+            product_id,
+            replacement_quantity,
             now,
         )
     return count * 2
@@ -284,6 +332,7 @@ def _offer_typical_unit_cost(offer) -> float:
 
 def _install_procurement_update() -> None:
     procurement_market.PROCUREMENT_BATCH_SIZES = PROCUREMENT_BATCH_SIZES
+    procurement_market.MINIMUM_BATCH_SIZE = MINIMUM_PROCUREMENT_BATCH_SIZE
     procurement_market.ProcurementMarketSimulationEngine._seed_market_conn = _seed_market_conn
     procurement_market.ProcurementMarketSimulationEngine._ensure_bounds_conn = _ensure_market_bounds_conn
     procurement_market.ProcurementMarketSimulationEngine._rotate_once_conn = _rotate_market_once_conn
