@@ -40,7 +40,7 @@ replace(APP / "courier_recruitment.py", "from .recruitment import RecruitmentSer
 replace(APP / "courier_recruitment.py", '        phone_text = {0: "старый", 1: "нормальный", 2: "хороший"}[phone_level]\n', "")
 replace(
     APP / "courier_recruitment.py",
-    '''        experience_text = {\n            0: "без подтверждённого опыта",\n            1: "есть опыт",\n            2: "сильный опыт",\n        }[experience_level]\n''',
+    '''        experience_text = {\n            0: "без подтверждённого опыта",\n            1: "есть опыт",\n            2: "опыт выглядит сильным",\n        }[experience_level]\n''',
     "",
 )
 replace(
