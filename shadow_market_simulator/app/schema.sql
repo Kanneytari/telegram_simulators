@@ -42,6 +42,7 @@ CREATE TABLE candidates (
     reliability REAL NOT NULL,
     attention REAL NOT NULL,
     honesty REAL NOT NULL,
+    loyalty REAL NOT NULL,
     expires_at TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'open',
     campaign_id INTEGER,
@@ -74,7 +75,6 @@ CREATE TABLE clients (
     disputes_won INTEGER NOT NULL DEFAULT 0,
     fraud_propensity REAL NOT NULL,
     patience REAL NOT NULL,
-    loyalty REAL NOT NULL,
     review_tendency REAL NOT NULL
 );
 
