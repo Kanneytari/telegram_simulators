@@ -1,0 +1,33 @@
+name: NIGHTSHIFT final dead-code cleanup
+
+on:
+  push:
+    branches:
+      - refactor/nightshift-clean-architecture
+    paths:
+      - "tools/cleanup_nightshift_unused.py"
+      - ".github/workflows/nightshift-unused-cleanup.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: ${{ !contains(github.event.head_commit.message, '[auto-unused-cleanup]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/nightshift-clean-architecture
+          fetch-depth: 0
+      - name: Apply cleanup
+        run: python tools/cleanup_nightshift_unused.py
+      - name: Commit cleanup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add shadow_market_simulator
+          if ! git diff --cached --quiet; then
+            git commit -m "Remove NIGHTSHIFT dead code [auto-unused-cleanup]"
+            git push origin HEAD:refactor/nightshift-clean-architecture
+          fi
