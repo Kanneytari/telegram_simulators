@@ -1,0 +1,21 @@
+Traceback (most recent call last):
+  File "/home/runner/work/telegram_simulators/telegram_simulators/tools/refactor_nightshift_stage6.py", line 857, in <module>
+    main()
+  File "/home/runner/work/telegram_simulators/telegram_simulators/tools/refactor_nightshift_stage6.py", line 844, in main
+    clean_game_service()
+  File "/home/runner/work/telegram_simulators/telegram_simulators/tools/refactor_nightshift_stage6.py", line 282, in clean_game_service
+    replace_method(
+  File "/home/runner/work/telegram_simulators/telegram_simulators/tools/refactor_nightshift_stage6.py", line 29, in replace_method
+    start, end = method_span(path, class_name, method_name)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/telegram_simulators/telegram_simulators/tools/refactor_nightshift_stage6.py", line 18, in method_span
+    tree = ast.parse(text)
+           ^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/ast.py", line 52, in parse
+    return compile(source, filename, mode, flags,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<unknown>", line 55
+    f"<b>{shop['name']}</b>
+    ^
+SyntaxError: unterminated f-string literal (detected at line 55)
+__EXIT_STATUS__=1
