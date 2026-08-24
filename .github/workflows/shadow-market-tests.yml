@@ -4,10 +4,14 @@ on:
   push:
     paths:
       - "shadow_market_simulator/**"
+      - "README.md"
+      - "docs/**"
       - ".github/workflows/shadow-market-tests.yml"
   pull_request:
     paths:
       - "shadow_market_simulator/**"
+      - "README.md"
+      - "docs/**"
       - ".github/workflows/shadow-market-tests.yml"
 
 jobs:
@@ -73,6 +77,7 @@ jobs:
           with tempfile.TemporaryDirectory() as tmp:
               db = Database(str(Path(tmp) / "fresh.db"))
               db.init()
+              db.init()
               simulation = CourierManagementSimulationEngine(db, speed=1.0, rng=random.Random(1))
               simulation.ensure_player(1, "smoke")
               game = CourierManagementGameService(db, simulation, rng=random.Random(2))
@@ -89,18 +94,23 @@ jobs:
               asyncio.run(render_team(target, game, simulation, 1))
               assert "Команда" in target.text
           PY
-      - name: Reject stale NIGHTSHIFT contracts
+      - name: Reject stale NIGHTSHIFT contracts and documentation
         run: |
           python - <<'PY'
           from pathlib import Path
 
           app = Path("shadow_market_simulator/app")
           tests = Path("shadow_market_simulator/tests")
-          text = "\n".join(
-              path.read_text(encoding="utf-8")
-              for root in (app, tests)
-              for path in root.glob("*.py")
-          )
+          docs = Path("shadow_market_simulator/docs")
+          files = [
+              *app.glob("*.py"),
+              *tests.glob("*.py"),
+              *docs.glob("*.md"),
+              Path("shadow_market_simulator/README.md"),
+              Path("README.md"),
+              Path("docs/PROJECT_RULES.md"),
+          ]
+          text = "\n".join(path.read_text(encoding="utf-8") for path in files if path.exists())
           banned = [
               "menu:procurement",
               "menu:sales",
@@ -117,6 +127,18 @@ jobs:
               "car_required",
               "courier_reply_pending",
               "courier_reply_due_at",
+              "pay_per_job",
+              "desired_pay",
+              "offered_pay",
+              "raise_request",
+              "leave_request",
+              "advance_request",
+              "catalog_extension",
+              "operations_final",
+              "workflow_final",
+              "recruitment_runtime",
+              "самокат",
+              "🛵",
               "«Закупки»",
           ]
           found = [value for value in banned if value in text]
@@ -136,6 +158,24 @@ jobs:
           leftovers = [str(path) for path in removed_files if path.exists()]
           if leftovers:
               raise SystemExit(f"obsolete NIGHTSHIFT modules returned: {leftovers}")
+
+          obsolete_docs = [
+              "ANALYTICS_EVENT_LOG.md",
+              "COMPENSATION.md",
+              "CUSTOMER_TRUST_AND_RETENTION.md",
+              "GAME_DESIGN.md",
+              "PAYROLL.md",
+              "PRICE_AND_CUSTOMER_EXPECTATIONS.md",
+              "PROCUREMENT_MARKET.md",
+              "RECRUITMENT.md",
+              "SIMULATION_MODEL.md",
+              "STAFF_PROFILE_ANALYTICS.md",
+              "STAFF_RESPONSIBILITY_AND_REVIEWS.md",
+              "STOREFRONT_AND_DISPUTES.md",
+          ]
+          returned_docs = [name for name in obsolete_docs if (docs / name).exists()]
+          if returned_docs:
+              raise SystemExit(f"obsolete NIGHTSHIFT docs returned: {returned_docs}")
 
           batch_renderers = sum(
               path.read_text(encoding="utf-8").count("async def render_batch(")
