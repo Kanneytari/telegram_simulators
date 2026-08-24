@@ -27,9 +27,8 @@ def build_workflow_allocation_router(game) -> Router:
         value = quantity * int(batch["unit_cost"])
         exposure_after = int(employee["exposure"]) + value
         unsecured = max(0, exposure_after - int(employee["deposit"]))
-        rules = game.packaging_rules(player_id, employee_id)
-        rule = next((row for row in rules if int(row["product_id"]) == int(batch["product_id"])), None)
-        mix = f"×1 {rule['pct_1']}% · ×2 {rule['pct_2']}% · ×5 {rule['pct_5']}%" if rule else "стандартное"
+        rule = game.global_packaging_rule(player_id)
+        mix = f"×1 {rule['pct_1']}% · ×2 {rule['pct_2']}% · ×5 {rule['pct_5']}%"
         risk = (
             f"🔴 Не покрыто депозитом после получения: <b>{unsecured:,} ₽</b>"
             if unsecured else "Объём полностью покрывается депозитом."
@@ -42,7 +41,7 @@ def build_workflow_allocation_router(game) -> Router:
             f"Товар на руках сейчас: {employee['exposure']:,} ₽\n"
             f"Депозит: {employee['deposit']:,} ₽\n"
             f"{risk}\n\n"
-            f"Фасовки после подготовки:\n{mix}"
+            f"Фасовки по общей настройке команды:\n{mix}"
         )
         presets = sorted({min(int(batch["remaining"]), value) for value in (5, 10, 25, 50, 100) if value <= int(batch["remaining"])})
         rows = []
@@ -62,9 +61,6 @@ def build_workflow_allocation_router(game) -> Router:
             callback_data=f"workflow:alloc:{batch_id}:{employee_id}:{int(batch['remaining'])}",
         )])
         rows.append([InlineKeyboardButton(text="✅ Назначить", callback_data=f"workflow:allocconfirm:{batch_id}:{employee_id}:{quantity}")])
-        rows.append([
-            InlineKeyboardButton(text="⚙️ Настроить фасовки", callback_data=f"workflow:packproduct:{employee_id}:{batch['product_id']}"),
-        ])
         rows.append([InlineKeyboardButton(text="← Партия", callback_data=f"workflow:batch:{batch_id}")])
         await present(target, text, InlineKeyboardMarkup(inline_keyboard=rows))
 
