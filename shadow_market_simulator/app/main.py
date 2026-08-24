@@ -21,7 +21,7 @@ from .ui_commerce import build_commerce_router
 from .ui_common import normalize_text
 from .ui_disputes import build_dispute_router
 from .ui_navigation import build_navigation_router
-from .ui_staff import build_staff_router
+from .ui_staff_handlers import build_staff_router
 
 
 def notification_markup(item) -> InlineKeyboardMarkup:
