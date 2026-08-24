@@ -17,6 +17,7 @@ from .db import Database
 from .gameplay_updates import apply_gameplay_updates
 from .handoff_copy_update import apply_handoff_copy_update
 from .inbox_lifecycle import install_inbox_lifecycle
+from .product_ui_update import apply_product_ui_update
 from .simulation import iso, utcnow
 from .ui_admin import build_admin_router
 from .ui_commerce import build_commerce_router
@@ -102,6 +103,7 @@ async def notification_loop(
 async def main() -> None:
     apply_gameplay_updates()
     apply_handoff_copy_update()
+    apply_product_ui_update()
     settings = load_settings()
     logging.basicConfig(
         level=logging.INFO,
