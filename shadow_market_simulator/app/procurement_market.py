@@ -8,8 +8,8 @@ from .staff_insights import StaffInsightGameService, StaffInsightSimulationEngin
 
 
 PROCUREMENT_BATCH_SIZES = (50, 100, 200, 400)
+MINIMUM_BATCH_SIZE = PROCUREMENT_BATCH_SIZES[0]
 ROTATION_MINUTES = 15
-
 
 
 class ProcurementMarketSimulationEngine(StaffInsightSimulationEngine):
@@ -116,11 +116,26 @@ class ProcurementMarketSimulationEngine(StaffInsightSimulationEngine):
             counts[(int(row["product_id"]), int(row["quantity"]))] = int(row["count"])
         return counts
 
+    def _ensure_minimum_lots_conn(self, conn, player_id: int, now, products: list[int], counts) -> None:
+        """Keep at least one 50-unit offer for every active product."""
+        for product_id in products:
+            key = (product_id, MINIMUM_BATCH_SIZE)
+            while counts.get(key, 0) < 1:
+                self._create_market_offer_conn(
+                    conn,
+                    player_id,
+                    product_id,
+                    MINIMUM_BATCH_SIZE,
+                    now,
+                )
+                counts[key] = counts.get(key, 0) + 1
+
     def _ensure_bounds_conn(self, conn, player_id: int, now) -> None:
         products = [int(row["id"]) for row in conn.execute(
             "SELECT id FROM products WHERE active=1 ORDER BY id"
         ).fetchall()]
         counts = self._group_counts_conn(conn, player_id)
+        self._ensure_minimum_lots_conn(conn, player_id, now, products, counts)
         for product_id in products:
             for quantity in PROCUREMENT_BATCH_SIZES:
                 key = (product_id, quantity)
@@ -178,6 +193,7 @@ class ProcurementMarketSimulationEngine(StaffInsightSimulationEngine):
             self._create_market_offer_conn(conn, player_id, product_id, quantity, now)
             counts[(product_id, quantity)] = counts.get((product_id, quantity), 0) + 1
             added += 1
+        self._ensure_minimum_lots_conn(conn, player_id, now, products, counts)
         return removed + added
 
     def _create_market_offer_conn(self, conn, player_id: int, product_id: int, quantity: int, now) -> int:
@@ -246,14 +262,38 @@ class ProcurementMarketSimulationEngine(StaffInsightSimulationEngine):
 
 
 class ProcurementMarketGameService(StaffInsightGameService):
+    def _free_cash_conn(self, conn, player_id: int) -> int:
+        shop = conn.execute(
+            "SELECT balance, reserve_target FROM shops WHERE player_id=?",
+            (player_id,),
+        ).fetchone()
+        if not shop:
+            return 0
+        deposits = int(conn.execute(
+            "SELECT COALESCE(SUM(deposit),0) FROM employees WHERE player_id=? AND active=1",
+            (player_id,),
+        ).fetchone()[0])
+        wages = int(conn.execute(
+            "SELECT COALESCE(SUM(wages_accrued),0) FROM employees WHERE player_id=? AND active=1",
+            (player_id,),
+        ).fetchone()[0])
+        return max(
+            0,
+            int(shop["balance"])
+            - int(shop["reserve_target"])
+            - deposits
+            - wages,
+        )
+
     def offers(self, player_id: int, product_id: int | None = None):
         self.simulation.refresh_procurement_market(player_id)
-        params: list[int] = [player_id]
-        product_filter = ""
-        if product_id is not None:
-            product_filter = " AND o.product_id=?"
-            params.append(int(product_id))
         with self.db.connect() as conn:
+            free_cash = self._free_cash_conn(conn, player_id)
+            params: list[int] = [player_id, free_cash]
+            product_filter = ""
+            if product_id is not None:
+                product_filter = " AND o.product_id=?"
+                params.append(int(product_id))
             return conn.execute(
                 f"""SELECT o.*, s.title supplier_title, p.title product_title,
                            p.base_market_price,
@@ -263,7 +303,8 @@ class ProcurementMarketGameService(StaffInsightGameService):
                     FROM supplier_offers o
                     JOIN suppliers s ON s.id=o.supplier_id
                     JOIN products p ON p.id=o.product_id
-                    WHERE o.player_id=? AND o.status='open'{product_filter}
+                    WHERE o.player_id=? AND o.status='open'
+                      AND o.quantity * o.unit_cost <= ?{product_filter}
                     ORDER BY o.quantity, o.unit_cost, o.id""",
                 tuple(params),
             ).fetchall()
@@ -271,25 +312,33 @@ class ProcurementMarketGameService(StaffInsightGameService):
     def procurement_products(self, player_id: int):
         self.simulation.refresh_procurement_market(player_id)
         with self.db.connect() as conn:
+            free_cash = self._free_cash_conn(conn, player_id)
             products = conn.execute("SELECT id, title FROM products WHERE active=1 ORDER BY id").fetchall()
             counts = conn.execute(
                 """SELECT product_id, quantity, COUNT(*) count
                    FROM supplier_offers
                    WHERE player_id=? AND status='open'
+                     AND quantity * unit_cost <= ?
                    GROUP BY product_id, quantity""",
-                (player_id,),
+                (player_id, free_cash),
             ).fetchall()
         by_product: dict[int, dict[int, int]] = defaultdict(dict)
         for row in counts:
             by_product[int(row["product_id"])][int(row["quantity"])] = int(row["count"])
         result = []
         for product in products:
-            packs = {quantity: by_product[int(product["id"])].get(quantity, 0) for quantity in PROCUREMENT_BATCH_SIZES}
+            packs = {
+                quantity: by_product[int(product["id"])].get(quantity, 0)
+                for quantity in PROCUREMENT_BATCH_SIZES
+            }
+            total = sum(packs.values())
+            if total <= 0:
+                continue
             result.append({
                 "id": int(product["id"]),
                 "title": product["title"],
                 "counts": packs,
-                "total": sum(packs.values()),
+                "total": total,
             })
         return result
 
@@ -319,15 +368,18 @@ class ProcurementMarketGameService(StaffInsightGameService):
                 "SELECT * FROM employees WHERE id=? AND player_id=? AND active=1 AND role='warehouse'",
                 (employee_id, player_id),
             ).fetchone()
-            shop = conn.execute("SELECT * FROM shops WHERE player_id=?", (player_id,)).fetchone()
             if not offer:
                 return "Предложение уже недоступно."
             if not employee:
                 return "Складмен больше недоступен."
 
             total = int(offer["quantity"] * offer["unit_cost"])
-            if int(shop["balance"]) < total:
-                return f"Недостаточно денег. Нужно {total:,} ₽."
+            free_cash = self._free_cash_conn(conn, player_id)
+            if free_cash < total:
+                return (
+                    f"Недостаточно свободных денег. Нужно {total:,} ₽. "
+                    f"Свободно {free_cash:,} ₽."
+                )
 
             delivered = self.rng.random() < float(offer["resolved_reliability"])
             quality = clamp(
