@@ -14,7 +14,6 @@ _TUTORIAL_BUTTON_MENTION = re.compile(
 _TUTORIAL_ACTION_MENTION = re.compile(
     r"(?i)(\bнажм(?:и|ите|ать)\s+)(⏩ Пропустить ожидание)"
 )
-_TUTORIAL_SENTENCE_BREAK = re.compile(r"(?<=[.!?]) (?=[A-ZА-ЯЁ0-9\[])")
 
 
 def money(value: int | float) -> str:
@@ -65,8 +64,7 @@ def _normalize_tutorial_button_mentions(text: str) -> str:
 
 
 def _format_tutorial_blocks(text: str) -> str:
-    text = _TUTORIAL_SENTENCE_BREAK.sub("\n\n", text.strip())
-    return re.sub(r"\n{3,}", "\n\n", text)
+    return re.sub(r"\n{3,}", "\n\n", text.strip())
 
 
 def tutorial_hint(text: str) -> str:
