@@ -112,7 +112,7 @@ def _install_procurement_empty_state() -> None:
             flash: str | None = None,
         ) -> None:
             products = game.procurement_products(player_id)
-            if products:
+            if any(int(product.get("total", 0)) > 0 for product in products):
                 await current_root(target, db, game, player_id, flash=flash)
                 return
             with db.connect() as conn:
