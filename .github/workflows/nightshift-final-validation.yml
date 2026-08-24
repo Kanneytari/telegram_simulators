@@ -77,4 +77,4 @@ jobs:
             exit 1
           fi
 
-# rerun after canonical analytics trust cleanup
+# rerun after removing duplicated schema analytics triggers
