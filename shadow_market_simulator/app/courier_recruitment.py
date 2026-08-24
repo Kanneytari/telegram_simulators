@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+from .courier_management import COURIER_MANAGEMENT_SCHEMA
 from .courier_model import COURIER_SCHEMA, generate_courier_blueprint
 from .recruitment_runtime import NightshiftRecruitmentService, ROLE_TITLES
 from .simulation import clamp, iso
@@ -14,6 +15,7 @@ class CourierRecruitmentService(NightshiftRecruitmentService):
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
             conn.executescript(COURIER_SCHEMA)
+            conn.executescript(COURIER_MANAGEMENT_SCHEMA)
 
     def _create_candidate(self, conn, player_id: int, campaign, channel, now) -> None:
         if campaign["role"] != "courier":
@@ -47,6 +49,16 @@ class CourierRecruitmentService(NightshiftRecruitmentService):
         ) + str(self.rng.randint(10, 99))
         has_car = 1 if car_required else int(self.rng.random() < channel.car_probability)
 
+        # Phone quality is visible at hiring because it is equipment, not personality.
+        phone_roll = self.rng.random()
+        if experience_level >= 2:
+            phone_level = 0 if phone_roll < 0.15 else 1 if phone_roll < 0.78 else 2
+        elif experience_level == 1:
+            phone_level = 0 if phone_roll < 0.35 else 1 if phone_roll < 0.90 else 2
+        else:
+            phone_level = 0 if phone_roll < 0.55 else 1 if phone_roll < 0.95 else 2
+        phone_text = {0: "старый", 1: "нормальный", 2: "хороший"}[phone_level]
+
         # Low-deposit candidates are intentional: they create a meaningful choice
         # between immediate financial safety and long-term employee potential.
         deposit_pool = (5_000, 10_000, 15_000, 25_000, 40_000, 60_000, 90_000, 100_000)
@@ -68,6 +80,7 @@ class CourierRecruitmentService(NightshiftRecruitmentService):
             f"Роль: {ROLE_TITLES['courier']}\n"
             f"Опыт: {experience_text}\n"
             f"Автомобиль: {'есть' if has_car else 'нет'}\n"
+            f"Телефон: {phone_text}\n"
             f"Готовый депозит: {deposit:,} ₽"
         )
 
@@ -95,16 +108,21 @@ class CourierRecruitmentService(NightshiftRecruitmentService):
                 experience_level,
             ),
         )
+        candidate_id = int(cur.lastrowid)
         conn.execute(
             """INSERT INTO courier_candidate_profiles(
                    candidate_id, pace, precision, resilience, integrity, trait
                ) VALUES (?, ?, ?, ?, ?, ?)""",
             (
-                int(cur.lastrowid),
+                candidate_id,
                 blueprint.pace,
                 blueprint.precision,
                 blueprint.resilience,
                 blueprint.integrity,
                 blueprint.trait,
             ),
+        )
+        conn.execute(
+            "INSERT INTO courier_candidate_equipment(candidate_id, phone_level) VALUES (?, ?)",
+            (candidate_id, phone_level),
         )

@@ -12,7 +12,8 @@ from .analytics_handlers import build_analytics_router
 from .analytics_log import AnalyticsLogger, AnalyticsLoggingMiddleware
 from .compensation_handlers import build_compensation_router
 from .config import load_settings
-from .courier_core import CourierCoreGameService, CourierCoreSimulationEngine
+from .courier_management import CourierManagementGameService, CourierManagementSimulationEngine
+from .courier_management_handlers import build_courier_management_router
 from .courier_recruitment import CourierRecruitmentService
 from .customer_trust_handlers import build_customer_trust_router
 from .db import Database
@@ -38,8 +39,8 @@ from .workflow_reassign_handlers import build_workflow_reassign_router
 async def notification_loop(
     bot: Bot,
     db: Database,
-    simulation: CourierCoreSimulationEngine,
-    game: CourierCoreGameService,
+    simulation: CourierManagementSimulationEngine,
+    game: CourierManagementGameService,
     recruitment: CourierRecruitmentService,
     analytics: AnalyticsLogger,
     interval: int,
@@ -93,9 +94,9 @@ async def main() -> None:
 
     db = Database(settings.db_path)
     db.init()
-    simulation = CourierCoreSimulationEngine(db, speed=settings.simulation_speed)
+    simulation = CourierManagementSimulationEngine(db, speed=settings.simulation_speed)
     simulation.seed_catalog()
-    game = CourierCoreGameService(db, simulation)
+    game = CourierManagementGameService(db, simulation)
     recruitment = CourierRecruitmentService(db, speed=settings.simulation_speed)
     install_inbox_lifecycle(db)
 
@@ -116,6 +117,7 @@ async def main() -> None:
     dispatcher.include_router(build_customer_trust_router(game, simulation))
     dispatcher.include_router(build_workflow_reassign_router(game))
     dispatcher.include_router(build_workflow_allocation_router(game))
+    dispatcher.include_router(build_courier_management_router(game))
     dispatcher.include_router(build_employee_profile_router(game))
     dispatcher.include_router(build_workflow_router(game))
     dispatcher.include_router(build_procurement_router(game))
