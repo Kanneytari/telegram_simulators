@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from . import simulation, tutorial
+from . import procurement_market, simulation, tutorial
 
 
 def _instruction(state: dict) -> str:
@@ -93,6 +93,61 @@ def _install_copy_rules() -> None:
     simulation.SimulationEngine.ensure_player = ensure_player
 
 
+def _install_first_batch_quality_protection() -> None:
+    current = procurement_market.ProcurementMarketGameService.buy_offer_for_employee
+    if getattr(current, "_nightshift_tutorial_quality", False):
+        return
+
+    def buy_offer_for_employee(
+        self,
+        player_id: int,
+        offer_id: int,
+        employee_id: int,
+    ) -> str:
+        state = tutorial.tutorial_state(self.db, player_id)
+        if (
+            not state
+            or not state["active"]
+            or state["stage"] != tutorial.STAGE_PROCUREMENT
+        ):
+            return current(self, player_id, offer_id, employee_id)
+
+        with self.db.connect() as conn:
+            offer = conn.execute(
+                """SELECT offer_quality_mean, offer_quality_sigma
+                   FROM supplier_offers
+                   WHERE id=? AND player_id=? AND status='open'""",
+                (offer_id, player_id),
+            ).fetchone()
+            if not offer:
+                return current(self, player_id, offer_id, employee_id)
+            previous_mean = offer["offer_quality_mean"]
+            previous_sigma = offer["offer_quality_sigma"]
+            conn.execute(
+                """UPDATE supplier_offers
+                   SET offer_quality_mean=84.0, offer_quality_sigma=2.0
+                   WHERE id=?""",
+                (offer_id,),
+            )
+
+        try:
+            return current(self, player_id, offer_id, employee_id)
+        finally:
+            with self.db.connect() as conn:
+                conn.execute(
+                    """UPDATE supplier_offers
+                       SET offer_quality_mean=?, offer_quality_sigma=?
+                       WHERE id=?""",
+                    (previous_mean, previous_sigma, offer_id),
+                )
+
+    buy_offer_for_employee._nightshift_tutorial_quality = True
+    procurement_market.ProcurementMarketGameService.buy_offer_for_employee = (
+        buy_offer_for_employee
+    )
+
+
 def apply_tutorial_runtime_fixes() -> None:
     """Keep tutorial guidance non-blocking and normalize player-facing copy."""
     _install_copy_rules()
+    _install_first_batch_quality_protection()
