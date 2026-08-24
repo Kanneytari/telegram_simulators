@@ -12,7 +12,6 @@ from .analytics_handlers import build_analytics_router
 from .analytics_log import AnalyticsLogger, AnalyticsLoggingMiddleware
 from .catalog_extension import ExpandedCatalogSimulationEngine
 from .config import load_settings
-from .courier_idle_handlers import build_courier_idle_router
 from .db import Database
 from .deposit_share_handlers import build_deposit_share_router
 from .dispute_handlers import build_dispute_router
@@ -105,14 +104,13 @@ async def main() -> None:
     dispatcher.callback_query.outer_middleware(AnalyticsLoggingMiddleware(analytics))
 
     dispatcher.include_router(build_workflow_dashboard_router(db, game, simulation, settings.admin_ids))
+    # This router owns the live batch screen, including recipient markers and
+    # wholesale-responsibility reassignment.
     dispatcher.include_router(build_workflow_reassign_router(game))
     dispatcher.include_router(build_workflow_allocation_router(game))
     # Must be before the legacy workflow employee-profile handler so the profile can
     # expose the deposit-share negotiation entry point.
     dispatcher.include_router(build_deposit_share_router(game))
-    # Must be before the legacy workflow batch handler so recipient buttons use
-    # the same strict green-idle rule as the Team screen.
-    dispatcher.include_router(build_courier_idle_router(game))
     dispatcher.include_router(build_workflow_router(game))
     dispatcher.include_router(build_procurement_router(game))
     dispatcher.include_router(build_product_review_router(game))
