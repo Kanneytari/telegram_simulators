@@ -3,18 +3,18 @@ from __future__ import annotations
 import random
 
 from app.analytics_log import AnalyticsLogger, normalize_callback
+from app.courier_management import CourierManagementGameService, CourierManagementSimulationEngine
+from app.courier_recruitment import CourierRecruitmentService
 from app.db import Database
-from app.recruitment import RecruitmentService
-from app.workflow_final import FinalWorkflowGameService, FinalWorkflowSimulationEngine
 
 
 def make_system(tmp_path):
     db = Database(str(tmp_path / "game.db"))
     db.init()
-    simulation = FinalWorkflowSimulationEngine(db, rng=random.Random(51))
+    simulation = CourierManagementSimulationEngine(db, rng=random.Random(51))
     simulation.seed_catalog()
-    game = FinalWorkflowGameService(db, simulation, rng=random.Random(52))
-    recruitment = RecruitmentService(db, rng=random.Random(53))
+    game = CourierManagementGameService(db, simulation, rng=random.Random(52))
+    recruitment = CourierRecruitmentService(db, rng=random.Random(53))
     analytics = AnalyticsLogger(db)
     analytics.install()
     simulation.ensure_player(1001, "tester")
