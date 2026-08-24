@@ -85,7 +85,10 @@ def test_updated_catalog_market_and_sales_pacing(tmp_path):
 
     product_rows = game.procurement_products(PLAYER_ID)
     assert len(product_rows) == len(EXPECTED_PRODUCTS)
-    assert all(int(row["total"]) == 5 for row in product_rows)
+    assert all(
+        int(row["total"]) == len(game.offers(PLAYER_ID, int(row["id"])))
+        for row in product_rows
+    )
 
 
 def test_market_rotates_one_or_two_offers_every_fifteen_minutes(tmp_path):
