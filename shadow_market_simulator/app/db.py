@@ -304,13 +304,6 @@ class Database:
         conn.execute("PRAGMA foreign_keys = ON")
         return conn
 
-    @staticmethod
-    def _ensure_column(conn: sqlite3.Connection, table: str, column: str, definition: str) -> None:
-        """Compatibility hook for inherited layers; the fresh schema already defines live columns."""
-        columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
-        if column not in columns:
-            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
-
     def init(self) -> None:
         with self.connect() as conn:
             conn.executescript(SCHEMA)
