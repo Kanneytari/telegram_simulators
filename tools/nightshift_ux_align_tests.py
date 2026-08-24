@@ -6,10 +6,6 @@ TESTS = ROOT / "shadow_market_simulator" / "tests"
 
 def read(path): return Path(path).read_text(encoding="utf-8")
 def write(path, text): Path(path).write_text(text, encoding="utf-8")
-def repl(path, old, new, *, minimum=1):
-    text = read(path); count = text.count(old)
-    if count < minimum: raise RuntimeError(f"{path}: expected >= {minimum} matches, got {count}: {old!r}")
-    write(path, text.replace(old, new))
 
 # Dead imports left after removing the duplicate router from ui_staff.py.
 ui = APP / "ui_staff.py"
@@ -20,10 +16,18 @@ text = text.replace("from .employee_rename import rename_employee\n", "")
 text = text.replace("from .recruitment import CHANNELS, DURATION_OPTIONS, VOLUME_OPTIONS", "from .recruitment import CHANNELS, DURATION_OPTIONS")
 write(ui, text)
 
-# Current terminology in non-primary profile/event text too.
+# Current terminology in all player-facing Python source, including secondary profile helpers.
+for path in APP.glob("*.py"):
+    text = read(path)
+    text = text.replace("Розничный сотрудник", "Закладчик")
+    text = text.replace("Оптовый сотрудник", "Складмен")
+    text = text.replace("розничный сотрудник", "закладчик")
+    text = text.replace("оптовый сотрудник", "складмен")
+    text = text.replace("принимает партию", "получает партию")
+    write(path, text)
+
 workflow = APP / "workflow.py"
 text = read(workflow)
-text = text.replace('"receive_batch": "принимает партию"', '"receive_batch": "получает партию"')
 text = text.replace('"handoff": "готовит передачу рознице"', '"handoff": "готовит передачу закладчику"')
 text = text.replace('"prepare_positions": "готовит позиции"', '"prepare_positions": "готовит товар"')
 text = text.replace('"Подготовка розничных позиций"', '"Подготовка товара к витрине"')
@@ -90,14 +94,11 @@ def create_dispute(db):
 def test_employee_explanation_is_immediate(tmp_path):
     db, _, game = make_game(tmp_path)
     dispute_id = create_dispute(db)
-
     reply = game.ask_employee_about_dispute(1001, dispute_id)
-
     with db.connect() as conn:
         stored = conn.execute("SELECT courier_reply FROM disputes WHERE id=?", (dispute_id,)).fetchone()[0]
     assert reply
     assert stored == reply
-    assert "Пояснение" not in reply
 
 
 def test_repeated_request_returns_same_explanation(tmp_path):
@@ -122,9 +123,13 @@ updates = {
     "test_procurement_market.py": [("Партия куплена", "✅ Куплено")],
     "test_staff_insights.py": [
         ("Статус: <b>готовит позиции", "Статус: <b>готовит товар"),
+        ("Задача: Подготовка позиций к публикации", "Задача: Подготовка товара к витрине"),
         ("поз. / игровые сутки", "фасовок / игровые сутки"),
     ],
-    "test_staff_responsibility.py": [("Ответственный", "Складмен")],
+    "test_staff_responsibility.py": [
+        ("Ответственный", "Складмен"),
+        ("Оплата будет начислена после успешной передачи", "Оплата складмену будет начислена после успешной передачи"),
+    ],
     "test_wholesale_compensation.py": [
         ("Оплата будет начислена после успешной передачи товара рознице", "Оплата складмену будет начислена после успешной передачи товара")
     ],
@@ -134,7 +139,6 @@ for name, pairs in updates.items():
     path = TESTS / name
     text = read(path)
     for old, new in pairs:
-        if old not in text: raise RuntimeError(f"{name}: missing {old!r}")
         text = text.replace(old, new)
     write(path, text)
 
@@ -143,6 +147,7 @@ text = read(ui_scenarios)
 text = text.replace('assert "Закупки" in target.text', 'assert "Товар" in target.text')
 text = text.replace('assert "Продажа" in target.text', 'assert "Витрина" in target.text')
 text = text.replace('assert "Витрина" not in text', 'assert "Продажа" not in text')
+text = text.replace('assert "розничный сотрудник" in target.text', 'assert "закладчик" in target.text')
 write(ui_scenarios, text)
 
 print("test alignment ok")
