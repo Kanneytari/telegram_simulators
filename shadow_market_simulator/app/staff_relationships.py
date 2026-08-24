@@ -4,7 +4,7 @@ from .compensation import CompensationGameService, CompensationSimulationEngine
 from .simulation import iso
 
 
-SALES_ACTIVITY_MULTIPLIER = 5.0
+SALES_ACTIVITY_MULTIPLIER = 4.0
 
 
 
