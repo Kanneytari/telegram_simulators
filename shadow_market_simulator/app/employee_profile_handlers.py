@@ -14,10 +14,18 @@ class RenameEmployeeState(StatesGroup):
 
 
 def employee_profile_keyboard(employee_id: int, role: str) -> InlineKeyboardMarkup:
-    rows = [
-        [InlineKeyboardButton(text="✏️ Переименовать", callback_data=f"employee:rename:{employee_id}")],
-        [InlineKeyboardButton(text="💰 Условия работы", callback_data=f"team:terms:{role}")],
-    ]
+    rows: list[list[InlineKeyboardButton]] = []
+    if role == "courier":
+        rows.append([
+            InlineKeyboardButton(
+                text="🧭 Управление",
+                callback_data=f"employee:manage:{employee_id}",
+            )
+        ])
+    rows.append([
+        InlineKeyboardButton(text="✏️ Переименовать", callback_data=f"employee:rename:{employee_id}"),
+        InlineKeyboardButton(text="💰 Условия", callback_data=f"team:terms:{role}"),
+    ])
     if role == "warehouse":
         rows.append([
             InlineKeyboardButton(
