@@ -125,7 +125,7 @@ def _install_first_batch_quality_protection() -> None:
             previous_sigma = offer["offer_quality_sigma"]
             conn.execute(
                 """UPDATE supplier_offers
-                   SET offer_quality_mean=84.0, offer_quality_sigma=2.0
+                   SET offer_quality_mean=84.0, offer_quality_sigma=0.0
                    WHERE id=?""",
                 (offer_id,),
             )
