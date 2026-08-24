@@ -76,6 +76,13 @@ class GlobalPackagingSimulationEngine(ExpandedCatalogSimulationEngine):
             self._ensure_global_rule_conn(conn, player_id)
             self._sync_legacy_rules_conn(conn, player_id)
 
+    def seed_catalog(self) -> None:
+        super().seed_catalog()
+        with self.db.connect() as conn:
+            player_ids = [int(row[0]) for row in conn.execute("SELECT player_id FROM shops").fetchall()]
+        for player_id in player_ids:
+            self._ensure_packaging_rules(player_id)
+
     def ensure_player(self, player_id: int, username: str | None) -> bool:
         created = super().ensure_player(player_id, username)
         self._ensure_packaging_rules(player_id)
@@ -156,3 +163,8 @@ class GlobalPackagingGameService(IdleAwareGameService):
         # Backward compatibility for stale Telegram buttons: they now change the
         # same global rule instead of creating a per-employee/per-product exception.
         return self.adjust_global_packaging_rule(player_id, pack_size, delta)
+
+    def change_employee_role(self, player_id: int, employee_id: int) -> str:
+        result = super().change_employee_role(player_id, employee_id)
+        self.simulation._ensure_packaging_rules(player_id)
+        return result
