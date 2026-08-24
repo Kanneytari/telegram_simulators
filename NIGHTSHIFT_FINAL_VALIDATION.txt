@@ -47,7 +47,7 @@ ERROR tests/test_payroll_clock.py
 ERROR tests/test_staff_turnover.py
 ERROR tests/test_storefront_disputes.py
 !!!!!!!!!!!!!!!!!!! Interrupted: 4 errors during collection !!!!!!!!!!!!!!!!!!!!
-4 errors in 5.34s
+4 errors in 5.17s
 PYTEST_EXIT=2
 
 === CURRENT ARCHITECTURE VALIDATOR ===
