@@ -44,12 +44,8 @@ def employee_list(employees) -> InlineKeyboardMarkup:
 
     rows.extend([
         [
-            InlineKeyboardButton(text="👤 Кандидаты", callback_data="candidates:list"),
             InlineKeyboardButton(text="🔎 Набор", callback_data="recruit:menu"),
-        ],
-        [
             InlineKeyboardButton(text="⚙️ Фасовки", callback_data="team:packrules"),
-            InlineKeyboardButton(text="📦 Без ответственного", callback_data="team:unassigned"),
         ],
         [
             InlineKeyboardButton(text="🔄 Обновить", callback_data="menu:team"),
