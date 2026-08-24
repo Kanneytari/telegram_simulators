@@ -115,10 +115,26 @@ def _install_affordable_product_filter() -> None:
     procurement_market.ProcurementMarketGameService.procurement_products = procurement_products
 
 
+def _install_tutorial_copy_cleanup() -> None:
+    current = tutorial._home_text
+    if getattr(current, "_nightshift_tutorial_copy", False):
+        return
+
+    def home_text(game, player_id: int, state: dict) -> str:
+        return current(game, player_id, state).replace(
+            "готовит позиции к продаже",
+            "готовит товар к витрине",
+        )
+
+    home_text._nightshift_tutorial_copy = True
+    tutorial._home_text = home_text
+
+
 def apply_tutorial_runtime_fixes() -> None:
     tutorial.skip_tutorial_wait = _safe_skip_tutorial_wait
     _install_final_procurement_protection()
     _install_affordable_product_filter()
+    _install_tutorial_copy_cleanup()
 
 
 _ORIGINAL_SKIP = tutorial.skip_tutorial_wait
