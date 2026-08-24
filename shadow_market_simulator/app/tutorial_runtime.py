@@ -1,7 +1,19 @@
 from __future__ import annotations
 
-from . import procurement_market, simulation, tutorial, ui_commerce
-from .ui_common import clean, money, notice, present
+from . import (
+    analytics_handlers,
+    procurement_market,
+    simulation,
+    tutorial,
+    ui_commerce,
+    ui_navigation,
+    ui_staff,
+    ui_staff_handlers,
+)
+from .ui_common import clean, money, notice, present, tutorial_hint
+
+
+RETURN_TO_MENU = "Вернись в Меню, чтобы продолжить обучение"
 
 
 def _instruction(state: dict) -> str:
@@ -25,10 +37,7 @@ def _instruction(state: dict) -> str:
             "Можешь заниматься другими делами, дождаться окончания или нажать ⏩ Пропустить ожидание."
         )
     if stage == tutorial.STAGE_HANDOFF:
-        return (
-            "Вернись в меню, нажми 📦 Товар, затем 📦 Склад. "
-            "Открой партию и выбери закладчика, которому передашь стафф."
-        )
+        return "Нажми [📦 Товар]"
     if stage == tutorial.STAGE_HANDOFF_WAIT:
         return (
             "Складмен передаёт товар закладчику. Можешь продолжать заниматься магазином, "
@@ -64,14 +73,20 @@ def _instruction(state: dict) -> str:
         )
     if stage == tutorial.STAGE_TEAM:
         return (
-            "Перед завершением посмотри остальные разделы. "
-            "В 👥 Команде можно проверить сотрудников, их нагрузку, депозит и результаты работы. "
-            "В Найме можно искать новых сотрудников и задавать требования к кандидатам. "
-            "В Оплате можно менять условия выплат для складменов и закладчиков. "
-            "В 🏷 Фасовках можно настроить, какая часть нового товара будет продаваться по 1, 2 и 5 единиц. "
-            "В 📊 Аналитике можно посмотреть продажи, расходы и прибыль. "
-            "В 📨 Входящих появляются сообщения и ситуации, которые требуют твоего решения. "
-            "Когда разберёшься, заверши обучение."
+            "Перед завершением обучения посмотри остальные разделы.\n\n"
+            "[👥 Команда]\n"
+            "Здесь можно проверить сотрудников, их нагрузку, депозит и результаты работы.\n\n"
+            "[🔎 Нанять]\n"
+            "Здесь можно искать новых сотрудников и задавать требования к кандидатам.\n\n"
+            "[⚙️ Оплата]\n"
+            "Здесь можно менять условия выплат для складменов и закладчиков.\n\n"
+            "[⚙️ Фасовки]\n"
+            "Здесь настраивается, какая часть нового товара будет продаваться по 1, 2 и 5 единиц.\n\n"
+            "[📊 Аналитика]\n"
+            "Здесь можно посмотреть продажи, расходы и прибыль.\n\n"
+            "[📨 Входящие]\n"
+            "Здесь появляются сообщения и ситуации, которые требуют решения.\n\n"
+            "Когда закончишь, нажми [✅ Завершить обучение]."
         )
     return "Обучение завершено."
 
@@ -180,6 +195,218 @@ def _install_procurement_empty_state() -> None:
         ui_commerce.render_procurement_product = render_procurement_product
 
 
+def _handoff_state(db, player_id: int) -> bool:
+    state = tutorial.sync_tutorial_state(db, player_id)
+    return bool(
+        state
+        and state["active"]
+        and state["stage"] == tutorial.STAGE_HANDOFF
+    )
+
+
+class _HintTarget:
+    def __init__(self, target, hint: str):
+        self._target = target
+        self._hint = hint
+        self.photo = getattr(target, "photo", None)
+
+    def _text(self, text: str) -> str:
+        return f"{text}\n\n{self._hint}"
+
+    async def edit_text(self, text, **kwargs):
+        return await self._target.edit_text(self._text(text), **kwargs)
+
+    async def answer(self, text, **kwargs):
+        return await self._target.answer(self._text(text), **kwargs)
+
+    async def delete(self):
+        return await self._target.delete()
+
+
+def _return_target(target):
+    return _HintTarget(target, tutorial_hint(RETURN_TO_MENU))
+
+
+def _install_handoff_guidance() -> None:
+    current_product_root = ui_commerce.render_product_root
+    if not getattr(current_product_root, "_nightshift_handoff_steps", False):
+
+        async def render_product_root(
+            target,
+            db,
+            game,
+            player_id: int,
+            *,
+            flash: str | None = None,
+        ) -> None:
+            if not _handoff_state(db, player_id):
+                await current_product_root(target, db, game, player_id, flash=flash)
+                return
+            products = game.procurement_products(player_id)
+            body = (
+                f"<b>📦 Товар</b>\n\n"
+                f"Свободно: <b>{money(game._free_cash_conn(db.connect().__enter__(), player_id))}</b>"
+            )
+            # Avoid keeping a manually entered connection open: recalculate normally.
+            with db.connect() as conn:
+                free_cash = game._free_cash_conn(conn, player_id)
+            body = (
+                f"<b>📦 Товар</b>\n\n"
+                f"Свободно: <b>{money(free_cash)}</b>\n\n"
+                + tutorial_hint("Нажми [📦 Склад]")
+            )
+            await present(
+                target,
+                notice(flash, body),
+                ui_commerce._procurement_products_keyboard(db, player_id, products),
+            )
+
+        render_product_root._nightshift_handoff_steps = True
+        ui_commerce.render_product_root = render_product_root
+
+    current_product = ui_commerce.render_procurement_product
+    if not getattr(current_product, "_nightshift_handoff_steps", False):
+
+        async def render_procurement_product(
+            target,
+            game,
+            player_id: int,
+            product_id: int,
+            *,
+            flash: str | None = None,
+        ) -> None:
+            if not _handoff_state(game.db, player_id):
+                await current_product(
+                    target,
+                    game,
+                    player_id,
+                    product_id,
+                    flash=flash,
+                )
+                return
+            await current_product(
+                _return_target(target),
+                game,
+                player_id,
+                product_id,
+                flash=flash,
+            )
+
+        render_procurement_product._nightshift_handoff_steps = True
+        ui_commerce.render_procurement_product = render_procurement_product
+
+    current_storefront = ui_commerce.render_storefront_root
+    if not getattr(current_storefront, "_nightshift_handoff_steps", False):
+
+        async def render_storefront_root(
+            target,
+            db,
+            game,
+            simulation_engine,
+            player_id: int,
+        ) -> None:
+            wrapped = _return_target(target) if _handoff_state(db, player_id) else target
+            await current_storefront(
+                wrapped,
+                db,
+                game,
+                simulation_engine,
+                player_id,
+            )
+
+        render_storefront_root._nightshift_handoff_steps = True
+        ui_commerce.render_storefront_root = render_storefront_root
+
+    current_sales_product = ui_commerce.render_sales_product
+    if not getattr(current_sales_product, "_nightshift_handoff_steps", False):
+
+        async def render_sales_product(target, db, player_id: int, product_id: int) -> None:
+            wrapped = _return_target(target) if _handoff_state(db, player_id) else target
+            await current_sales_product(wrapped, db, player_id, product_id)
+
+        render_sales_product._nightshift_handoff_steps = True
+        ui_commerce.render_sales_product = render_sales_product
+
+    current_listing = ui_commerce.render_listing
+    if not getattr(current_listing, "_nightshift_handoff_steps", False):
+
+        async def render_listing(
+            target,
+            db,
+            game,
+            player_id: int,
+            listing_id: int,
+        ) -> None:
+            wrapped = _return_target(target) if _handoff_state(db, player_id) else target
+            await current_listing(wrapped, db, game, player_id, listing_id)
+
+        render_listing._nightshift_handoff_steps = True
+        ui_commerce.render_listing = render_listing
+
+    current_inbox = ui_navigation.render_inbox
+    if not getattr(current_inbox, "_nightshift_handoff_steps", False):
+
+        async def render_inbox(
+            target,
+            game,
+            simulation_engine,
+            player_id: int,
+            *,
+            flash: str | None = None,
+            page: int = 0,
+        ) -> None:
+            wrapped = _return_target(target) if _handoff_state(game.db, player_id) else target
+            await current_inbox(
+                wrapped,
+                game,
+                simulation_engine,
+                player_id,
+                flash=flash,
+                page=page,
+            )
+
+        render_inbox._nightshift_handoff_steps = True
+        ui_navigation.render_inbox = render_inbox
+
+    current_team = ui_staff.render_team
+    if not getattr(current_team, "_nightshift_handoff_steps", False):
+
+        async def render_team(
+            target,
+            game,
+            simulation_engine,
+            player_id: int,
+            *,
+            flash: str | None = None,
+        ) -> None:
+            wrapped = _return_target(target) if _handoff_state(game.db, player_id) else target
+            await current_team(
+                wrapped,
+                game,
+                simulation_engine,
+                player_id,
+                flash=flash,
+            )
+
+        render_team._nightshift_handoff_steps = True
+        ui_staff.render_team = render_team
+        ui_staff_handlers.render_team = render_team
+
+    for name in ("overview_text", "products_text", "finance_text"):
+        current = getattr(analytics_handlers, name)
+        if getattr(current, "_nightshift_handoff_steps", False):
+            continue
+
+        def render_analytics(db, player_id: int, period: str, _current=current):
+            text = _current(db, player_id, period)
+            if _handoff_state(db, player_id):
+                text += "\n\n" + tutorial_hint(RETURN_TO_MENU)
+            return text
+
+        render_analytics._nightshift_handoff_steps = True
+        setattr(analytics_handlers, name, render_analytics)
+
+
 def _install_first_batch_quality_protection() -> None:
     current = procurement_market.ProcurementMarketGameService.buy_offer_for_employee
     if getattr(current, "_nightshift_tutorial_quality", False):
@@ -238,4 +465,5 @@ def apply_tutorial_runtime_fixes() -> None:
     """Keep tutorial guidance non-blocking and normalize player-facing copy."""
     _install_copy_rules()
     _install_procurement_empty_state()
+    _install_handoff_guidance()
     _install_first_batch_quality_protection()
