@@ -32,7 +32,18 @@ jobs:
           python -m pip install -r requirements.txt
           python -m pip install ruff
       - name: Apply current cleanup
-        run: python tools/nightshift_current_cleanup.py
+        run: |
+          python tools/nightshift_current_cleanup.py
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("shadow_market_simulator/app/ui_staff.py")
+          text = path.read_text(encoding="utf-8")
+          text = text.replace(
+              'await render_batch(target, game, player_id, batch_id, flash="Партия или сотрудник уже недоступны.")',
+              'await render_batches(target, game, player_id, flash="Партия или сотрудник уже недоступны.")',
+          )
+          path.write_text(text, encoding="utf-8")
+          PY
       - name: Compile
         run: python -m compileall -q shadow_market_simulator/app
       - name: Run tests
