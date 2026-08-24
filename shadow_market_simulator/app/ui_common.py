@@ -36,12 +36,12 @@ def rating(value: float, count: int = 1) -> str:
 
 def signed_pct_change(current: float, previous: float, neutral: float = 0.05) -> str:
     if previous == 0:
-        return "" if current == 0 else " ↑"
+        return "" if current == 0 else " +100%"
     change = (current - previous) / abs(previous)
     if abs(change) < neutral:
-        return " →"
-    arrow = "↑" if change > 0 else "↓"
-    return f" {arrow}{abs(change) * 100:.0f}%"
+        return ""
+    sign = "+" if change > 0 else "-"
+    return f" {sign}{abs(change) * 100:.0f}%"
 
 
 def clean(value: object) -> str:
@@ -49,7 +49,14 @@ def clean(value: object) -> str:
 
 
 def _normalize_tutorial_button_mentions(text: str) -> str:
-    text = text.replace("🚚 Склад", "📦 Склад")
+    text = (
+        text.replace("🚚 Склад", "📦 Склад")
+        .replace("—", "-")
+        .replace("«", "[")
+        .replace("»", "]")
+        .replace(" → ", ", затем ")
+        .replace("← ", "")
+    )
     text = _TUTORIAL_ACTION_MENTION.sub(r"\1[\2]", text)
 
     def replace(match: re.Match[str]) -> str:
@@ -73,6 +80,14 @@ def tutorial_hint(text: str) -> str:
 
 
 def normalize_text(text: str) -> str:
+    text = (
+        text.replace("—", "-")
+        .replace("«", '"')
+        .replace("»", '"')
+        .replace(" → ", ", затем ")
+        .replace("→ ", "")
+        .replace("← ", "")
+    )
     return _THOUSANDS_COMMA.sub(" ", text)
 
 
@@ -85,6 +100,16 @@ def claim_tip(db, player_id: int, code: str) -> bool:
     return cur.rowcount > 0
 
 
+def _normalize_button_text(text: str) -> str:
+    return (
+        text.replace("—", "-")
+        .replace("«", '"')
+        .replace("»", '"')
+        .replace("← ", "")
+        .replace(" →", "")
+    )
+
+
 def _normalize_menu_buttons(markup: InlineKeyboardMarkup | None) -> InlineKeyboardMarkup | None:
     if not markup:
         return None
@@ -93,14 +118,15 @@ def _normalize_menu_buttons(markup: InlineKeyboardMarkup | None) -> InlineKeyboa
     for row in markup.inline_keyboard:
         normalized_row: list[InlineKeyboardButton] = []
         for button in row:
-            replacement = None
-            if button.callback_data == "menu:home" and button.text == "Меню":
+            original_text = button.text or ""
+            replacement = _normalize_button_text(original_text)
+            if button.callback_data == "menu:home" and replacement == "Меню":
                 replacement = "🏠 Меню"
-            elif button.callback_data == "team:recruit" and button.text == "Нанять":
+            elif button.callback_data == "team:recruit" and replacement == "Нанять":
                 replacement = "🔎 Нанять"
-            elif button.callback_data == "team:terms" and button.text == "Оплата":
+            elif button.callback_data == "team:terms" and replacement == "Оплата":
                 replacement = "⚙️ Оплата"
-            if replacement is not None:
+            if replacement != original_text:
                 button = button.model_copy(update={"text": replacement})
                 changed = True
             normalized_row.append(button)
@@ -138,7 +164,7 @@ async def present(
 
 def nav(
     parent_callback: str | None = None,
-    parent_text: str = "← Назад",
+    parent_text: str = "Назад",
     *,
     menu: bool = True,
 ) -> InlineKeyboardMarkup:
@@ -152,7 +178,7 @@ def nav(
 
 def nav_row(
     parent_callback: str | None = None,
-    parent_text: str = "← Назад",
+    parent_text: str = "Назад",
     *,
     menu: bool = True,
 ) -> list[InlineKeyboardButton]:
