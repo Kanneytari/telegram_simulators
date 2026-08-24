@@ -1,4 +1,4 @@
-from app.keyboards import employee_list
+from app.team_keyboard import employee_list
 
 
 def test_team_buttons_show_role_icons_before_names():
@@ -10,6 +10,7 @@ def test_team_buttons_show_role_icons_before_names():
             "deposit": 500000,
             "exposure": 100000,
             "status_text": "готово к распределению · 20 ед.",
+            "idle_ready": False,
         },
         {
             "id": 2,
@@ -18,6 +19,7 @@ def test_team_buttons_show_role_icons_before_names():
             "deposit": 50000,
             "exposure": 10000,
             "status_text": "свободен",
+            "idle_ready": False,
         },
     ])
 
@@ -25,3 +27,4 @@ def test_team_buttons_show_role_icons_before_names():
     assert markup.inline_keyboard[1][0].text.startswith("👤 Крот ·")
     assert "опт" not in markup.inline_keyboard[0][0].text
     assert "розница" not in markup.inline_keyboard[1][0].text
+    assert "свободен" not in markup.inline_keyboard[1][0].text.lower()
