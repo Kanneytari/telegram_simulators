@@ -7,7 +7,6 @@ from .runtime import ROLE_MARKET_PAY, STAFF_INBOX_KINDS
 from .simulation import iso, parse_dt, utcnow
 from .workflow import TASK_LABELS, WORKFLOW_SCHEMA, WorkflowGameService, WorkflowSimulationEngine
 
-# Keep the existing Staff Inbox UI without duplicating its routing code.
 STAFF_INBOX_KINDS.add("resignation_notice")
 
 
@@ -16,7 +15,6 @@ class FinalWorkflowSimulationEngine(WorkflowSimulationEngine):
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
             conn.executescript(WORKFLOW_SCHEMA)
-            # Reuse the existing staff-inbox UX for dishonest exits.
             conn.executescript(
                 """
                 CREATE TRIGGER IF NOT EXISTS trg_employee_theft_to_staff_inbox
@@ -88,7 +86,7 @@ class FinalWorkflowSimulationEngine(WorkflowSimulationEngine):
                 quality,
             ),
         )
-        order_id = cur.lastrowid
+        order_id = int(cur.lastrowid)
         profit = revenue - cost - employee_cost
         conn.execute(
             """UPDATE shops SET balance=balance+?, total_revenue=total_revenue+?,
@@ -112,16 +110,10 @@ class FinalWorkflowSimulationEngine(WorkflowSimulationEngine):
         if self.rng.random() < probability:
             self._open_dispute(conn, player_id, order_id, client, employee_view, quality, revenue, now)
             return True
-        self._create_review(conn, player_id, order_id, force=False)
         return False
 
     def _simulate_management_events(self, conn, player_id: int, sim_hours: float, now) -> int:
         created = super()._simulate_management_events(conn, player_id, sim_hours, now)
-
-        # Normal turnover is distinct from theft. To avoid a stuck state, a voluntary
-        # resignation notice is generated only when the employee has no inventory exposure.
-        # Staff with inventory finish the current product loop first; overexposure theft risk
-        # remains an independent mechanism.
         hours = min(max(0.0, sim_hours), 12.0)
         if hours <= 0:
             return created
@@ -139,7 +131,6 @@ class FinalWorkflowSimulationEngine(WorkflowSimulationEngine):
             ).fetchone()
             if existing:
                 continue
-
             exposure = int(self.employee_exposure(conn, player_id, int(employee["id"])))
             if exposure > 0:
                 continue
@@ -183,7 +174,6 @@ class FinalWorkflowSimulationEngine(WorkflowSimulationEngine):
             )
             created += 1
             break
-
         return created
 
 
@@ -219,7 +209,6 @@ class FinalWorkflowGameService(WorkflowGameService):
                 remaining_game = remaining_real * self.simulation.effective_speed(player_id)
                 eta = "<1 ч" if remaining_game < 1 else f"~{remaining_game:.1f} ч"
                 return f"{TASK_LABELS.get(task['kind'], task['kind'])} · {eta}"
-
             if employee["role"] == "courier":
                 waiting = int(conn.execute(
                     """SELECT COALESCE(SUM(quantity),0) FROM retail_allocations
