@@ -23,8 +23,8 @@ from .keyboards import notification_actions
 from .operations_handlers import build_operations_router
 from .procurement_handlers import build_procurement_router
 from .product_review_handlers import build_product_review_router
+from .recruitment_deposit_cap import RetailDepositCappedRecruitmentService
 from .recruitment_handlers import build_recruitment_router
-from .recruitment_runtime import NightshiftRecruitmentService
 from .simulation import iso, utcnow
 from .staff_idle import IdleAwareGameService
 from .storefront_handlers import build_storefront_router
@@ -40,7 +40,7 @@ async def notification_loop(
     db: Database,
     simulation: ExpandedCatalogSimulationEngine,
     game: IdleAwareGameService,
-    recruitment: NightshiftRecruitmentService,
+    recruitment: RetailDepositCappedRecruitmentService,
     analytics: AnalyticsLogger,
     interval: int,
 ) -> None:
@@ -90,7 +90,7 @@ async def main() -> None:
     simulation = ExpandedCatalogSimulationEngine(db, speed=settings.simulation_speed)
     simulation.seed_catalog()
     game = IdleAwareGameService(db, simulation)
-    recruitment = NightshiftRecruitmentService(db, speed=settings.simulation_speed)
+    recruitment = RetailDepositCappedRecruitmentService(db, speed=settings.simulation_speed)
     install_inbox_lifecycle(db)
 
     # Install after all feature schemas so triggers can reference workflow/recruitment tables.
