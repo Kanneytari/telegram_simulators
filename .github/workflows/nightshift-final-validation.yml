@@ -76,3 +76,5 @@ jobs:
           if [ "$pytest_status" -ne 0 ] || [ "$validator_status" -ne 0 ] || [ "$compile_status" -ne 0 ] || [ "$ruff_status" -ne 0 ]; then
             exit 1
           fi
+
+# rerun after final dead-code cleanup
