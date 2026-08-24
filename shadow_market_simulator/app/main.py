@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from contextlib import suppress
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
@@ -69,35 +70,36 @@ async def notification_loop(
                          AND priority IN ('important','urgent')
                        ORDER BY created_at LIMIT 50"""
                 ).fetchall()
-                for item in items:
-                    marker = "🔴" if item["priority"] == "urgent" else "🟡"
-                    body = str(item["body"] or "").strip().replace("\n\n", "\n")
-                    if len(body) > 220:
-                        body = body[:217].rstrip() + "…"
-                    text = f"<b>{marker} {item['title']}</b>"
-                    if body:
-                        text += f"\n\n{body}"
+            for item in items:
+                marker = "🔴" if item["priority"] == "urgent" else "🟡"
+                body = str(item["body"] or "").strip().replace("\n\n", "\n")
+                if len(body) > 220:
+                    body = body[:217].rstrip() + "…"
+                text = f"<b>{marker} {item['title']}</b>"
+                if body:
+                    text += f"\n\n{body}"
+                try:
+                    await bot.send_message(
+                        item["player_id"],
+                        normalize_text(text),
+                        reply_markup=notification_markup(item),
+                    )
                     try:
-                        await bot.send_message(
-                            item["player_id"],
-                            normalize_text(text),
-                            reply_markup=notification_markup(item),
-                        )
-                        try:
-                            analytics.log_notification(
-                                int(item["player_id"]),
-                                int(item["id"]),
-                                str(item["kind"]),
-                                str(item["priority"]),
-                            )
-                        except Exception:
-                            logging.exception("Failed to log notification %s", item["id"])
-                        conn.execute(
-                            "UPDATE inbox SET notified_at=? WHERE id=?",
-                            (iso(utcnow()), item["id"]),
+                        analytics.log_notification(
+                            int(item["player_id"]),
+                            int(item["id"]),
+                            str(item["kind"]),
+                            str(item["priority"]),
                         )
                     except Exception:
-                        logging.exception("Failed to deliver inbox item %s", item["id"])
+                        logging.exception("Failed to log notification %s", item["id"])
+                    with db.connect() as conn:
+                        conn.execute(
+                            "UPDATE inbox SET notified_at=? WHERE id=? AND notified_at IS NULL",
+                            (iso(utcnow()), item["id"]),
+                        )
+                except Exception:
+                    logging.exception("Failed to deliver inbox item %s", item["id"])
         except Exception:
             logging.exception("Simulation loop failed")
         await asyncio.sleep(interval)
@@ -157,6 +159,8 @@ async def main() -> None:
         await dispatcher.start_polling(bot)
     finally:
         notifier.cancel()
+        with suppress(asyncio.CancelledError):
+            await notifier
         await bot.session.close()
 
 
