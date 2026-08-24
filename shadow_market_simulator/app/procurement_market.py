@@ -376,9 +376,8 @@ class ProcurementMarketGameService(StaffInsightGameService):
                     ),
                 )
                 conn.execute(
-                    """UPDATE employees SET jobs_done=jobs_done+1, wages_accrued=wages_accrued+?,
-                           stress=MIN(100, stress+1.2), last_contact_at=? WHERE id=?""",
-                    (employee["pay_per_job"], iso(now), employee_id),
+                    "UPDATE employees SET stress=MIN(100, stress+1.2), last_contact_at=? WHERE id=?",
+                    (iso(now), employee_id),
                 )
                 note = f"Партия #{batch_id}: {offer['product_title']} · ответственный {employee['alias']}"
             else:
@@ -409,6 +408,6 @@ class ProcurementMarketGameService(StaffInsightGameService):
             f"Партия куплена за <b>{total:,} ₽</b>.\n\n"
             f"Ответственный: <b>{employee['alias']}</b>\n"
             "Статус: получает партию\n"
-            f"Начислено за операцию: {employee['pay_per_job']:,} ₽"
+            "Оплата будет начислена после успешной передачи товара рознице."
             f"{risk}"
         )

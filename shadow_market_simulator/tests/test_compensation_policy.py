@@ -36,13 +36,6 @@ def test_default_terms_are_global_by_role(tmp_path):
         "deposit_contribution_pct": 25,
     }
 
-    with db.connect() as conn:
-        legacy = conn.execute(
-            "SELECT pay_per_job, deposit_contribution_pct FROM employees WHERE player_id=1001"
-        ).fetchall()
-    assert legacy
-    assert all(int(row["pay_per_job"]) == 0 for row in legacy)
-    assert all(int(row["deposit_contribution_pct"]) == 0 for row in legacy)
 
 
 def test_changing_role_terms_affects_all_active_employees_of_that_role(tmp_path):

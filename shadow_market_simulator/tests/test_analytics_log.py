@@ -4,7 +4,7 @@ import random
 
 from app.analytics_log import AnalyticsLogger, normalize_callback
 from app.db import Database
-from app.recruitment_runtime import NightshiftRecruitmentService
+from app.recruitment import RecruitmentService
 from app.workflow_final import FinalWorkflowGameService, FinalWorkflowSimulationEngine
 
 

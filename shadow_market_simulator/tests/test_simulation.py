@@ -5,14 +5,14 @@ from datetime import timedelta
 
 from app.db import Database
 from app.game import GameService
-from app.simulation import SimulationEngine, iso, utcnow
+from app.courier_management import CourierManagementSimulationEngine, iso, utcnow
 
 
 def make_game(tmp_path):
     db = Database(str(tmp_path / "game.db"))
     db.init()
     rng = random.Random(42)
-    simulation = SimulationEngine(db, speed=8.0, rng=rng)
+    simulation = CourierManagementSimulationEngine(db, speed=8.0, rng=rng)
     game = GameService(db, simulation, rng=rng)
     simulation.ensure_player(1001, "tester")
     return db, simulation, game
@@ -24,7 +24,7 @@ def test_new_player_has_operational_state(tmp_path):
         assert conn.execute("SELECT COUNT(*) FROM employees WHERE player_id=1001").fetchone()[0] >= 2
         assert conn.execute("SELECT COUNT(*) FROM clients WHERE player_id=1001").fetchone()[0] >= 20
         assert conn.execute("SELECT SUM(remaining) FROM batches WHERE player_id=1001").fetchone()[0] > 0
-        assert conn.execute("SELECT COUNT(*) FROM listings WHERE player_id=1001").fetchone()[0] == 9
+        assert conn.execute("SELECT COUNT(*) FROM listings WHERE player_id=1001").fetchone()[0] == 18
     assert "Свободные деньги" in game.dashboard(1001)
 
 

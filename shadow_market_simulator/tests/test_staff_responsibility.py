@@ -4,7 +4,7 @@ import random
 
 from app.compensation import CompensationGameService, CompensationSimulationEngine
 from app.db import Database
-from app.recruitment_runtime import NightshiftRecruitmentService
+from app.recruitment import RecruitmentService
 
 
 def make_system(tmp_path):
