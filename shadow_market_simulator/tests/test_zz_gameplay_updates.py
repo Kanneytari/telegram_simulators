@@ -147,6 +147,8 @@ def test_procurement_storefront_and_global_menu_labels(tmp_path):
             assert label == product["title"]
         else:
             assert label == f"{product['title']} · 🚚 {stock_status}"
+    assert procurement_labels[len(EXPECTED_PRODUCTS)].startswith("📦 Склад · ")
+    assert not any(label.startswith("🚚 Склад") for label in procurement_labels)
     assert procurement_labels[-1] == "🏠 Меню"
 
     storefront = ui_commerce._sales_root_keyboard([])
@@ -159,6 +161,20 @@ def test_procurement_storefront_and_global_menu_labels(tmp_path):
     )
     normalized = _normalize_menu_buttons(raw)
     assert _labels(normalized) == ["🏠 Меню"]
+
+
+def test_tutorial_button_mentions_use_square_brackets():
+    from app.ui_common import tutorial_hint
+
+    assert tutorial_hint("Нажми на кнопку 📦 Товар") == (
+        "<blockquote>Нажми на кнопку [📦 Товар]</blockquote>"
+    )
+    assert tutorial_hint("Нажми на кнопку 🚚 Склад") == (
+        "<blockquote>Нажми на кнопку [📦 Склад]</blockquote>"
+    )
+    assert tutorial_hint("Проверь и нажми кнопку «✅ Отправить 10 ед.».") == (
+        "<blockquote>Проверь и нажми кнопку [✅ Отправить 10 ед.].</blockquote>"
+    )
 
 
 class Target:
@@ -181,6 +197,20 @@ class Target:
     async def answer_photo(self, photo, caption=None, **kwargs):
         self.text = caption
         self.reply_markup = kwargs.get("reply_markup")
+
+
+def test_product_screen_uses_package_warehouse_button_and_tutorial(tmp_path):
+    from app import ui_commerce
+
+    db, _, game = make_system(tmp_path, seed=353)
+    target = Target()
+    asyncio.run(ui_commerce.render_product_root(target, db, game, PLAYER_ID))
+
+    assert "<blockquote>Нажми на кнопку [📦 Склад]</blockquote>" in target.text
+    labels = _labels(target.reply_markup)
+    assert any(label.startswith("📦 Склад · ") for label in labels)
+    assert not any(label.startswith("🚚 Склад") for label in labels)
+    assert not any("нет запаса" in label.lower() for label in labels)
 
 
 def test_handoff_copy_icons_and_master_stash_status(tmp_path):
