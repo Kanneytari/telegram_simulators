@@ -5,7 +5,8 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message, ReplyKeyboardRemove
 
-from .keyboards import employee_list, main_menu
+from .keyboards import main_menu
+from .team_keyboard import employee_list
 
 
 def build_workflow_dashboard_router(db, game, simulation, admin_ids: frozenset[int]) -> Router:
@@ -123,7 +124,9 @@ def build_workflow_dashboard_router(db, game, simulation, admin_ids: frozenset[i
             f"В штате: <b>{len(employees)}</b>\n"
             f"Сейчас заняты: {busy}\n"
             f"С товаром сверх депозита: <b>{risky}</b>\n\n"
-            "На кнопке каждого сотрудника показаны роль и текущая задача. 🔴 означает, что стоимость товара на руках выше его депозита."
+            "На кнопке показаны роль, имя, депозит и текущая задача, если она есть. "
+            "🟢 означает, что у сотрудника нет товара под ответственностью и активных позиций на витрине. "
+            "🔴 означает, что стоимость товара под ответственностью выше его депозита."
         )
         await present(target, text, employee_list(employees), edit=edit)
 
