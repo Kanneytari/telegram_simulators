@@ -67,6 +67,9 @@ text = text.replace(
 )
 ux.write_text(text, encoding="utf-8")
 
+compact = TESTS / "test_compact_ui.py"
+replace(compact, '        "Обновить",\n', '        "🔄 Обновить",\n')
+
 (TESTS / "test_db_init.py").write_text(
     '''from app.db import Database\n\n\ndef test_database_init_can_run_twice_without_losing_data(tmp_path):\n    db = Database(str(tmp_path / "repeat.db"))\n    db.init()\n    with db.connect() as conn:\n        conn.execute("INSERT INTO shops(player_id, username) VALUES (?, ?)", (42, "repeat"))\n\n    db.init()\n\n    with db.connect() as conn:\n        shop = conn.execute("SELECT username FROM shops WHERE player_id=42").fetchone()\n        analytics_table = conn.execute(\n            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='analytics_events'"\n        ).fetchone()\n    assert shop["username"] == "repeat"\n    assert analytics_table is not None\n''',
     encoding="utf-8",
