@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import subprocess
 import sys
 import textwrap
@@ -8,11 +9,13 @@ import textwrap
 def test_tutorial_copy_uses_blocks_and_exact_button_labels() -> None:
     script = textwrap.dedent(
         r'''
+        import inspect
+
         from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-        from app import tutorial
+        from app import tutorial, ui_navigation
         from app.tutorial_copy_update import CONTINUE_LABEL, apply_tutorial_copy_update
-        from app.ui_common import tutorial_hint
+        from app.ui_common import normalize_text, tutorial_hint
 
 
         apply_tutorial_copy_update()
@@ -68,6 +71,22 @@ def test_tutorial_copy_uses_blocks_and_exact_button_labels() -> None:
         assert "Первая мысль.\n\nВторая мысль." not in formatted
         assert "[⏩ Пропустить ожидание]" in formatted
 
+        route_hint = tutorial_hint(
+            "Открой «Товар» → «Склад» и распредели товар между закладчиками. "
+            "После подготовки фасовки появятся на витрине и начнут продаваться автоматически."
+        )
+        assert "Открой [Товар], затем [Склад]" in route_hint
+        for forbidden in ("—", "«", "»", "→", "←"):
+            assert forbidden not in route_hint
+
+        normalized = normalize_text("Текст — тест. «Товар» → «Склад»")
+        for forbidden in ("—", "«", "»", "→", "←"):
+            assert forbidden not in normalized
+
+        source = inspect.getsource(ui_navigation._home_snapshot)
+        assert "Стафф уже на складе!" not in source
+        assert "tutorial_hint" not in source
+
         for stage in (
             tutorial.STAGE_PROCUREMENT,
             tutorial.STAGE_PICKUP_WAIT,
@@ -79,6 +98,8 @@ def test_tutorial_copy_uses_blocks_and_exact_button_labels() -> None:
         ):
             text = tutorial._instruction({"stage": stage, "data": {}})
             assert "\n\n" in text
+            for forbidden in ("—", "«", "»", "→", "←"):
+                assert forbidden not in text
 
         assert tutorial._instruction(
             {"stage": tutorial.STAGE_HANDOFF, "data": {}}
