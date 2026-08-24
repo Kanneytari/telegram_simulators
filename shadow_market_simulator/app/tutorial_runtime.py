@@ -220,7 +220,10 @@ class _HintTarget:
         return await self._target.answer(self._text(text), **kwargs)
 
     async def delete(self):
-        return await self._target.delete()
+        delete = getattr(self._target, "delete", None)
+        if delete is not None:
+            return await delete()
+        return None
 
 
 def _return_target(target):
@@ -243,13 +246,7 @@ def _install_handoff_guidance() -> None:
                 await current_product_root(target, db, game, player_id, flash=flash)
                 return
             products = game.procurement_products(player_id)
-            body = (
-                f"<b>📦 Товар</b>\n\n"
-                f"Свободно: <b>{money(game._free_cash_conn(db.connect().__enter__(), player_id))}</b>"
-            )
-            # Avoid keeping a manually entered connection open: recalculate normally.
-            with db.connect() as conn:
-                free_cash = game._free_cash_conn(conn, player_id)
+            free_cash = tutorial._free_cash(game, player_id)
             body = (
                 f"<b>📦 Товар</b>\n\n"
                 f"Свободно: <b>{money(free_cash)}</b>\n\n"
