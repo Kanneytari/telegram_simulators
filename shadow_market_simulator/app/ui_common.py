@@ -11,6 +11,9 @@ _THOUSANDS_COMMA = re.compile(r"(?<=\d),(?=\d{3}(?:\D|$))")
 _TUTORIAL_BUTTON_MENTION = re.compile(
     r"(?i)(\bкнопк\w*\s+)(?:«([^»]+)»|\[([^\]]+)\]|([^\n.!?]+))"
 )
+_TUTORIAL_ACTION_MENTION = re.compile(
+    r"(?i)(\bнажм(?:и|ите|ать)\s+)(⏩ Пропустить ожидание)"
+)
 _TUTORIAL_SENTENCE_BREAK = re.compile(r"(?<=[.!?]) (?=[A-ZА-ЯЁ0-9\[])")
 
 
@@ -48,14 +51,7 @@ def clean(value: object) -> str:
 
 def _normalize_tutorial_button_mentions(text: str) -> str:
     text = text.replace("🚚 Склад", "📦 Склад")
-    text = text.replace(
-        "нажми ⏩ Пропустить ожидание",
-        "нажми [⏩ Пропустить ожидание]",
-    )
-    text = text.replace(
-        "нажать ⏩ Пропустить ожидание",
-        "нажать [⏩ Пропустить ожидание]",
-    )
+    text = _TUTORIAL_ACTION_MENTION.sub(r"\1[\2]", text)
 
     def replace(match: re.Match[str]) -> str:
         label = next(
