@@ -15,6 +15,64 @@ app.nightshift.NightshiftSimulationEngine :: nightshift.py
 app.runtime.PlayerSimulationEngine :: runtime.py
 app.simulation.SimulationEngine :: simulation.py
 
+=== METHOD OWNERSHIP CourierManagementSimulationEngine ===
+
+app.courier_management.CourierManagementSimulationEngine
+  LIVE: __init__, _effective_pace, _effective_precision, _employee_deposit_contribution, _ensure_courier_management_conn, _management, _management_conn, ensure_player
+  SHADOWED: none
+
+app.courier_core.CourierCoreSimulationEngine
+  LIVE: _courier_rating, _create_retail_order, _dispute_probability, _employee_id, _ensure_courier_profiles_conn, _learning_bonus, _open_dispute, _process_tasks, _profile, _profile_conn, _record_rating_conn, _recover_courier_state_conn, _simulate_courier_problem_conn, _simulate_management_events, _stress_per_order, _sync_legacy_mirrors_conn
+  SHADOWED: __init__ -> app.courier_management.CourierManagementSimulationEngine, _effective_pace -> app.courier_management.CourierManagementSimulationEngine, _effective_precision -> app.courier_management.CourierManagementSimulationEngine, ensure_player -> app.courier_management.CourierManagementSimulationEngine
+
+app.customer_trust.CustomerTrustSimulationEngine
+  LIVE: _availability_now_conn, _customer_counts_conn, _ensure_all_relationships_conn, _product_rating, _refresh_trust_conn, _relationship_conn, _select_client_conn, _simulate_sales
+  SHADOWED: __init__ -> app.courier_management.CourierManagementSimulationEngine, _courier_rating -> app.courier_core.CourierCoreSimulationEngine, _create_retail_order -> app.courier_core.CourierCoreSimulationEngine, _employee_deposit_contribution -> app.courier_management.CourierManagementSimulationEngine, _record_rating_conn -> app.courier_core.CourierCoreSimulationEngine, _simulate_management_events -> app.courier_core.CourierCoreSimulationEngine, ensure_player -> app.courier_management.CourierManagementSimulationEngine
+
+app.staff_relationships.StaffRelationshipSimulationEngine
+  LIVE: none
+  SHADOWED: __init__ -> app.courier_management.CourierManagementSimulationEngine, _process_tasks -> app.courier_core.CourierCoreSimulationEngine
+
+app.compensation.CompensationSimulationEngine
+  LIVE: none
+  SHADOWED: __init__ -> app.courier_management.CourierManagementSimulationEngine, _process_tasks -> app.courier_core.CourierCoreSimulationEngine, _simulate_management_events -> app.courier_core.CourierCoreSimulationEngine, ensure_player -> app.courier_management.CourierManagementSimulationEngine
+
+app.delayed_disputes.DelayedDisputeSimulationEngine
+  LIVE: advance, fast_forward_timers, materialize_due_replies, rescale_existing_timers
+  SHADOWED: __init__ -> app.courier_management.CourierManagementSimulationEngine
+
+app.procurement_market.ProcurementMarketSimulationEngine
+  LIVE: _create_market_offer_conn, _ensure_bounds_conn, _group_counts_conn, _maybe_refresh_offer, _rotate_once_conn, _seed_market_conn, ensure_procurement_bounds, refresh_procurement_market
+  SHADOWED: __init__ -> app.courier_management.CourierManagementSimulationEngine, advance -> app.delayed_disputes.DelayedDisputeSimulationEngine, ensure_player -> app.courier_management.CourierManagementSimulationEngine
+
+app.staff_insights.StaffInsightSimulationEngine
+  LIVE: _publish_allocation, _seed_retail_positions, current_game_hour
+  SHADOWED: __init__ -> app.courier_management.CourierManagementSimulationEngine, advance -> app.delayed_disputes.DelayedDisputeSimulationEngine, ensure_player -> app.courier_management.CourierManagementSimulationEngine
+
+app.workflow_final.FinalWorkflowSimulationEngine
+  LIVE: none
+  SHADOWED: _simulate_management_events -> app.courier_core.CourierCoreSimulationEngine
+
+app.workflow.WorkflowSimulationEngine
+  LIVE: _check_overexposure_risk, _employee_absconds, _ensure_packaging_rules, _game_hours_to_real, _has_stock, employee_exposure
+  SHADOWED: __init__ -> app.courier_management.CourierManagementSimulationEngine, _process_tasks -> app.courier_core.CourierCoreSimulationEngine, _publish_allocation -> app.staff_insights.StaffInsightSimulationEngine, _seed_retail_positions -> app.staff_insights.StaffInsightSimulationEngine, _simulate_management_events -> app.courier_core.CourierCoreSimulationEngine, ensure_player -> app.courier_management.CourierManagementSimulationEngine, fast_forward_timers -> app.delayed_disputes.DelayedDisputeSimulationEngine, rescale_existing_timers -> app.delayed_disputes.DelayedDisputeSimulationEngine
+
+app.operations.OperationsSimulationEngine
+  LIVE: none
+  SHADOWED: ensure_player -> app.courier_management.CourierManagementSimulationEngine
+
+app.nightshift.NightshiftSimulationEngine
+  LIVE: _expire_items, _scale_new_timers, _scale_rows_after_id, effective_speed, seed_catalog
+  SHADOWED: _simulate_management_events -> app.courier_core.CourierCoreSimulationEngine, advance -> app.delayed_disputes.DelayedDisputeSimulationEngine, ensure_player -> app.courier_management.CourierManagementSimulationEngine, fast_forward_timers -> app.delayed_disputes.DelayedDisputeSimulationEngine, rescale_existing_timers -> app.delayed_disputes.DelayedDisputeSimulationEngine
+
+app.runtime.PlayerSimulationEngine
+  LIVE: _maybe_refresh_candidate, player_multiplier
+  SHADOWED: advance -> app.delayed_disputes.DelayedDisputeSimulationEngine, effective_speed -> app.nightshift.NightshiftSimulationEngine
+
+app.simulation.SimulationEngine
+  LIVE: _apply_refund, _create_candidate, _create_offer, _poisson, _reactivate_employees, _weighted_choice, advance_all
+  SHADOWED: __init__ -> app.courier_management.CourierManagementSimulationEngine, _dispute_probability -> app.courier_core.CourierCoreSimulationEngine, _expire_items -> app.nightshift.NightshiftSimulationEngine, _has_stock -> app.workflow.WorkflowSimulationEngine, _maybe_refresh_candidate -> app.runtime.PlayerSimulationEngine, _maybe_refresh_offer -> app.procurement_market.ProcurementMarketSimulationEngine, _open_dispute -> app.courier_core.CourierCoreSimulationEngine, _simulate_management_events -> app.courier_core.CourierCoreSimulationEngine, advance -> app.delayed_disputes.DelayedDisputeSimulationEngine, ensure_player -> app.courier_management.CourierManagementSimulationEngine, seed_catalog -> app.nightshift.NightshiftSimulationEngine
+
 === MRO CourierManagementGameService ===
 app.courier_management.CourierManagementGameService :: courier_management.py
 app.courier_core.CourierCoreGameService :: courier_core.py
@@ -33,9 +91,85 @@ app.services.FinalGameService :: services.py
 app.runtime.NightshiftGameService :: runtime.py
 app.game.GameService :: game.py
 
+=== METHOD OWNERSHIP CourierManagementGameService ===
+
+app.courier_management.CourierManagementGameService
+  LIVE: __init__, _charge_conn, _condition, _free_cash_conn, _game_hours_since, _managed_employee_conn, _management_event_conn, _relationship, _relationship_delta, courier_deposit_text, courier_equipment_text, courier_management_snapshot, courier_management_text, courier_rest_text, employee_details, give_bonus, hire_candidate, send_to_rest, set_deposit_plan, set_deposit_target, upgrade_equipment
+  SHADOWED: none
+
+app.courier_core.CourierCoreGameService
+  LIVE: _observations, _reliability_label
+  SHADOWED: __init__ -> app.courier_management.CourierManagementGameService, employee_details -> app.courier_management.CourierManagementGameService, hire_candidate -> app.courier_management.CourierManagementGameService
+
+app.customer_trust.CustomerTrustGameService
+  LIVE: _apply_customer_case_result, customer_metrics, dispute_details, employee_service_metrics, handle_inbox_action, procurement_offer, product_quality_metrics, resolve_dispute_with_source, supplier_performance
+  SHADOWED: employee_details -> app.courier_management.CourierManagementGameService
+
+app.global_packaging.GlobalPackagingGameService
+  LIVE: adjust_global_packaging_rule, change_employee_role, global_packaging_rule
+  SHADOWED: none
+
+app.staff_idle.IdleAwareGameService
+  LIVE: allocate_to_retail, employees, retail_staff_for_batch
+  SHADOWED: none
+
+app.staff_relationships.StaffRelationshipGameService
+  LIVE: assign_unassigned_batch, buy_offer_for_employee
+  SHADOWED: __init__ -> app.courier_management.CourierManagementGameService, resolve_dispute_with_source -> app.customer_trust.CustomerTrustGameService
+
+app.compensation.CompensationGameService
+  LIVE: _policy_score, adjust_compensation_policy, compensation_policy, payroll_summary, process_payroll, process_payroll_all, wholesale_handoff_quote
+  SHADOWED: __init__ -> app.courier_management.CourierManagementGameService, employee_details -> app.courier_management.CourierManagementGameService, hire_candidate -> app.courier_management.CourierManagementGameService
+
+app.delayed_disputes.DelayedDisputeGameService
+  LIVE: _format_game_minutes, _generate_employee_reply, _pending_eta, ask_employee_about_dispute
+  SHADOWED: dispute_details -> app.customer_trust.CustomerTrustGameService
+
+app.procurement_market.ProcurementMarketGameService
+  LIVE: offer_typical_unit_cost, offers, procurement_products
+  SHADOWED: buy_offer_for_employee -> app.staff_relationships.StaffRelationshipGameService, procurement_offer -> app.customer_trust.CustomerTrustGameService
+
+app.staff_insights.StaffInsightGameService
+  LIVE: _activity_details, _inventory_lines, _productivity_lines, _task_status
+  SHADOWED: __init__ -> app.courier_management.CourierManagementGameService, employee_details -> app.courier_management.CourierManagementGameService
+
+app.workflow_final.FinalWorkflowGameService
+  LIVE: _has_pending_assignment, fire_employee
+  SHADOWED: _task_status -> app.staff_insights.StaffInsightGameService, change_employee_role -> app.global_packaging.GlobalPackagingGameService
+
+app.workflow.WorkflowGameService
+  LIVE: _employee_exposure, active_batches, unassigned_batches, warehouse_staff_for_offer
+  SHADOWED: __init__ -> app.courier_management.CourierManagementGameService, _task_status -> app.staff_insights.StaffInsightGameService, allocate_to_retail -> app.staff_idle.IdleAwareGameService, assign_unassigned_batch -> app.staff_relationships.StaffRelationshipGameService, buy_offer_for_employee -> app.staff_relationships.StaffRelationshipGameService, change_employee_role -> app.global_packaging.GlobalPackagingGameService, employee_details -> app.courier_management.CourierManagementGameService, employees -> app.staff_idle.IdleAwareGameService, fire_employee -> app.workflow_final.FinalWorkflowGameService, retail_staff_for_batch -> app.staff_idle.IdleAwareGameService
+
+app.operations.OperationsGameService
+  LIVE: batch_transfer_options, employee_inventory, reassign_batch
+  SHADOWED: buy_offer_for_employee -> app.staff_relationships.StaffRelationshipGameService, employee_details -> app.courier_management.CourierManagementGameService, fire_employee -> app.workflow_final.FinalWorkflowGameService, warehouse_staff_for_offer -> app.workflow.WorkflowGameService
+
+app.services.FinalGameService
+  LIVE: dispute_payment_context
+  SHADOWED: handle_inbox_action -> app.customer_trust.CustomerTrustGameService, payroll_summary -> app.compensation.CompensationGameService, process_payroll -> app.compensation.CompensationGameService, resolve_dispute_with_source -> app.customer_trust.CustomerTrustGameService
+
+app.runtime.NightshiftGameService
+  LIVE: accept_raise_request, adjust_raise_offer, start_raise_negotiation, submit_raise_offer
+  SHADOWED: employee_details -> app.courier_management.CourierManagementGameService, hire_candidate -> app.courier_management.CourierManagementGameService, payroll_summary -> app.compensation.CompensationGameService, process_payroll -> app.compensation.CompensationGameService, process_payroll_all -> app.compensation.CompensationGameService
+
+app.game.GameService
+  LIVE: _decision_quality, analytics, buy_offer, candidates, change_listing_price, close_inbox, dashboard, inbox, inbox_item, listings, recruit, reject_candidate, resolve_dispute
+  SHADOWED: __init__ -> app.courier_management.CourierManagementGameService, ask_employee_about_dispute -> app.delayed_disputes.DelayedDisputeGameService, dispute_details -> app.customer_trust.CustomerTrustGameService, employee_details -> app.courier_management.CourierManagementGameService, employees -> app.staff_idle.IdleAwareGameService, handle_inbox_action -> app.customer_trust.CustomerTrustGameService, hire_candidate -> app.courier_management.CourierManagementGameService, offers -> app.procurement_market.ProcurementMarketGameService
+
 === MRO CourierRecruitmentService ===
 app.courier_recruitment.CourierRecruitmentService :: courier_recruitment.py
 app.recruitment.RecruitmentService :: recruitment.py
+
+=== METHOD OWNERSHIP CourierRecruitmentService ===
+
+app.courier_recruitment.CourierRecruitmentService
+  LIVE: _create_candidate
+  SHADOWED: none
+
+app.recruitment.RecruitmentService
+  LIVE: __init__, _policy, _policy_score, active_campaigns, adjust_draft, advance, advance_all, campaign_status_text, candidates, effective_speed, ensure_draft, fast_forward, get_channel, player_multiplier, quote, set_player_multiplier, start_campaign, update_draft
+  SHADOWED: _create_candidate -> app.courier_recruitment.CourierRecruitmentService
 
 === LEGACY REFERENCES ===
 
