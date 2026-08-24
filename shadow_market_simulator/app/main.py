@@ -12,6 +12,7 @@ from .analytics_handlers import build_analytics_router
 from .analytics_log import AnalyticsLogger, AnalyticsLoggingMiddleware
 from .catalog_extension import ExpandedCatalogSimulationEngine
 from .config import load_settings
+from .courier_idle_handlers import build_courier_idle_router
 from .db import Database
 from .deposit_share_handlers import build_deposit_share_router
 from .dispute_handlers import build_dispute_router
@@ -26,7 +27,7 @@ from .product_review_handlers import build_product_review_router
 from .recruitment_handlers import build_recruitment_router
 from .recruitment_runtime import NightshiftRecruitmentService
 from .simulation import iso, utcnow
-from .staff_relationships import StaffRelationshipGameService
+from .staff_idle import IdleAwareGameService
 from .storefront_handlers import build_storefront_router
 from .time_handlers import build_time_router
 from .workflow_allocation_handlers import build_workflow_allocation_router
@@ -39,7 +40,7 @@ async def notification_loop(
     bot: Bot,
     db: Database,
     simulation: ExpandedCatalogSimulationEngine,
-    game: StaffRelationshipGameService,
+    game: IdleAwareGameService,
     recruitment: NightshiftRecruitmentService,
     analytics: AnalyticsLogger,
     interval: int,
@@ -89,7 +90,7 @@ async def main() -> None:
     db.init()
     simulation = ExpandedCatalogSimulationEngine(db, speed=settings.simulation_speed)
     simulation.seed_catalog()
-    game = StaffRelationshipGameService(db, simulation)
+    game = IdleAwareGameService(db, simulation)
     recruitment = NightshiftRecruitmentService(db, speed=settings.simulation_speed)
     install_inbox_lifecycle(db)
 
@@ -109,6 +110,9 @@ async def main() -> None:
     # Must be before the legacy workflow employee-profile handler so the profile can
     # expose the deposit-share negotiation entry point.
     dispatcher.include_router(build_deposit_share_router(game))
+    # Must be before the legacy workflow batch handler so recipient buttons use
+    # the same strict green-idle rule as the Team screen.
+    dispatcher.include_router(build_courier_idle_router(game))
     dispatcher.include_router(build_workflow_router(game))
     dispatcher.include_router(build_procurement_router(game))
     dispatcher.include_router(build_product_review_router(game))
