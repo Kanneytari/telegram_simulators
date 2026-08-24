@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS shops (
     name TEXT NOT NULL DEFAULT 'NIGHTSHIFT',
     balance INTEGER NOT NULL DEFAULT 150000,
     reserve_target INTEGER NOT NULL DEFAULT 30000,
-    rating REAL NOT NULL DEFAULT 4.82,
+    rating REAL NOT NULL DEFAULT 4.0,
     employee_reputation REAL NOT NULL DEFAULT 50.0,
     supplier_reputation REAL NOT NULL DEFAULT 50.0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -53,6 +53,10 @@ CREATE TABLE IF NOT EXISTS supplier_offers (
     quantity INTEGER NOT NULL,
     unit_cost INTEGER NOT NULL,
     quality_hint TEXT NOT NULL,
+    offer_quality_mean REAL,
+    offer_quality_sigma REAL,
+    offer_reliability REAL,
+    market_profile TEXT NOT NULL DEFAULT 'normal',
     expires_at TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'open',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -63,10 +67,11 @@ CREATE TABLE IF NOT EXISTS employees (
     player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
     alias TEXT NOT NULL,
     role TEXT NOT NULL,
-    pay_per_job INTEGER NOT NULL,
+    pay_per_job INTEGER NOT NULL DEFAULT 0,
     deposit INTEGER NOT NULL DEFAULT 0,
-    deposit_contribution_pct INTEGER NOT NULL DEFAULT 10,
+    deposit_contribution_pct INTEGER NOT NULL DEFAULT 0,
     wages_accrued INTEGER NOT NULL DEFAULT 0,
+    deposit_accrued INTEGER NOT NULL DEFAULT 0,
     total_wages_paid INTEGER NOT NULL DEFAULT 0,
     deposit_from_wages INTEGER NOT NULL DEFAULT 0,
     has_car INTEGER NOT NULL DEFAULT 0,
@@ -104,7 +109,7 @@ CREATE TABLE IF NOT EXISTS candidates (
     player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
     alias TEXT NOT NULL,
     role TEXT NOT NULL,
-    desired_pay INTEGER NOT NULL,
+    desired_pay INTEGER NOT NULL DEFAULT 0,
     deposit INTEGER NOT NULL,
     has_car INTEGER NOT NULL,
     reliability REAL NOT NULL,
@@ -118,7 +123,7 @@ CREATE TABLE IF NOT EXISTS candidates (
     source_channel TEXT,
     offered_pay INTEGER,
     min_deposit INTEGER,
-    deposit_contribution_pct INTEGER NOT NULL DEFAULT 10,
+    deposit_contribution_pct INTEGER NOT NULL DEFAULT 0,
     experience_level INTEGER NOT NULL DEFAULT 0
 );
 
@@ -161,10 +166,14 @@ CREATE TABLE IF NOT EXISTS orders (
     employee_cost INTEGER NOT NULL,
     employee_deposit_contribution INTEGER NOT NULL DEFAULT 0,
     quality REAL NOT NULL,
+    customer_purchase_number INTEGER NOT NULL DEFAULT 1,
+    customer_was_repeat INTEGER NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'completed',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Removed from live UX. Kept temporarily until analytics/event-log migration is
+-- completed in this branch, then deleted before merge.
 CREATE TABLE IF NOT EXISTS reviews (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     player_id INTEGER NOT NULL REFERENCES shops(player_id) ON DELETE CASCADE,
@@ -187,6 +196,8 @@ CREATE TABLE IF NOT EXISTS disputes (
     message TEXT NOT NULL,
     evidence_json TEXT NOT NULL,
     courier_reply TEXT,
+    courier_reply_pending TEXT,
+    courier_reply_due_at TEXT,
     status TEXT NOT NULL DEFAULT 'open',
     decision TEXT,
     refund_amount INTEGER NOT NULL DEFAULT 0,
@@ -230,7 +241,7 @@ CREATE TABLE IF NOT EXISTS settings (
     notifications_enabled INTEGER NOT NULL DEFAULT 1,
     hardcore INTEGER NOT NULL DEFAULT 0,
     time_multiplier REAL NOT NULL DEFAULT 1.0,
-    last_payroll_at TEXT
+    last_payroll_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS payroll_runs (
@@ -247,6 +258,7 @@ CREATE TABLE IF NOT EXISTS payroll_runs (
 CREATE INDEX IF NOT EXISTS idx_inbox_player_status ON inbox(player_id, status, priority);
 CREATE INDEX IF NOT EXISTS idx_disputes_player_status ON disputes(player_id, status);
 CREATE INDEX IF NOT EXISTS idx_orders_player_created ON orders(player_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_orders_repeat ON orders(player_id, customer_was_repeat, created_at);
 CREATE INDEX IF NOT EXISTS idx_batches_player_status ON batches(player_id, status);
 CREATE INDEX IF NOT EXISTS idx_batches_responsible ON batches(player_id, responsible_employee_id, status);
 CREATE INDEX IF NOT EXISTS idx_reviews_product_created ON reviews(player_id, product_id, created_at);
@@ -277,6 +289,7 @@ class Database:
 
     @staticmethod
     def _ensure_column(conn: sqlite3.Connection, table: str, column: str, definition: str) -> None:
+        """Temporary compatibility helper for lower layers; fresh schema already contains live columns."""
         columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
         if column not in columns:
             conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
@@ -284,25 +297,3 @@ class Database:
     def init(self) -> None:
         with self.connect() as conn:
             conn.executescript(SCHEMA)
-            self._ensure_column(conn, "employees", "deposit_contribution_pct", "INTEGER NOT NULL DEFAULT 10")
-            self._ensure_column(conn, "employees", "wages_accrued", "INTEGER NOT NULL DEFAULT 0")
-            self._ensure_column(conn, "employees", "total_wages_paid", "INTEGER NOT NULL DEFAULT 0")
-            self._ensure_column(conn, "employees", "deposit_from_wages", "INTEGER NOT NULL DEFAULT 0")
-            self._ensure_column(conn, "batches", "responsible_employee_id", "INTEGER REFERENCES employees(id)")
-            self._ensure_column(conn, "candidates", "campaign_id", "INTEGER")
-            self._ensure_column(conn, "candidates", "source_channel", "TEXT")
-            self._ensure_column(conn, "candidates", "offered_pay", "INTEGER")
-            self._ensure_column(conn, "candidates", "min_deposit", "INTEGER")
-            self._ensure_column(conn, "candidates", "deposit_contribution_pct", "INTEGER NOT NULL DEFAULT 10")
-            self._ensure_column(conn, "candidates", "experience_level", "INTEGER NOT NULL DEFAULT 0")
-            self._ensure_column(conn, "orders", "employee_deposit_contribution", "INTEGER NOT NULL DEFAULT 0")
-            self._ensure_column(conn, "settings", "time_multiplier", "REAL NOT NULL DEFAULT 1.0")
-            self._ensure_column(conn, "settings", "last_payroll_at", "TEXT")
-            self._ensure_column(conn, "disputes", "refund_amount", "INTEGER NOT NULL DEFAULT 0")
-            self._ensure_column(conn, "disputes", "refund_source", "TEXT")
-            self._ensure_column(conn, "disputes", "refund_employee_id", "INTEGER")
-
-            conn.execute("UPDATE employees SET deposit_contribution_pct=10 WHERE deposit_contribution_pct IS NULL")
-            conn.execute("UPDATE employees SET pay_per_job=1500 WHERE role='courier' AND pay_per_job<500")
-            conn.execute("UPDATE employees SET pay_per_job=5000 WHERE role='warehouse' AND pay_per_job<1000")
-            conn.execute("UPDATE settings SET last_payroll_at=CURRENT_TIMESTAMP WHERE last_payroll_at IS NULL")
