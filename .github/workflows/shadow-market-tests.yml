@@ -7,17 +7,12 @@ on:
       - "README.md"
       - "docs/**"
       - ".github/workflows/shadow-market-tests.yml"
-      - "tools/cleanup_nightshift_doc_audit.py"
   pull_request:
     paths:
       - "shadow_market_simulator/**"
       - "README.md"
       - "docs/**"
       - ".github/workflows/shadow-market-tests.yml"
-      - "tools/cleanup_nightshift_doc_audit.py"
-
-permissions:
-  contents: write
 
 jobs:
   test:
@@ -26,9 +21,6 @@ jobs:
       PYTHONPATH: ${{ github.workspace }}/shadow_market_simulator
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: docs/nightshift-current-state
-          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -37,8 +29,6 @@ jobs:
         run: |
           python -m pip install -r requirements.txt
           python -m pip install ruff
-      - name: Apply legacy wording cleanup
-        run: python tools/cleanup_nightshift_doc_audit.py
       - name: Compile
         run: python -m compileall -q shadow_market_simulator/app
       - name: Run tests
@@ -196,14 +186,3 @@ jobs:
           if batch_renderers != 1:
               raise SystemExit(f"expected one canonical batch renderer, found {batch_renderers}")
           PY
-      - name: Commit validated cleanup
-        if: success()
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add shadow_market_simulator
-          if ! git diff --cached --quiet; then
-            git commit -m "Remove stale NIGHTSHIFT wording"
-            git pull --rebase origin docs/nightshift-current-state
-            git push origin HEAD:docs/nightshift-current-state
-          fi
