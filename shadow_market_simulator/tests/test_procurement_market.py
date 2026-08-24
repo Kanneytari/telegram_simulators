@@ -40,11 +40,11 @@ def test_market_has_one_to_five_offers_per_product_and_size(tmp_path):
     assert all(1 <= value <= 5 for value in counts.values())
 
     products = game.procurement_products(1001)
+    assert len(products) == 6
     for product in products:
         assert set(product["counts"]) == set(PROCUREMENT_BATCH_SIZES)
         offers = game.offers(1001, int(product["id"]))
         assert product["total"] == len(offers)
-        assert product["total"] > 0
         with db.connect() as conn:
             free_cash = game._free_cash_conn(conn, 1001)
         assert all(int(offer["quantity"] * offer["unit_cost"]) <= free_cash for offer in offers)
@@ -163,7 +163,10 @@ def test_unaffordable_offers_are_hidden_and_purchase_uses_free_cash(tmp_path):
     assert all(int(row["quantity"] * row["unit_cost"]) <= 80000 for row in offers)
 
     products = game.procurement_products(1001)
-    assert [int(row["id"]) for row in products] == [1]
+    assert len(products) == 6
+    by_id = {int(row["id"]): row for row in products}
+    assert int(by_id[1]["total"]) == 1
+    assert all(int(row["total"]) == 0 for product_id, row in by_id.items() if product_id != 1)
 
     with db.connect() as conn:
         balance_before = int(conn.execute(
