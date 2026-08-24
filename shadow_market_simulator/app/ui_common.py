@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import re
 from html import escape
 
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+
+
+_THOUSANDS_COMMA = re.compile(r"(?<=\d),(?=\d{3}(?:\D|$))")
 
 
 def money(value: int | float) -> str:
@@ -38,6 +42,11 @@ def clean(value: object) -> str:
     return escape(str(value or ""))
 
 
+def normalize_text(text: str) -> str:
+    """Keep legacy service messages visually consistent with the new Russian UI."""
+    return _THOUSANDS_COMMA.sub(" ", text)
+
+
 async def present(
     target: Message,
     text: str,
@@ -45,6 +54,7 @@ async def present(
     *,
     edit: bool = True,
 ) -> None:
+    text = normalize_text(text)
     if not edit:
         await target.answer(text, reply_markup=markup)
         return
