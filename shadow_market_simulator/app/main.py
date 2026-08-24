@@ -20,6 +20,7 @@ from .inbox_lifecycle import install_inbox_lifecycle
 from .product_ui_update import apply_product_ui_update
 from .simulation import iso, utcnow
 from .tutorial import apply_tutorial_updates, build_tutorial_router
+from .tutorial_copy_update import apply_tutorial_copy_update
 from .tutorial_runtime import apply_tutorial_runtime_fixes
 from .ui_admin import build_admin_router
 from .ui_commerce import build_commerce_router
@@ -116,6 +117,7 @@ async def main() -> None:
     db.init()
     apply_tutorial_updates()
     apply_tutorial_runtime_fixes()
+    apply_tutorial_copy_update()
     simulation = CourierManagementSimulationEngine(db, speed=settings.simulation_speed)
     simulation.seed_catalog()
     game = CourierManagementGameService(db, simulation)
