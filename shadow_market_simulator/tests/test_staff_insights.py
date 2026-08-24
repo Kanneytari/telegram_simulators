@@ -66,7 +66,7 @@ def test_profile_separates_current_activity_from_inventory(tmp_path):
     assert "Статус: <b>готовит позиции" in text
     assert "Задача: Подготовка позиций к публикации" in text
     assert "на руках 10 ед." in text
-    assert "Продуктивность" in text
+    assert "<b>Товар</b>" in text
 
 
 def test_publication_history_drives_productivity_and_inventory(tmp_path):
@@ -106,8 +106,9 @@ def test_publication_history_drives_productivity_and_inventory(tmp_path):
 
     text = game.employee_details(1001, courier["id"])
     assert "витрина" in text
-    assert "Средняя: <b>" in text
-    assert "поз. / игровые сутки" in text
+    productivity = "\n".join(game._productivity_lines(1001, int(courier["id"])))
+    assert "Средняя: <b>" in productivity
+    assert "поз. / игровые сутки" in productivity
 
 
 def test_short_eta_is_safe_for_html_parse_mode(tmp_path):
