@@ -32,7 +32,9 @@ jobs:
           python -m pip install -r requirements.txt
           python -m pip install ruff
       - name: Apply requested changes
-        run: python tools/apply_transfer_controls_db_fix.py
+        run: |
+          python tools/apply_transfer_controls_db_fix.py
+          python tools/fix_compact_refresh_expectation.py
       - name: Compile
         run: python -m compileall -q shadow_market_simulator/app
       - name: Run tests
