@@ -3,8 +3,6 @@ from __future__ import annotations
 import random
 from datetime import timedelta
 
-import pytest
-
 from app.courier_core import CourierCoreGameService, CourierCoreSimulationEngine
 from app.courier_model import (
     TRAIT_METICULOUS,
@@ -101,6 +99,44 @@ def test_candidate_generation_produces_distinct_hidden_archetypes(tmp_path):
     assert len(traits) >= 4
     assert max(paces) - min(paces) >= 0.25
     assert max(precisions) - min(precisions) >= 0.20
+
+
+def test_hiring_preserves_hidden_candidate_personality(tmp_path):
+    db, _, game, recruitment = make_system(tmp_path)
+    campaign = {
+        "id": 1000,
+        "role": "courier",
+        "min_deposit": 0,
+        "car_required": 0,
+        "experience_required": 0,
+    }
+    with db.connect() as conn:
+        recruitment._create_candidate(conn, PLAYER_ID, campaign, CHANNELS["forums"], utcnow())
+        candidate = conn.execute(
+            "SELECT * FROM candidates WHERE player_id=? AND status='open' ORDER BY id DESC LIMIT 1",
+            (PLAYER_ID,),
+        ).fetchone()
+        hidden = conn.execute(
+            "SELECT * FROM courier_candidate_profiles WHERE candidate_id=?",
+            (candidate["id"],),
+        ).fetchone()
+    result = game.hire_candidate(PLAYER_ID, int(candidate["id"]))
+    assert "принят" in result
+    with db.connect() as conn:
+        employee = conn.execute(
+            "SELECT * FROM employees WHERE player_id=? AND alias=? ORDER BY id DESC LIMIT 1",
+            (PLAYER_ID, candidate["alias"]),
+        ).fetchone()
+        profile = conn.execute(
+            "SELECT * FROM courier_profiles WHERE employee_id=?",
+            (employee["id"],),
+        ).fetchone()
+    assert profile is not None
+    assert profile["trait"] == hidden["trait"]
+    assert float(profile["pace"]) == float(hidden["pace"])
+    assert float(profile["precision"]) == float(hidden["precision"])
+    assert float(profile["resilience"]) == float(hidden["resilience"])
+    assert float(profile["integrity"]) == float(hidden["integrity"])
 
 
 def test_fast_and_slow_couriers_get_materially_different_task_times(tmp_path):
@@ -275,3 +311,69 @@ def test_customer_rating_differs_materially_between_precise_and_sloppy_couriers(
     assert precise >= 4
     assert sloppy <= 3
     assert precise - sloppy >= 1
+
+
+def test_live_order_records_rating_and_courier_observation(tmp_path):
+    db, simulation, _, _ = make_system(tmp_path)
+    with db.connect() as conn:
+        courier = conn.execute(
+            "SELECT * FROM employees WHERE player_id=? AND role='courier' AND active=1 ORDER BY id LIMIT 1",
+            (PLAYER_ID,),
+        ).fetchone()
+        batch = conn.execute(
+            """SELECT * FROM batches WHERE player_id=? AND responsible_employee_id IS NOT NULL
+               ORDER BY id LIMIT 1""",
+            (PLAYER_ID,),
+        ).fetchone()
+        listing = conn.execute(
+            """SELECT l.*, p.complaint_modifier FROM listings l
+               JOIN products p ON p.id=l.product_id
+               WHERE l.player_id=? AND l.product_id=? AND l.pack_size=1 LIMIT 1""",
+            (PLAYER_ID, batch["product_id"]),
+        ).fetchone()
+        allocation = conn.execute(
+            """INSERT INTO retail_allocations(
+                   player_id, batch_id, wholesale_employee_id, retail_employee_id,
+                   product_id, quantity, unit_cost, quality, status, received_at, completed_at
+               ) VALUES (?, ?, ?, ?, ?, 5, ?, ?, 'published', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)""",
+            (
+                PLAYER_ID,
+                batch["id"],
+                batch["responsible_employee_id"],
+                courier["id"],
+                batch["product_id"],
+                batch["unit_cost"],
+                batch["quality"],
+            ),
+        )
+        conn.execute(
+            """INSERT INTO retail_positions(
+                   player_id, allocation_id, batch_id, employee_id, product_id,
+                   pack_size, position_count, unit_cost, quality
+               ) VALUES (?, ?, ?, ?, ?, 1, 5, ?, ?)""",
+            (
+                PLAYER_ID,
+                int(allocation.lastrowid),
+                batch["id"],
+                courier["id"],
+                batch["product_id"],
+                batch["unit_cost"],
+                batch["quality"],
+            ),
+        )
+        before = conn.execute(
+            "SELECT observed_orders FROM courier_profiles WHERE employee_id=?",
+            (courier["id"],),
+        ).fetchone()
+        result = simulation._create_retail_order(conn, PLAYER_ID, listing, utcnow())
+        after = conn.execute(
+            "SELECT observed_orders FROM courier_profiles WHERE employee_id=?",
+            (courier["id"],),
+        ).fetchone()
+        rating = conn.execute(
+            "SELECT COUNT(*) FROM order_ratings WHERE player_id=? AND employee_id=?",
+            (PLAYER_ID, courier["id"]),
+        ).fetchone()[0]
+    assert result in {True, False}
+    assert int(after["observed_orders"]) == int(before["observed_orders"]) + 1
+    assert int(rating) >= 1
