@@ -21,6 +21,18 @@ DEFAULT_POLICIES = {
     },
 }
 
+COMPENSATION_RANGES = {
+    "courier": {
+        "fixed_fee": (0, 1000, 50),
+        "base_rate_bps": (100, 800, 50),
+        "deposit_contribution_pct": (0, 50, 5),
+    },
+    "warehouse": {
+        "base_rate_bps": (50, 500, 50),
+        "risk_rate_bps": (0, 300, 50),
+        "deposit_contribution_pct": (0, 50, 5),
+    },
+}
 
 
 def _ensure_policy_conn(conn, player_id: int, role: str) -> None:
@@ -63,7 +75,6 @@ class CompensationSimulationEngine(ProcurementMarketSimulationEngine):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            pass
             for row in conn.execute("SELECT player_id FROM shops").fetchall():
                 for role in DEFAULT_POLICIES:
                     _ensure_policy_conn(conn, int(row["player_id"]), role)
@@ -71,13 +82,11 @@ class CompensationSimulationEngine(ProcurementMarketSimulationEngine):
     def ensure_player(self, player_id: int, username: str | None) -> bool:
         created = super().ensure_player(player_id, username)
         with self.db.connect() as conn:
-            pass
             for role in DEFAULT_POLICIES:
                 _ensure_policy_conn(conn, player_id, role)
             # Live compensation is defined by the shop-wide policy. Per-employee
             # operation rates stay zero at this layer so they cannot be charged twice.
         return created
-
 
     def _process_tasks(self, conn, player_id: int, now) -> int:
         due_handoffs = conn.execute(
@@ -184,7 +193,9 @@ class CompensationSimulationEngine(ProcurementMarketSimulationEngine):
             )
         return completed
 
-    def _simulate_management_events(self, conn, player_id: int, sim_hours: float, now) -> int:
+    def _simulate_management_events(
+        self, conn, player_id: int, sim_hours: float, now
+    ) -> int:
         created = super()._simulate_management_events(conn, player_id, sim_hours, now)
         conn.execute(
             """UPDATE employees SET deposit_accrued=0
@@ -200,7 +211,6 @@ class CompensationGameService(ProcurementMarketGameService):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with self.db.connect() as conn:
-            pass
             for row in conn.execute("SELECT player_id FROM shops").fetchall():
                 for role in DEFAULT_POLICIES:
                     _ensure_policy_conn(conn, int(row["player_id"]), role)
@@ -233,22 +243,11 @@ class CompensationGameService(ProcurementMarketGameService):
     ) -> dict:
         if role not in DEFAULT_POLICIES:
             raise ValueError("Unsupported role")
-        ranges = {
-            "courier": {
-                "fixed_fee": (0, 1000, 50),
-                "base_rate_bps": (100, 800, 50),
-                "deposit_contribution_pct": (0, 50, 5),
-            },
-            "warehouse": {
-                "base_rate_bps": (50, 500, 50),
-                "risk_rate_bps": (0, 300, 50),
-                "deposit_contribution_pct": (0, 50, 5),
-            },
-        }
-        if field not in ranges[role]:
+        if field not in COMPENSATION_RANGES[role]:
             raise ValueError("Unsupported compensation field")
-        low, high, step = ranges[role][field]
-        if delta not in {-step, step}:
+        low, high, step = COMPENSATION_RANGES[role][field]
+        delta = int(delta)
+        if delta == 0 or delta % step != 0:
             raise ValueError("Unsupported compensation adjustment")
 
         before = self.compensation_policy(player_id, role)
@@ -316,7 +315,6 @@ class CompensationGameService(ProcurementMarketGameService):
             "reaction": reaction,
         }
 
-
     def wholesale_handoff_quote(
         self, player_id: int, batch_id: int, quantity: int
     ) -> dict[str, int] | None:
@@ -368,7 +366,9 @@ class CompensationGameService(ProcurementMarketGameService):
                 )
                 return None
             last = parse_dt(settings["last_payroll_at"])
-            elapsed_game_hours = max(0.0, (now - last).total_seconds() / 3600.0) * speed
+            elapsed_game_hours = (
+                max(0.0, (now - last).total_seconds() / 3600.0) * speed
+            )
             if elapsed_game_hours < 24.0:
                 return None
 
@@ -376,20 +376,28 @@ class CompensationGameService(ProcurementMarketGameService):
                 "SELECT * FROM employees WHERE player_id=? AND wages_accrued>0 ORDER BY id",
                 (player_id,),
             ).fetchall()
-            gross = sum(int(e["wages_accrued"]) for e in employees)
+            gross = sum(int(employee["wages_accrued"]) for employee in employees)
             if gross <= 0:
                 conn.execute(
                     "UPDATE settings SET last_payroll_at=? WHERE player_id=?",
                     (iso(now), player_id),
                 )
-                return {"gross": 0, "cash": 0, "deposit": 0, "employees": 0, "status": "empty"}
+                return {
+                    "gross": 0,
+                    "cash": 0,
+                    "deposit": 0,
+                    "employees": 0,
+                    "status": "empty",
+                }
 
             settlements = []
             cash_due = 0
             deposit_due = 0
             for employee in employees:
                 accrued = int(employee["wages_accrued"])
-                deposit_part = max(0, min(accrued, int(employee["deposit_accrued"])))
+                deposit_part = max(
+                    0, min(accrued, int(employee["deposit_accrued"]))
+                )
                 cash_part = accrued - deposit_part
                 cash_due += cash_part
                 deposit_due += deposit_part
@@ -488,7 +496,10 @@ class CompensationGameService(ProcurementMarketGameService):
 
     def process_payroll_all(self) -> None:
         with self.db.connect() as conn:
-            player_ids = [int(row[0]) for row in conn.execute("SELECT player_id FROM shops").fetchall()]
+            player_ids = [
+                int(row[0])
+                for row in conn.execute("SELECT player_id FROM shops").fetchall()
+            ]
         for player_id in player_ids:
             self.process_payroll(player_id)
 
@@ -516,7 +527,11 @@ class CompensationGameService(ProcurementMarketGameService):
             ).fetchone()
         accrued = sum(int(row["wages_accrued"]) for row in rows)
         deposit_accrued = sum(int(row["deposit_accrued"]) for row in rows)
-        last = parse_dt(settings["last_payroll_at"]) if settings and settings["last_payroll_at"] else now
+        last = (
+            parse_dt(settings["last_payroll_at"])
+            if settings and settings["last_payroll_at"]
+            else now
+        )
         elapsed_game = max(0.0, (now - last).total_seconds() / 3600.0) * speed
         remaining_game = max(0.0, 24.0 - elapsed_game)
         remaining_real_minutes = remaining_game / speed * 60.0
@@ -565,14 +580,20 @@ class CompensationGameService(ProcurementMarketGameService):
             ).fetchone()
         exposure = self._employee_exposure(player_id, employee_id)
         unsecured = max(0, exposure - int(employee["deposit"]))
-        dispute_rate = employee["disputes"] / employee["jobs_done"] * 100.0 if employee["jobs_done"] else 0.0
+        dispute_rate = (
+            employee["disputes"] / employee["jobs_done"] * 100.0
+            if employee["jobs_done"]
+            else 0.0
+        )
         role = str(employee["role"])
         policy = self.compensation_policy(player_id, role)
         role_title = "Складмен" if role == "warehouse" else "Закладчик"
         role_icon = "🚚" if role == "warehouse" else "👤"
         activity = "\n".join(self._activity_details(player_id, employee_id))
         inventory = self._inventory_lines(player_id, employee_id, role)
-        inventory_text = "\n".join(inventory) if inventory else "Нет товара под ответственностью."
+        inventory_text = (
+            "\n".join(inventory) if inventory else "Нет товара под ответственностью."
+        )
         if role == "courier":
             terms = (
                 f"За успешный заказ: {policy['fixed_fee']:,} ₽\n"
@@ -585,7 +606,9 @@ class CompensationGameService(ProcurementMarketGameService):
                 f"За непокрытый риск: +{policy['risk_rate_bps'] / 100:.1f}%\n"
                 f"В депозит: {policy['deposit_contribution_pct']}%"
             )
-        accrued_cash = int(employee["wages_accrued"]) - int(employee["deposit_accrued"])
+        accrued_cash = int(employee["wages_accrued"]) - int(
+            employee["deposit_accrued"]
+        )
         text = (
             f"<b>{role_icon} {employee['alias']} · {role_title}</b>\n\n"
             f"<b>Сейчас</b>\n{activity}\n\n"
@@ -616,9 +639,11 @@ class CompensationGameService(ProcurementMarketGameService):
             if service["count"]:
                 text += f" · ⭐ {float(service['avg']):.2f}/5"
         if unsecured > 0:
-            text += "\n\n🔴 Часть товара не покрыта депозитом. Это осознанный дополнительный риск."
+            text += (
+                "\n\n🔴 Часть товара не покрыта депозитом. "
+                "Это осознанный дополнительный риск."
+            )
         return text
-
 
     def hire_candidate(self, player_id: int, candidate_id: int) -> str:
         with self.db.connect() as conn:
@@ -635,9 +660,15 @@ class CompensationGameService(ProcurementMarketGameService):
                        reliability, attention, honesty, loyalty
                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
-                    player_id, candidate["alias"], candidate["role"], deposit,
-                    candidate["has_car"], candidate["reliability"], candidate["attention"],
-                    candidate["honesty"], candidate["loyalty"],
+                    player_id,
+                    candidate["alias"],
+                    candidate["role"],
+                    deposit,
+                    candidate["has_car"],
+                    candidate["reliability"],
+                    candidate["attention"],
+                    candidate["honesty"],
+                    candidate["loyalty"],
                 ),
             )
             employee_id = int(cur.lastrowid)
@@ -648,13 +679,23 @@ class CompensationGameService(ProcurementMarketGameService):
             conn.execute(
                 """INSERT INTO ledger(player_id, amount, kind, reference_type, reference_id, note)
                    VALUES (?, ?, 'deposit_in', 'employee', ?, ?)""",
-                (player_id, deposit, employee_id, f"Стартовый депозит сотрудника {candidate['alias']}"),
+                (
+                    player_id,
+                    deposit,
+                    employee_id,
+                    f"Стартовый депозит сотрудника {candidate['alias']}",
+                ),
             )
-            conn.execute("UPDATE candidates SET status='hired' WHERE id=?", (candidate_id,))
+            conn.execute(
+                "UPDATE candidates SET status='hired' WHERE id=?", (candidate_id,)
+            )
         self.simulation._ensure_packaging_rules(player_id)
         policy = self.compensation_policy(player_id, str(candidate["role"]))
         if candidate["role"] == "courier":
-            terms = f"{policy['fixed_fee']:,} ₽ за заказ + {policy['base_rate_bps'] / 100:.1f}% с продажи"
+            terms = (
+                f"{policy['fixed_fee']:,} ₽ за заказ + "
+                f"{policy['base_rate_bps'] / 100:.1f}% с продажи"
+            )
         else:
             terms = (
                 f"{policy['base_rate_bps'] / 100:.1f}% от передачи + "
