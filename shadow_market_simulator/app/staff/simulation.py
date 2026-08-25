@@ -1,3 +1,3 @@
-from ..simulation import iso, parse_dt, utcnow
+from ..simulation import clamp, iso, parse_dt, utcnow
 
-__all__ = ["iso", "parse_dt", "utcnow"]
+__all__ = ["clamp", "iso", "parse_dt", "utcnow"]
