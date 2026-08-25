@@ -61,6 +61,13 @@ jobs:
           addition = '''\n\ndef test_final_game_service_uses_precise_runtime_status_formatter() -> None:\n    import inspect\n\n    from app.staff.couriers.management import CourierManagementGameService\n    from app.staff.insights import StaffInsightGameService\n\n    assert CourierManagementGameService._task_status is StaffInsightGameService._task_status\n    source = inspect.getsource(CourierManagementGameService._task_status)\n    assert "_format_game_duration" in source\n    assert "remaining_game:.1f" not in source\n    assert "менее 1 ч" not in source\n'''
           if 'test_final_game_service_uses_precise_runtime_status_formatter' not in test:
               test_path.write_text(test.rstrip() + addition + '\n', encoding='utf-8')
+
+          legacy_path = Path('shadow_market_simulator/tests/test_staff_insights.py')
+          legacy = legacy_path.read_text(encoding='utf-8')
+          old_assert = '    assert "менее 1 ч" in text\n'
+          new_assert = '    assert "20 м" in text\n'
+          assert old_assert in legacy
+          legacy_path.write_text(legacy.replace(old_assert, new_assert, 1), encoding='utf-8')
           PY
       - name: Verify
         run: |
@@ -72,6 +79,6 @@ jobs:
         run: |
           git config user.name "Kanneytari"
           git config user.email "hitroplan@yandex.ru"
-          git add shadow_market_simulator/app/staff/insights.py shadow_market_simulator/tests/test_team_time_format.py
+          git add shadow_market_simulator/app/staff/insights.py shadow_market_simulator/tests/test_team_time_format.py shadow_market_simulator/tests/test_staff_insights.py
           git commit -m "fix(shadow-market): use precise ETA in final team status [skip ci]"
           git push origin HEAD:fix/nightshift-team-time-runtime
