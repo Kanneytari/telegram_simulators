@@ -7,8 +7,8 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
-from .analytics_handlers import build_analytics_router
-from .analytics_log import AnalyticsLogger, AnalyticsLoggingMiddleware
+from .analytics.analytics_handlers import build_analytics_router
+from .analytics.analytics_log import AnalyticsLogger, AnalyticsLoggingMiddleware
 from .bot import OneShotCallbackMiddleware
 from .core import Database, Settings, load_settings
 from .gameplay_updates import apply_gameplay_updates
