@@ -26,12 +26,8 @@ jobs:
           cd shadow_market_simulator
           python -m pip install -r requirements.txt
           python -m pip install ruff
-      - name: Apply entity presentation pass
-        run: |
-          python .github/scripts/unify_nightshift_entity_presentation.py
-          python .github/scripts/fix_remaining_entity_presentation.py
-          python .github/scripts/finalize_entity_presentation_contracts.py
-          python .github/scripts/refine_semantic_ui_markers.py
+      - name: Apply semantic marker refinement
+        run: python .github/scripts/refine_semantic_ui_markers.py
       - name: Verify
         run: |
           cd shadow_market_simulator
@@ -43,5 +39,5 @@ jobs:
           git config user.name "Kanneytari"
           git config user.email "hitroplan@yandex.ru"
           git add shadow_market_simulator/app shadow_market_simulator/tests
-          git commit -m "refactor(shadow-market): unify entity presentation"
+          git commit -m "refactor(shadow-market): refine semantic UI markers"
           git push origin HEAD:refactor/nightshift-ui-vocabulary
