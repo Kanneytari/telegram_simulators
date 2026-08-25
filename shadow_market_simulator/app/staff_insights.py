@@ -4,8 +4,6 @@ from .simulation import parse_dt, utcnow
 from .workflow import WorkflowGameService, WorkflowSimulationEngine
 
 
-
-
 class StaffInsightSimulationEngine(WorkflowSimulationEngine):
     """Final simulation layer for starter safety and historical staff throughput."""
 
@@ -22,14 +20,10 @@ class StaffInsightSimulationEngine(WorkflowSimulationEngine):
             if created:
                 conn.execute(
                     """UPDATE inbox
-                       SET body=?
+                       SET title='Первая смена',
+                           body='Склад пуст. Начни с первой закупки в разделе Товар.'
                        WHERE player_id=? AND kind='tutorial' AND status='open'""",
-                    (
-                        "Стартовые партии уже находятся на складе у складмена.\n\n"
-                        "Открой «Товар» → «Склад» и распредели товар между закладчиками. "
-                        "После подготовки фасовки появятся на витрине и начнут продаваться автоматически.",
-                        player_id,
-                    ),
+                    (player_id,),
                 )
         return created
 
@@ -47,7 +41,10 @@ class StaffInsightSimulationEngine(WorkflowSimulationEngine):
         stored = float(clock["game_hours"]) if clock else 0.0
         if not shop:
             return stored
-        real_hours = max(0.0, (now - parse_dt(shop["last_simulated_at"])).total_seconds() / 3600.0)
+        real_hours = max(
+            0.0,
+            (now - parse_dt(shop["last_simulated_at"])).total_seconds() / 3600.0,
+        )
         pending = min(real_hours * self.effective_speed(player_id), 72.0)
         return stored + pending
 
@@ -60,7 +57,10 @@ class StaffInsightSimulationEngine(WorkflowSimulationEngine):
             ).fetchone()
         sim_hours = 0.0
         if shop:
-            real_hours = max(0.0, (now - parse_dt(shop["last_simulated_at"])).total_seconds() / 3600.0)
+            real_hours = max(
+                0.0,
+                (now - parse_dt(shop["last_simulated_at"])).total_seconds() / 3600.0,
+            )
             sim_hours = min(real_hours * self.effective_speed(player_id), 72.0)
         result = super().advance(player_id, now)
         if sim_hours >= 0.015:
@@ -145,51 +145,76 @@ class StaffInsightGameService(WorkflowGameService):
                 (player_id, employee_id),
             ).fetchone()
             if task:
-                remaining_real = max(0.0, (parse_dt(task["completes_at"]) - now).total_seconds() / 3600.0)
+                remaining_real = max(
+                    0.0,
+                    (parse_dt(task["completes_at"]) - now).total_seconds() / 3600.0,
+                )
                 remaining_game = remaining_real * self.simulation.effective_speed(player_id)
                 eta = "менее 1 ч" if remaining_game < 1 else f"~{remaining_game:.1f} ч"
                 labels = {
                     "receive_batch": "получает партию",
-                    "handoff": "готовит передачу",
+                    "handoff": "готовит мастер-клад",
                     "place_stashes": "раскидывает клады",
                 }
                 return f"{labels.get(task['kind'], task['kind'])} · {eta}"
             if not employee["available"]:
                 if employee["unavailable_until"]:
-                    remaining_real = max(0.0, (parse_dt(employee["unavailable_until"]) - now).total_seconds() / 3600.0)
-                    remaining_game = remaining_real * self.simulation.effective_speed(player_id)
-                    eta = "менее 1 ч" if remaining_game < 1 else f"~{remaining_game:.1f} ч"
-                    return f"отдыхает · {eta}" if employee["role"] == "courier" else f"недоступен · {eta}"
+                    remaining_real = max(
+                        0.0,
+                        (
+                            parse_dt(employee["unavailable_until"]) - now
+                        ).total_seconds()
+                        / 3600.0,
+                    )
+                    remaining_game = remaining_real * self.simulation.effective_speed(
+                        player_id
+                    )
+                    eta = (
+                        "менее 1 ч" if remaining_game < 1 else f"~{remaining_game:.1f} ч"
+                    )
+                    return (
+                        f"отдыхает · {eta}"
+                        if employee["role"] == "courier"
+                        else f"недоступен · {eta}"
+                    )
                 return "временно недоступен"
             if employee["role"] == "courier":
-                waiting = int(conn.execute(
-                    """SELECT COALESCE(SUM(quantity),0) FROM retail_allocations
-                       WHERE player_id=? AND retail_employee_id=? AND status='waiting'""",
-                    (player_id, employee_id),
-                ).fetchone()[0])
+                waiting = int(
+                    conn.execute(
+                        """SELECT COALESCE(SUM(quantity),0) FROM retail_allocations
+                           WHERE player_id=? AND retail_employee_id=? AND status='waiting'""",
+                        (player_id, employee_id),
+                    ).fetchone()[0]
+                )
                 if waiting:
                     return f"ожидает товар · {waiting} ед."
-                preparing = int(conn.execute(
-                    """SELECT COALESCE(SUM(quantity),0) FROM retail_allocations
-                       WHERE player_id=? AND retail_employee_id=? AND status='preparing'""",
-                    (player_id, employee_id),
-                ).fetchone()[0])
+                preparing = int(
+                    conn.execute(
+                        """SELECT COALESCE(SUM(quantity),0) FROM retail_allocations
+                           WHERE player_id=? AND retail_employee_id=? AND status='preparing'""",
+                        (player_id, employee_id),
+                    ).fetchone()[0]
+                )
                 if preparing:
                     return f"раскидывает клады · {preparing} ед."
-                published = int(conn.execute(
-                    """SELECT COALESCE(SUM(position_count*pack_size),0) FROM retail_positions
-                       WHERE player_id=? AND employee_id=? AND position_count>0""",
-                    (player_id, employee_id),
-                ).fetchone()[0])
+                published = int(
+                    conn.execute(
+                        """SELECT COALESCE(SUM(position_count*pack_size),0) FROM retail_positions
+                           WHERE player_id=? AND employee_id=? AND position_count>0""",
+                        (player_id, employee_id),
+                    ).fetchone()[0]
+                )
                 if published:
                     return f"ждёт продажи · {published} ед."
             else:
-                ready = int(conn.execute(
-                    """SELECT COALESCE(SUM(remaining),0) FROM batches
-                       WHERE player_id=? AND responsible_employee_id=?
-                         AND status='warehouse' AND remaining>0""",
-                    (player_id, employee_id),
-                ).fetchone()[0])
+                ready = int(
+                    conn.execute(
+                        """SELECT COALESCE(SUM(remaining),0) FROM batches
+                           WHERE player_id=? AND responsible_employee_id=?
+                             AND status='warehouse' AND remaining>0""",
+                        (player_id, employee_id),
+                    ).fetchone()[0]
+                )
                 if ready:
                     return f"ждёт распределения · {ready} ед."
         return "свободен"
@@ -214,35 +239,58 @@ class StaffInsightGameService(WorkflowGameService):
         if task:
             labels = {
                 "receive_batch": "Получение партии",
-                "handoff": "Подготовка передачи закладчику",
+                "handoff": "Подготовка мастер-клада",
                 "place_stashes": "Подготовка товара к витрине",
             }
-            remaining_real_min = max(0.0, (parse_dt(task["completes_at"]) - now).total_seconds() / 60.0)
-            remaining_game_h = remaining_real_min / 60.0 * self.simulation.effective_speed(player_id)
+            remaining_real_min = max(
+                0.0,
+                (parse_dt(task["completes_at"]) - now).total_seconds() / 60.0,
+            )
+            remaining_game_h = (
+                remaining_real_min
+                / 60.0
+                * self.simulation.effective_speed(player_id)
+            )
             lines.append(f"Задача: {labels.get(task['kind'], task['kind'])}")
             if task["product_title"]:
-                lines.append(f"Товар: {task['product_title']} · {int(task['quantity'])} ед.")
-            real_eta = "менее 1 мин" if remaining_real_min < 1 else f"~{remaining_real_min:.0f} мин"
-            game_eta = "менее 1 ч" if remaining_game_h < 1 else f"~{remaining_game_h:.1f} ч"
+                lines.append(
+                    f"Товар: {task['product_title']} · {int(task['quantity'])} ед."
+                )
+            real_eta = (
+                "менее 1 мин"
+                if remaining_real_min < 1
+                else f"~{remaining_real_min:.0f} мин"
+            )
+            game_eta = (
+                "менее 1 ч" if remaining_game_h < 1 else f"~{remaining_game_h:.1f} ч"
+            )
             lines.append(f"Осталось: {game_eta} игровых · {real_eta} реальных")
         return lines
 
-    def _inventory_lines(self, player_id: int, employee_id: int, role: str) -> list[str]:
+    def _inventory_lines(
+        self, player_id: int, employee_id: int, role: str
+    ) -> list[str]:
         with self.db.connect() as conn:
-            products = conn.execute("SELECT id, title FROM products WHERE active=1 ORDER BY id").fetchall()
+            products = conn.execute(
+                "SELECT id, title FROM products WHERE active=1 ORDER BY id"
+            ).fetchall()
             lines: list[str] = []
             for product in products:
                 if role == "courier":
-                    waiting = int(conn.execute(
-                        """SELECT COALESCE(SUM(quantity),0) FROM retail_allocations
-                           WHERE player_id=? AND retail_employee_id=? AND product_id=? AND status='waiting'""",
-                        (player_id, employee_id, product["id"]),
-                    ).fetchone()[0])
-                    preparing = int(conn.execute(
-                        """SELECT COALESCE(SUM(quantity),0) FROM retail_allocations
-                           WHERE player_id=? AND retail_employee_id=? AND product_id=? AND status='preparing'""",
-                        (player_id, employee_id, product["id"]),
-                    ).fetchone()[0])
+                    waiting = int(
+                        conn.execute(
+                            """SELECT COALESCE(SUM(quantity),0) FROM retail_allocations
+                               WHERE player_id=? AND retail_employee_id=? AND product_id=? AND status='waiting'""",
+                            (player_id, employee_id, product["id"]),
+                        ).fetchone()[0]
+                    )
+                    preparing = int(
+                        conn.execute(
+                            """SELECT COALESCE(SUM(quantity),0) FROM retail_allocations
+                               WHERE player_id=? AND retail_employee_id=? AND product_id=? AND status='preparing'""",
+                            (player_id, employee_id, product["id"]),
+                        ).fetchone()[0]
+                    )
                     published = conn.execute(
                         """SELECT COALESCE(SUM(position_count*pack_size),0) units,
                                   COALESCE(SUM(position_count),0) positions
@@ -261,23 +309,29 @@ class StaffInsightGameService(WorkflowGameService):
                             parts.append(f"витрина {published_units} ед.")
                         lines.append(f"{product['title']}: " + " · ".join(parts))
                 else:
-                    receiving = int(conn.execute(
-                        """SELECT COALESCE(SUM(remaining),0) FROM batches
-                           WHERE player_id=? AND responsible_employee_id=? AND product_id=?
-                             AND status='receiving'""",
-                        (player_id, employee_id, product["id"]),
-                    ).fetchone()[0])
-                    ready = int(conn.execute(
-                        """SELECT COALESCE(SUM(remaining),0) FROM batches
-                           WHERE player_id=? AND responsible_employee_id=? AND product_id=?
-                             AND status='warehouse'""",
-                        (player_id, employee_id, product["id"]),
-                    ).fetchone()[0])
-                    handoff = int(conn.execute(
-                        """SELECT COALESCE(SUM(quantity),0) FROM retail_allocations
-                           WHERE player_id=? AND wholesale_employee_id=? AND product_id=? AND status='waiting'""",
-                        (player_id, employee_id, product["id"]),
-                    ).fetchone()[0])
+                    receiving = int(
+                        conn.execute(
+                            """SELECT COALESCE(SUM(remaining),0) FROM batches
+                               WHERE player_id=? AND responsible_employee_id=? AND product_id=?
+                                 AND status='receiving'""",
+                            (player_id, employee_id, product["id"]),
+                        ).fetchone()[0]
+                    )
+                    ready = int(
+                        conn.execute(
+                            """SELECT COALESCE(SUM(remaining),0) FROM batches
+                               WHERE player_id=? AND responsible_employee_id=? AND product_id=?
+                                 AND status='warehouse'""",
+                            (player_id, employee_id, product["id"]),
+                        ).fetchone()[0]
+                    )
+                    handoff = int(
+                        conn.execute(
+                            """SELECT COALESCE(SUM(quantity),0) FROM retail_allocations
+                               WHERE player_id=? AND wholesale_employee_id=? AND product_id=? AND status='waiting'""",
+                            (player_id, employee_id, product["id"]),
+                        ).fetchone()[0]
+                    )
                     if receiving or ready or handoff:
                         parts = []
                         if receiving:
@@ -299,18 +353,25 @@ class StaffInsightGameService(WorkflowGameService):
                    WHERE player_id=? AND employee_id=?""",
                 (player_id, employee_id),
             ).fetchone()
-            last = int(conn.execute(
-                """SELECT COALESCE(SUM(positions),0) FROM publication_events
-                   WHERE player_id=? AND employee_id=? AND game_hour>?""",
-                (player_id, employee_id, current_hour - 24.0),
-            ).fetchone()[0])
-            previous = int(conn.execute(
-                """SELECT COALESCE(SUM(positions),0) FROM publication_events
-                   WHERE player_id=? AND employee_id=? AND game_hour>? AND game_hour<=?""",
-                (player_id, employee_id, current_hour - 48.0, current_hour - 24.0),
-            ).fetchone()[0])
+            last = int(
+                conn.execute(
+                    """SELECT COALESCE(SUM(positions),0) FROM publication_events
+                       WHERE player_id=? AND employee_id=? AND game_hour>?""",
+                    (player_id, employee_id, current_hour - 24.0),
+                ).fetchone()[0]
+            )
+            previous = int(
+                conn.execute(
+                    """SELECT COALESCE(SUM(positions),0) FROM publication_events
+                       WHERE player_id=? AND employee_id=? AND game_hour>? AND game_hour<=?""",
+                    (player_id, employee_id, current_hour - 48.0, current_hour - 24.0),
+                ).fetchone()[0]
+            )
         if not total or int(total["events"] or 0) == 0:
-            return ["Средняя: пока нет данных", "Динамика: появится после первых публикаций"]
+            return [
+                "Средняя: пока нет данных",
+                "Динамика: появится после первых публикаций",
+            ]
         first_hour = float(total["first_hour"] or current_hour)
         active_days = max(1.0, (current_hour - first_hour) / 24.0)
         average = int(total["positions"] or 0) / active_days
