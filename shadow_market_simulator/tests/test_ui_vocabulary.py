@@ -51,20 +51,54 @@ def test_no_post_hoc_button_normalizer_or_hidden_back_arrows() -> None:
     assert "← " not in source
 
 
-def test_plain_product_button_cannot_return() -> None:
+def test_global_buttons_cannot_reinvent_canonical_labels() -> None:
+    bare_labels = {
+        "Меню", "Товар", "Поставщики", "Склад", "Витрина", "Команда",
+        "Аналитика", "Входящие", "Нанять", "Оплата", "Обновить", "Фасовки",
+    }
+    canonical_callbacks = {
+        "menu:product": PRODUCT.label,
+        "proc:suppliers": SUPPLIERS.label,
+        "team:batches": WAREHOUSE.label,
+        "menu:storefront": STOREFRONT.label,
+        "menu:team": TEAM.label,
+        "menu:analytics": ANALYTICS.label,
+        "menu:inbox": INBOX.label,
+        "menu:home": {HOME.label, "🔄 Обновить"},
+    }
     offenders: list[str] = []
-    for path in APP.rglob("*.py"):
-        if path.name == "vocabulary.py":
+    for source_path in APP.rglob("*.py"):
+        if source_path.name == "vocabulary.py":
             continue
-        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
                 continue
             func = node.func
             name = func.id if isinstance(func, ast.Name) else func.attr if isinstance(func, ast.Attribute) else ""
+            line = f"{source_path.relative_to(APP)}:{getattr(node, 'lineno', '?')}"
+            if name == "nav_row":
+                first_arg = node.args[0] if node.args else None
+                if isinstance(first_arg, ast.Constant) and first_arg.value in canonical_callbacks:
+                    offenders.append(
+                        f"{line} raw canonical nav callback={first_arg.value!r}; use UiItem"
+                    )
+                continue
             if name != "InlineKeyboardButton":
                 continue
             text_kw = next((kw.value for kw in node.keywords if kw.arg == "text"), None)
-            if isinstance(text_kw, ast.Constant) and text_kw.value == "Товар":
-                offenders.append(f"{path.relative_to(APP)}:{getattr(node, 'lineno', '?')}")
-    assert not offenders, f"plain Product button labels found: {offenders}"
+            callback_kw = next((kw.value for kw in node.keywords if kw.arg == "callback_data"), None)
+            if isinstance(text_kw, ast.Constant) and text_kw.value in bare_labels:
+                offenders.append(f"{line} bare={text_kw.value!r}")
+            if isinstance(callback_kw, ast.Constant) and callback_kw.value in canonical_callbacks and isinstance(text_kw, ast.Constant):
+                allowed = canonical_callbacks[callback_kw.value]
+                allowed_set = allowed if isinstance(allowed, set) else {allowed}
+                if text_kw.value not in allowed_set:
+                    offenders.append(f"{line} callback={callback_kw.value!r} text={text_kw.value!r}")
+    assert not offenders, "global UI labels bypass vocabulary: " + "; ".join(offenders)
+
+
+def test_ui_common_does_not_repair_semantic_labels() -> None:
+    source = (APP / "ui_common.py").read_text(encoding="utf-8")
+    assert "🚚 Склад" not in source
+    assert "📦 Склад" not in source

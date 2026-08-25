@@ -50,8 +50,7 @@ def clean(value: object) -> str:
 
 def _normalize_tutorial_button_mentions(text: str) -> str:
     text = (
-        text.replace("🚚 Склад", "📦 Склад")
-        .replace("—", "-")
+        text.replace("—", "-")
         .replace("«", "[")
         .replace("»", "]")
         .replace(" → ", ", затем ")

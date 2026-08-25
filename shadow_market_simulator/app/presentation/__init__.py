@@ -1,1 +1,1 @@
-from .vocabulary import *
+"""Shared presentation primitives for NIGHTSHIFT."""

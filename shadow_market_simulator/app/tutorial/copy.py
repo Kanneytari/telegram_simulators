@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.presentation.vocabulary import ANALYTICS, INBOX, PAYMENT, PRODUCT, RECRUIT, STOREFRONT, TEAM
+from app.presentation.vocabulary import ANALYTICS, INBOX, PACKAGING, PAYMENT, PRODUCT, RECRUIT, STOREFRONT, TEAM
 
 from .core import (
     CONTINUE_LABEL,
@@ -82,7 +82,7 @@ def instruction(state: dict) -> str:
             "Ищи новых сотрудников и задавай требования к кандидатам.\n\n"
             f"[{PAYMENT.label}]\n"
             "Настраивай условия выплат для складменов и закладчиков.\n\n"
-            "[⚙️ Фасовки]\n"
+            f"[{PACKAGING.label}]\n"
             "Настраивай, сколько нового товара продавать фасовками по 1, 2 и 5 единиц.\n\n"
             f"[{ANALYTICS.label}]\n"
             "Смотри продажи, расходы и прибыль.\n\n"

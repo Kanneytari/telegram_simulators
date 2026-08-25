@@ -167,7 +167,7 @@ def test_tutorial_button_mentions_use_square_brackets():
     assert tutorial_hint("Нажми на кнопку 📦 Товар") == (
         "<blockquote>Нажми на кнопку [📦 Товар]</blockquote>"
     )
-    assert tutorial_hint("Нажми на кнопку 🚚 Склад") == (
+    assert tutorial_hint("Нажми на кнопку 📦 Склад") == (
         "<blockquote>Нажми на кнопку [📦 Склад]</blockquote>"
     )
     assert tutorial_hint("Проверь и нажми кнопку «✅ Отправить 10 ед.».") == (

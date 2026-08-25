@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.presentation.vocabulary import WAREHOUSE, nav_row
+from app.presentation.vocabulary import HIRE, WAREHOUSE, button, nav_row
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
@@ -173,7 +173,7 @@ async def render_candidate(target: Message, game, player_id: int, candidate_id: 
         terms = f"{pct(rate / 100, 1)} с передачи\n{deposit_pct}% заработка идёт в депозит"
     lines.extend(["", "<b>Условия</b>", terms])
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Нанять", callback_data=f"team:hire:{candidate_id}"), InlineKeyboardButton(text="Отказать", callback_data=f"team:reject:{candidate_id}")],
+        [button(HIRE, callback_data=f"team:hire:{candidate_id}"), InlineKeyboardButton(text="Отказать", callback_data=f"team:reject:{candidate_id}")],
         nav_row("team:candidates", "Кандидаты"),
     ])
     await present(target, "\n".join(lines), keyboard)

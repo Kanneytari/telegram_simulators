@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.presentation.vocabulary import HOME, PRODUCT, SUPPLIERS, WAREHOUSE, button, nav_row
+from app.presentation.vocabulary import HOME, PACKAGING, PRODUCT, STOREFRONT, SUPPLIERS, WAREHOUSE, button, nav_row
 from .tutorial import hooks as tutorial_hooks
 
 from aiogram import F, Router
@@ -97,7 +97,7 @@ async def render_product_root(target: Message, db, game, player_id: int, *, flas
         )
     body = f"<b>{PRODUCT.label}</b>\n\nСвободно: <b>{money(free_cash)}</b>"
     if game.needs_first_handoff_tutorial(player_id):
-        body += "\n\n" + tutorial_hint("Нажми на кнопку 📦 Склад")
+        body += "\n\n" + tutorial_hint(f"Нажми на кнопку {WAREHOUSE.label}")
     await present(target, notice(flash, body), _product_root_keyboard(_warehouse_batch_count(db, player_id)))
 
 @tutorial_hooks.handoff_suppliers_root
@@ -252,8 +252,8 @@ def _sales_root_keyboard(rows) -> InlineKeyboardMarkup:
         callback_data=f"sales:product:{row['id']}",
     )] for row in rows]
     buttons.append([
-        InlineKeyboardButton(text="⚙️ Фасовки", callback_data="sales:packaging"),
-        InlineKeyboardButton(text="🏠 Меню", callback_data="menu:home"),
+        button(PACKAGING),
+        button(HOME),
     ])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -265,7 +265,7 @@ async def render_storefront_root(target: Message, db, game, simulation, player_i
     rows = _sales_products(db, player_id)
     trust = game.customer_metrics(player_id)
     text = (
-        "<b>🏷 Витрина</b>\n\n"
+        f"<b>{STOREFRONT.label}</b>\n\n"
         f"Доверие: {trust['trust_score']:.0f}/100\n"
         f"Наценка до ~+{trust['premium_allowance'] * 100:.0f}% обычно не снижает спрос."
     )
@@ -309,7 +309,7 @@ async def render_sales_product(target: Message, db, player_id: int, product_id: 
         text=f"×{listing['pack_size']} · {money(listing['price'])} · доступно {int(listing['positions'])}",
         callback_data=f"sales:listing:{listing['id']}",
     )] for listing in listings]
-    rows.append(nav_row("menu:storefront", "Витрина"))
+    rows.append(nav_row(STOREFRONT))
     await present(
         target,
         f"<b>{clean(product['title'])}</b>\n\n{published} ед. готовы к продаже · оценка {rating(avg, n)}",
@@ -365,14 +365,14 @@ def packaging_keyboard(rule) -> InlineKeyboardMarkup:
             InlineKeyboardButton(text=f"×{size} −10", callback_data=f"sales:packadj:{size}:-10"),
             InlineKeyboardButton(text=f"×{size} +10", callback_data=f"sales:packadj:{size}:10"),
         ])
-    rows.append(nav_row("menu:storefront", "Витрина"))
+    rows.append(nav_row(STOREFRONT))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 async def render_packaging(target: Message, game, player_id: int) -> None:
     rule = game.global_packaging_rule(player_id)
     text = (
-        "<b>⚙️ Фасовки</b>\n\n"
+        f"<b>{PACKAGING.label}</b>\n\n"
         "Новые партии распределяются так:\n\n"
         f"×1 · <b>{rule['pct_1']}%</b>\n"
         f"×2 · <b>{rule['pct_2']}%</b>\n"

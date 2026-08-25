@@ -158,7 +158,7 @@ async def render_inbox(target: Message, game, simulation, player_id: int, *, fla
     simulation.advance(player_id)
     game.process_payroll(player_id)
     items, total, attention, page = _inbox_page(game.db, player_id, page)
-    body = f"<b>📨 Входящие · {total}</b>"
+    body = f"<b>{label(INBOX, total)}</b>"
     if attention:
         body += f"\n\n{attention} требуют внимания."
     elif not total:

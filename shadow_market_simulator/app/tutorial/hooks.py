@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.presentation.vocabulary import PRODUCT, SUPPLIERS
+from app.presentation.vocabulary import PRODUCT, STOREFRONT, SUPPLIERS, WAREHOUSE, button
 from functools import wraps
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
@@ -317,7 +317,7 @@ def soft_product_root(original):
         if not state or not state['active'] or state['stage'] != STAGE_PROCUREMENT:
             await original(target, db, game, player_id, flash=flash)
             return
-        body = f'<b>{PRODUCT.label}</b>\n\nСвободно: <b>{money(_free_cash(game, player_id))}</b>\n\n' + tutorial_hint('Нажми [🤝 Поставщики]')
+        body = f'<b>{PRODUCT.label}</b>\n\nСвободно: <b>{money(_free_cash(game, player_id))}</b>\n\n' + tutorial_hint(f'Нажми [{SUPPLIERS.label}]')
         if flash:
             body = f'{flash}\n\n{body}'
         markup = ui_commerce._product_root_keyboard(ui_commerce._warehouse_batch_count(db, player_id))
@@ -401,7 +401,7 @@ def soft_storefront(original):
         state = sync_tutorial_state(db, player_id)
         rows = ui_commerce._sales_products(db, player_id)
         trust = game.customer_metrics(player_id)
-        text = f"<b>🏷 Витрина</b>\n\nДоверие: {trust['trust_score']:.0f}/100\nНаценка до ~+{trust['premium_allowance'] * 100:.0f}% обычно не снижает спрос."
+        text = f"<b>{STOREFRONT.label}</b>\n\nДоверие: {trust['trust_score']:.0f}/100\nНаценка до ~+{trust['premium_allowance'] * 100:.0f}% обычно не снижает спрос."
         if state and state['active'] and (state['stage'] == STAGE_PRICE):
             text += '\n\n' + tutorial_hint('Выбери товар.')
         elif state and state['active'] and (state['stage'] == STAGE_SALE_WAIT):
@@ -434,7 +434,7 @@ def soft_sales_product(original):
         if not product:
             return
         rows = [[InlineKeyboardButton(text=f"×{listing['pack_size']} · {money(listing['price'])} · доступно {int(listing['positions'])}", callback_data=f"sales:listing:{listing['id']}")] for listing in listings]
-        rows.append([InlineKeyboardButton(text='Витрина', callback_data='menu:storefront')])
+        rows.append([button(STOREFRONT)])
         text = f"<b>{clean(product['title'])}</b>\n\n{published} ед. готовы к продаже · оценка {rating(avg, n)}\n\n" + tutorial_hint('Выбери фасовку.')
         await present(target, text, InlineKeyboardMarkup(inline_keyboard=rows))
     decorated = render_sales_product
@@ -568,7 +568,7 @@ def handoff_product_root(original):
             await original(target, db, game, player_id, flash=flash)
             return
         free_cash = tutorial._free_cash(game, player_id)
-        body = f'<b>{PRODUCT.label}</b>\n\nСвободно: <b>{money(free_cash)}</b>\n\n' + tutorial_hint('Нажми [📦 Склад]')
+        body = f'<b>{PRODUCT.label}</b>\n\nСвободно: <b>{money(free_cash)}</b>\n\n' + tutorial_hint(f'Нажми [{WAREHOUSE.label}]')
         markup = ui_commerce._product_root_keyboard(ui_commerce._warehouse_batch_count(db, player_id))
         await present(target, notice(flash, body), markup)
     decorated = render_product_root
