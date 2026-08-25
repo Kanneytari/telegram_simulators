@@ -3,10 +3,15 @@ from __future__ import annotations
 from .dispute_payments import DisputePaymentMixin
 from .game import GameService
 from .nightshift import NightshiftSimulationMixin
-from .runtime import PlayerSimulationEngine
+from .runtime import PlayerSimulationMixin
+from .simulation import SimulationEngine
 
 
-class OperationsSimulationEngine(NightshiftSimulationMixin, PlayerSimulationEngine):
+class OperationsSimulationEngine(
+    NightshiftSimulationMixin,
+    PlayerSimulationMixin,
+    SimulationEngine,
+):
     """Adds accountable wholesale inventory to the core simulation."""
 
     def ensure_player(self, player_id: int, username: str | None) -> bool:
