@@ -31,6 +31,7 @@ jobs:
           python .github/scripts/unify_nightshift_entity_presentation.py
           python .github/scripts/fix_remaining_entity_presentation.py
           python .github/scripts/finalize_entity_presentation_contracts.py
+          python .github/scripts/refine_semantic_ui_markers.py
       - name: Verify
         run: |
           cd shadow_market_simulator
