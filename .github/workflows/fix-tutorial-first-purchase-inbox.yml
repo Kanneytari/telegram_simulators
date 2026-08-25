@@ -44,4 +44,4 @@ jobs:
           git commit -m "fix(shadow-market): keep tutorial inbox state accurate"
           git push origin HEAD:fix/tutorial-first-purchase-inbox
 
-# final retry without duplicate copy layer
+# scan retry
