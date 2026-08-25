@@ -71,7 +71,7 @@ LEGACY_ENGINE_INHERITANCE = {
     ("staff/compensation.py", "CompensationSimulationEngine"),
     ("staff/relationships.py", "StaffRelationshipSimulationEngine"),
     ("trust/customer.py", "CustomerTrustSimulationEngine"),
-    ("courier_core.py", "CourierCoreSimulationEngine"),
+    ("staff/couriers/core.py", "CourierCoreSimulationEngine"),
     ("courier_management.py", "CourierManagementSimulationEngine"),
 }
 
@@ -84,7 +84,7 @@ LEGACY_SERVICE_INHERITANCE = {
     ("staff/relationships.py", "StaffRelationshipGameService"),
     ("commerce/packaging.py", "GlobalPackagingGameService"),
     ("trust/customer.py", "CustomerTrustGameService"),
-    ("courier_core.py", "CourierCoreGameService"),
+    ("staff/couriers/core.py", "CourierCoreGameService"),
     ("courier_management.py", "CourierManagementGameService"),
 }
 
