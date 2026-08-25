@@ -1,0 +1,56 @@
+name: NIGHTSHIFT storefront packaging label
+
+on:
+  push:
+    branches:
+      - fix/nightshift-storefront-packaging-label
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    env:
+      PYTHONPATH: ${{ github.workspace }}/shadow_market_simulator
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nightshift-storefront-packaging-label
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          cd shadow_market_simulator
+          python -m pip install -r requirements.txt
+          python -m pip install ruff
+      - name: Apply UI fix
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          ui = Path('shadow_market_simulator/app/ui_commerce.py')
+          text = ui.read_text(encoding='utf-8')
+          old = '''        text=f"🏷 ×{listing['pack_size']} · {money(listing['price'])} · доступно {int(listing['positions'])}",'''
+          new = '''        text=f"×{listing['pack_size']} · {money(listing['price'])} · доступно {int(listing['positions'])}",'''
+          assert old in text
+          ui.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          test = Path('shadow_market_simulator/tests/test_storefront_packaging_labels.py')
+          test.write_text('''from pathlib import Path\n\n\ndef test_storefront_packaging_buttons_do_not_reuse_storefront_emoji() -> None:\n    source = Path("app/ui_commerce.py").read_text(encoding="utf-8")\n    assert 'text=f"×{listing[\\'pack_size\\']} · {money(listing[\\'price\\'])} · доступно {int(listing[\\'positions\\'])}"' in source\n    assert 'text=f"🏷 ×{listing[\\'pack_size\\']}' not in source\n    assert 'rows.append(nav_row(STOREFRONT))' in source\n''', encoding='utf-8')
+          PY
+      - name: Verify
+        run: |
+          cd shadow_market_simulator
+          python -m compileall -q app tests
+          python -m pytest -q
+          ruff check app tests --select F401,F821,F841
+      - name: Commit permanent changes
+        run: |
+          git config user.name "Kanneytari"
+          git config user.email "hitroplan@yandex.ru"
+          git add shadow_market_simulator/app/ui_commerce.py shadow_market_simulator/tests/test_storefront_packaging_labels.py
+          git commit -m "fix(shadow-market): simplify storefront packaging labels [skip ci]"
+          git push origin HEAD:fix/nightshift-storefront-packaging-label
