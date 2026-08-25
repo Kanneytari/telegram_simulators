@@ -7,6 +7,11 @@ new_start = "body='Сейчас у тебя нет товара. Начни с �
 if old_start not in text:
     raise SystemExit('starter inbox copy not found')
 text = text.replace(old_start, new_start, 1)
+old_copy_rule = "body='Склад пуст. Начни с первой закупки в разделе Товар.'"
+new_copy_rule = "body='Сейчас у тебя нет товара. Начни с первой закупки в разделе Товар.'"
+if old_copy_rule not in text:
+    raise SystemExit('copy-rule inbox text not found')
+text = text.replace(old_copy_rule, new_copy_rule, 1)
 old_purchase = """        if batch:\n            _set_stage(self.db, player_id, STAGE_PICKUP_WAIT, batch_id=int(batch['id']), product_id=int(batch['product_id']), warehouse_employee_id=employee_id)\n            result += '\\n\\n' + tutorial_hint('Складмен забирает товар. Обычно это занимает время. Можешь продолжать играть или вернуться в меню и нажать ⏩ Пропустить ожидание.')\n"""
 new_purchase = """        if batch:\n            _set_stage(self.db, player_id, STAGE_PICKUP_WAIT, batch_id=int(batch['id']), product_id=int(batch['product_id']), warehouse_employee_id=employee_id)\n            with self.db.connect() as conn:\n                conn.execute(\n                    \"\"\"UPDATE inbox\n                       SET body='Складмен забирает первую партию. Обычно это занимает игровое время.'\n                       WHERE player_id=? AND kind='tutorial' AND status='open'\"\"\",\n                    (player_id,),\n                )\n            result += '\\n\\n' + tutorial_hint('Складмен забирает товар. Обычно это занимает время. Можешь продолжать играть или вернуться в меню и нажать ⏩ Пропустить ожидание.')\n"""
 if old_purchase not in text:
