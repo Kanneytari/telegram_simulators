@@ -1,5 +1,6 @@
 from app.analytics.analytics_handlers import analytics_view_keyboard
-from app.ui_commerce import packaging_keyboard
+from app import ui_commerce
+from app.ui_commerce import _product_root_keyboard, packaging_keyboard
 from app.ui_navigation import home_keyboard, inbox_keyboard
 from app.ui_staff import _profile_keyboard, more_keyboard
 
@@ -54,6 +55,32 @@ def test_packaging_is_nested_under_sales():
     assert "menu:storefront" in callbacks(markup)
     assert "menu:team" not in callbacks(markup)
 
+
+
+def test_product_root_nests_procurement_under_suppliers():
+    markup = _product_root_keyboard(3)
+    assert labels(markup) == [
+        "🤝 Поставщики",
+        "📦 Склад · 3",
+        "🏠 Меню",
+    ]
+    assert callbacks(markup) == ["proc:suppliers", "team:batches", "menu:home"]
+
+
+def test_suppliers_screen_contains_product_categories(monkeypatch):
+    monkeypatch.setattr(ui_commerce, "_stock_status", lambda *_args: "нет запаса")
+    markup = ui_commerce._procurement_products_keyboard(
+        object(),
+        1,
+        [
+            {"id": 1, "title": "Амфетамин"},
+            {"id": 3, "title": "Кокаин"},
+        ],
+    )
+    assert labels(markup) == ["Амфетамин", "Кокаин", "← Товар", "🏠 Меню"]
+    assert callbacks(markup) == [
+        "proc:product:1", "proc:product:3", "menu:product", "menu:home"
+    ]
 
 def test_analytics_uses_same_compact_navigation_language():
     assert labels(analytics_view_keyboard("overview", "7")) == [
