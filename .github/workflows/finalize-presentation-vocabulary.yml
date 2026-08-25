@@ -26,12 +26,8 @@ jobs:
           cd shadow_market_simulator
           python -m pip install -r requirements.txt
           python -m pip install ruff
-      - name: Apply final presentation cleanup
-        run: |
-          python .github/scripts/finalize_presentation_vocabulary.py
-          python .github/scripts/strengthen_ui_vocabulary_guardrail.py
-          python .github/scripts/finalize_hire_action_vocabulary.py
-          python .github/scripts/unify_nightshift_entity_presentation.py
+      - name: Apply entity presentation pass
+        run: python .github/scripts/unify_nightshift_entity_presentation.py
       - name: Verify
         run: |
           cd shadow_market_simulator
