@@ -11,7 +11,7 @@ from . import compensation, staff_insights
 # These callbacks confirm one irreversible action and the source message is replaced
 # immediately afterwards. Telegram/network retries can still deliver the same callback
 # more than once before the edit reaches the client, so execute an exact callback from
-# the same message only once per process.
+# the same message only once after a successful handler run.
 _ONE_SHOT_CALLBACK_PREFIXES = (
     "team:allocdo:",
     "team:roleconfirm:",
@@ -20,7 +20,7 @@ _ONE_SHOT_CALLBACK_PREFIXES = (
 
 
 class OneShotCallbackMiddleware(BaseMiddleware):
-    """Suppress duplicate delivery of confirmation callbacks from one message."""
+    """Suppress duplicate delivery of successful confirmation callbacks."""
 
     def __init__(self, max_entries: int = 4096) -> None:
         self.max_entries = max(128, int(max_entries))
@@ -48,7 +48,11 @@ class OneShotCallbackMiddleware(BaseMiddleware):
         self._seen.move_to_end(key)
         while len(self._seen) > self.max_entries:
             self._seen.popitem(last=False)
-        return await handler(event, data)
+        try:
+            return await handler(event, data)
+        except Exception:
+            self._seen.pop(key, None)
+            raise
 
 
 def _install_start_copy_fix() -> None:
