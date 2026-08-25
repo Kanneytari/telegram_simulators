@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from ..simulation import iso, parse_dt, utcnow
+from .simulation import iso, parse_dt, utcnow
 
 
 class NightshiftSimulationMixin:
