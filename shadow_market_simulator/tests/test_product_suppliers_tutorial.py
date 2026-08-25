@@ -58,5 +58,5 @@ def test_first_purchase_tutorial_enters_suppliers_before_product_category(tmp_pa
     suppliers = Target()
     asyncio.run(ui_commerce.render_suppliers_root(suppliers, db, game, player_id))
     supplier_labels = _labels(suppliers)
-    assert supplier_labels[-2:] == ["Товар", "🏠 Меню"]
+    assert supplier_labels[-2:] == ["📦 Товар", "🏠 Меню"]
     assert "Выбери товар для первой закупки." in suppliers.text

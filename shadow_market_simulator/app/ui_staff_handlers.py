@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.presentation.vocabulary import WAREHOUSE, nav_row
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
@@ -7,7 +8,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 from app.staff.couriers.management import PHONE, TRANSPORT
 from app.staff.rename import rename_employee
 from app.staff.recruitment import CHANNELS
-from .ui_common import clean, money, nav_row, notice, pct, present, tutorial_hint
+from .ui_common import clean, money, notice, pct, present, tutorial_hint
 from .ui_staff import (
     RenameEmployeeState,
     render_allocation,
@@ -136,7 +137,7 @@ async def render_batch(
         text += "\n\n" + tutorial_hint(
             "Складмен ещё получает партию. Вернись сюда, когда она будет готова."
         )
-    rows.append(nav_row("team:batches", "← Склад"))
+    rows.append(nav_row(WAREHOUSE))
     await present(
         target,
         notice(flash, text),
@@ -153,7 +154,7 @@ async def render_candidate(target: Message, game, player_id: int, candidate_id: 
         ).fetchone()
         profile = conn.execute("SELECT transport_level, phone_level FROM courier_candidate_profiles WHERE candidate_id=?", (candidate_id,)).fetchone()
     if not row:
-        await present(target, "Кандидат уже недоступен.", InlineKeyboardMarkup(inline_keyboard=[nav_row("team:candidates", "← Кандидаты")]))
+        await present(target, "Кандидат уже недоступен.", InlineKeyboardMarkup(inline_keyboard=[nav_row("team:candidates", "Кандидаты")]))
         return
     role = str(row["role"]); role_text = "закладчик" if role == "courier" else "складмен"
     experience = {0: "нет", 1: "есть", 2: "сильный"}.get(int(row["experience_level"] or 0), "нет данных")
@@ -173,7 +174,7 @@ async def render_candidate(target: Message, game, player_id: int, candidate_id: 
     lines.extend(["", "<b>Условия</b>", terms])
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Нанять", callback_data=f"team:hire:{candidate_id}"), InlineKeyboardButton(text="Отказать", callback_data=f"team:reject:{candidate_id}")],
-        nav_row("team:candidates", "← Кандидаты"),
+        nav_row("team:candidates", "Кандидаты"),
     ])
     await present(target, "\n".join(lines), keyboard)
 
@@ -183,7 +184,7 @@ def candidates_keyboard(candidates) -> InlineKeyboardMarkup:
         callback_data=f"team:candidate:{row['id']}",
     )] for row in candidates]
     rows.append([InlineKeyboardButton(text="Новый поиск", callback_data="team:recruit:new")])
-    rows.append(nav_row("team:recruit", "← Найм"))
+    rows.append(nav_row("team:recruit", "Найм"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 

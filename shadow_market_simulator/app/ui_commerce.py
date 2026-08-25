@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+from app.presentation.vocabulary import HOME, PRODUCT, SUPPLIERS, WAREHOUSE, button, nav_row
 from .tutorial import hooks as tutorial_hooks
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-from .ui_common import claim_tip, clean, money, nav_row, notice, present, rating, tutorial_hint
+from .ui_common import claim_tip, clean, money, notice, present, rating, tutorial_hint
 
 
 def _quality_label(value: float) -> str:
@@ -65,11 +66,10 @@ def _warehouse_batch_count(db, player_id: int) -> int:
 
 def _product_root_keyboard(batch_count: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🤝 Поставщики", callback_data="proc:suppliers")],
-        [InlineKeyboardButton(text=f"📦 Склад · {batch_count}", callback_data="team:batches")],
-        [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:home")],
+        [button(SUPPLIERS)],
+        [button(WAREHOUSE, suffix=batch_count)],
+        [button(HOME)],
     ])
-
 
 def _procurement_products_keyboard(db, player_id: int, products) -> InlineKeyboardMarkup:
     rows: list[list[InlineKeyboardButton]] = []
@@ -84,7 +84,7 @@ def _procurement_products_keyboard(db, player_id: int, products) -> InlineKeyboa
                 callback_data=f"proc:product:{product['id']}",
             )
         ])
-    rows.append(nav_row("menu:product", "← Товар"))
+    rows.append(nav_row(PRODUCT))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 @tutorial_hooks.handoff_product_root
@@ -95,7 +95,7 @@ async def render_product_root(target: Message, db, game, player_id: int, *, flas
         free_cash = game._free_cash_conn(conn, player_id) if hasattr(game, "_free_cash_conn") else int(
             conn.execute("SELECT balance FROM shops WHERE player_id=?", (player_id,)).fetchone()[0]
         )
-    body = f"<b>📦 Товар</b>\n\nСвободно: <b>{money(free_cash)}</b>"
+    body = f"<b>{PRODUCT.label}</b>\n\nСвободно: <b>{money(free_cash)}</b>"
     if game.needs_first_handoff_tutorial(player_id):
         body += "\n\n" + tutorial_hint("Нажми на кнопку 📦 Склад")
     await present(target, notice(flash, body), _product_root_keyboard(_warehouse_batch_count(db, player_id)))
@@ -105,7 +105,7 @@ async def render_product_root(target: Message, db, game, player_id: int, *, flas
 @tutorial_hooks.soft_suppliers_root
 async def render_suppliers_root(target: Message, db, game, player_id: int, *, flash: str | None = None) -> None:
     products = game.procurement_products(player_id)
-    body = "<b>🤝 Поставщики</b>\n\nВыберите категорию товара."
+    body = f"<b>{SUPPLIERS.label}</b>\n\nВыберите категорию товара."
     await present(target, notice(flash, body), _procurement_products_keyboard(db, player_id, products))
 
 
@@ -118,7 +118,7 @@ def _offers_keyboard(product_id: int, offers) -> InlineKeyboardMarkup:
             text=f"{_offer_marker(str(offer['market_profile']))}×{offer['quantity']} · {money(total)} · {quality}",
             callback_data=f"proc:offer:{offer['id']}",
         )])
-    rows.append(nav_row("proc:suppliers", "← Поставщики"))
+    rows.append(nav_row(SUPPLIERS))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -161,7 +161,7 @@ def _offer_keyboard(offer_id: int, product_id: int, selected, staff) -> InlineKe
             rows.append([InlineKeyboardButton(text="Сменить складмена", callback_data=f"proc:staff:{offer_id}")])
     else:
         rows.append([InlineKeyboardButton(text="Нанять сотрудника", callback_data="team:recruit")])
-    rows.append(nav_row(f"proc:product:{product_id}", "← Предложения"))
+    rows.append(nav_row(f"proc:product:{product_id}", "Предложения"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -218,7 +218,7 @@ async def render_offer_staff(target: Message, game, player_id: int, offer_id: in
             text=f"{employee['alias']}{suffix}",
             callback_data=f"proc:offer:{offer_id}:{employee['id']}",
         )])
-    rows.append(nav_row(f"proc:offer:{offer_id}", "← Предложение"))
+    rows.append(nav_row(f"proc:offer:{offer_id}", "Предложение"))
     await present(
         target,
         f"<b>Складмен для закупки</b>\n\n{clean(offer['product_title'])} · {money(int(offer['quantity'] * offer['unit_cost']))}",
@@ -309,7 +309,7 @@ async def render_sales_product(target: Message, db, player_id: int, product_id: 
         text=f"×{listing['pack_size']} · {money(listing['price'])} · доступно {int(listing['positions'])}",
         callback_data=f"sales:listing:{listing['id']}",
     )] for listing in listings]
-    rows.append(nav_row("menu:storefront", "← Витрина"))
+    rows.append(nav_row("menu:storefront", "Витрина"))
     await present(
         target,
         f"<b>{clean(product['title'])}</b>\n\n{published} ед. готовы к продаже · оценка {rating(avg, n)}",
@@ -354,7 +354,7 @@ async def render_listing(target: Message, db, game, player_id: int, listing_id: 
             InlineKeyboardButton(text="−5%", callback_data=f"sales:price:{listing_id}:-5"),
             InlineKeyboardButton(text="+5%", callback_data=f"sales:price:{listing_id}:5"),
         ],
-        nav_row(f"sales:product:{row['product_id']}", f"← {str(row['title'])[:18]}"),
+        nav_row(f"sales:product:{row['product_id']}", f"{str(row['title'])[:18]}"),
     ]))
 
 
@@ -365,7 +365,7 @@ def packaging_keyboard(rule) -> InlineKeyboardMarkup:
             InlineKeyboardButton(text=f"×{size} −10", callback_data=f"sales:packadj:{size}:-10"),
             InlineKeyboardButton(text=f"×{size} +10", callback_data=f"sales:packadj:{size}:10"),
         ])
-    rows.append(nav_row("menu:storefront", "← Витрина"))
+    rows.append(nav_row("menu:storefront", "Витрина"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 

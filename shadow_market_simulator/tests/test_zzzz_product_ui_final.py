@@ -54,7 +54,7 @@ def test_final_product_screen_contract(tmp_path):
         else:
             assert label == f"{product['title']} · 🚚 {stock_status}"
 
-    assert labels[len(products)] == "← Товар"
+    assert labels[len(products)] == "📦 Товар"
     assert labels[-1] == "🏠 Меню"
     assert not any(label.startswith("📦 Склад") for label in labels)
 
@@ -75,7 +75,7 @@ def test_final_product_screen_contract(tmp_path):
         for button in row
     ]
     assert supplier_screen_labels[: len(products)] == product_labels
-    assert supplier_screen_labels[-2:] == ["Товар", "🏠 Меню"]
+    assert supplier_screen_labels[-2:] == ["📦 Товар", "🏠 Меню"]
 
     target = Target()
     asyncio.run(ui_commerce.render_product_root(target, db, game, PLAYER_ID))

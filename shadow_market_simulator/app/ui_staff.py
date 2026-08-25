@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.presentation.vocabulary import HOME, PAYMENT, PRODUCT, RECRUIT, TEAM, button, nav_row
 from .tutorial import hooks as tutorial_hooks
 
 from aiogram.fsm.context import FSMContext
@@ -9,7 +10,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 from app.staff.couriers.management import BONUS_COST, DEPOSIT_PCTS, DEPOSIT_TARGETS, PHONE, REST_OPTIONS, TRANSPORT
 from app.staff.couriers.model import condition_band, pace_band, relationship_band
 from app.staff.recruitment import CHANNELS, DURATION_OPTIONS
-from .ui_common import claim_tip, clean, money, nav_row, notice, pct, present, rating, tutorial_hint
+from .ui_common import claim_tip, clean, money, notice, pct, present, rating, tutorial_hint
 
 
 class RenameEmployeeState(StatesGroup):
@@ -38,10 +39,10 @@ def _team_keyboard(game, player_id: int, employees) -> InlineKeyboardMarkup:
             callback_data=f"team:employee:{employee['id']}",
         )])
     rows.append([
-        InlineKeyboardButton(text="Нанять", callback_data="team:recruit"),
-        InlineKeyboardButton(text="Оплата", callback_data="team:terms"),
+        button(RECRUIT),
+        button(PAYMENT),
     ])
-    rows.append([InlineKeyboardButton(text="Меню", callback_data="menu:home")])
+    rows.append([button(HOME)])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 @tutorial_hooks.handoff_team
@@ -148,10 +149,10 @@ def _profile_keyboard(employee_id: int, role: str) -> InlineKeyboardMarkup:
         ])
     else:
         rows.extend([
-            [InlineKeyboardButton(text="Товар", callback_data=f"team:batches:{employee_id}")],
+            [InlineKeyboardButton(text=PRODUCT.label, callback_data=f"team:batches:{employee_id}")],
             [InlineKeyboardButton(text="Ещё", callback_data=f"team:more:{employee_id}")],
         ])
-    rows.append(nav_row("menu:team", "← Команда"))
+    rows.append(nav_row(TEAM))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -178,7 +179,7 @@ def rest_keyboard(employee_id: int) -> InlineKeyboardMarkup:
             InlineKeyboardButton(text=f"12 ч · {money(REST_OPTIONS[12]['cost'])}", callback_data=f"team:restdo:{employee_id}:12"),
             InlineKeyboardButton(text=f"24 ч · {money(REST_OPTIONS[24]['cost'])}", callback_data=f"team:restdo:{employee_id}:24"),
         ],
-        nav_row(f"team:employee:{employee_id}", "← Профиль", menu=False),
+        nav_row(f"team:employee:{employee_id}", "Профиль", menu=False),
     ])
 
 
@@ -203,7 +204,7 @@ def development_keyboard(game, player_id: int, employee_id: int) -> InlineKeyboa
         if p_level < 2:
             title, cost, _ = PHONE[p_level + 1]
             rows.append([InlineKeyboardButton(text=f"Телефон: {title} · {money(cost)}", callback_data=f"team:upgradeconfirm:{employee_id}:phone")])
-    rows.append(nav_row(f"team:employee:{employee_id}", "← Профиль"))
+    rows.append(nav_row(f"team:employee:{employee_id}", "Профиль"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -244,7 +245,7 @@ def deposit_keyboard(employee_id: int, snapshot) -> InlineKeyboardMarkup:
         text=("✓ " if int(snapshot["deposit_target"]) == value else "") + money(value),
         callback_data=f"team:deposittarget:{employee_id}:{value}",
     )] for value in DEPOSIT_TARGETS]
-    return InlineKeyboardMarkup(inline_keyboard=[pct_row, *target_rows, nav_row(f"team:development:{employee_id}", "← Развитие", menu=False)])
+    return InlineKeyboardMarkup(inline_keyboard=[pct_row, *target_rows, nav_row(f"team:development:{employee_id}", "Развитие", menu=False)])
 
 
 async def render_deposit(target: Message, game, player_id: int, employee_id: int, *, flash: str | None = None) -> None:
@@ -266,7 +267,7 @@ def more_keyboard(employee_id: int) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="Переименовать", callback_data=f"team:rename:{employee_id}")],
         [InlineKeyboardButton(text="Сменить роль", callback_data=f"team:role:{employee_id}")],
         [InlineKeyboardButton(text="Уволить", callback_data=f"team:fire:{employee_id}")],
-        nav_row(f"team:employee:{employee_id}", "← Профиль"),
+        nav_row(f"team:employee:{employee_id}", "Профиль"),
     ])
 
 
@@ -279,7 +280,7 @@ async def render_more(target: Message, game, player_id: int, employee_id: int) -
     await present(target, f"<b>{clean(employee['alias'])} · ещё</b>", more_keyboard(employee_id))
 
 
-def batches_keyboard(rows, back_callback: str = "menu:product", back_text: str = "← Товар") -> InlineKeyboardMarkup:
+def batches_keyboard(rows, back_callback: str = "menu:product", back_text: str = "Товар") -> InlineKeyboardMarkup:
     buttons = []
     for batch in rows:
         state = "получает" if batch["status"] == "receiving" else "готово"
@@ -307,7 +308,7 @@ async def render_batches(target: Message, game, player_id: int, employee_id: int
         body += "\n\nНа складе нет активных партий."
     elif employee_id is None and game.needs_first_handoff_tutorial(player_id):
         body += "\n\n" + tutorial_hint("Выбери партию стаффа, которую хочешь передать закладчику.")
-    keyboard = batches_keyboard(rows) if employee_id is None else batches_keyboard(rows, f"team:employee:{employee_id}", "← Профиль")
+    keyboard = batches_keyboard(rows) if employee_id is None else batches_keyboard(rows, f"team:employee:{employee_id}", "Профиль")
     await present(target, notice(flash, body), keyboard)
 
 async def render_allocation(target: Message, game, player_id: int, batch_id: int, employee_id: int, quantity: int) -> None:
@@ -327,7 +328,7 @@ async def render_allocation(target: Message, game, player_id: int, batch_id: int
     ]]
     if quantity > 0:
         rows.append([InlineKeyboardButton(text=f"✅ Отправить {quantity} ед.", callback_data=f"team:allocdo:{batch_id}:{employee_id}:{quantity}")])
-    rows.append(nav_row(f"team:batch:{batch_id}", "← Назад"))
+    rows.append(nav_row(f"team:batch:{batch_id}", "Назад"))
     text = (
         f"<b>Передать {clean(employee['alias'])}</b>\n\n"
         f"Количество: <b>{quantity} ед.</b> · {money(value)}\n"
@@ -365,7 +366,7 @@ async def render_reassign(target: Message, game, player_id: int, batch_id: int) 
         unsecured = max(0, after - int(employee["deposit"]))
         suffix = f" · 🔴 {money(unsecured)}" if unsecured else " · покрыто"
         rows.append([InlineKeyboardButton(text=f"{employee['alias']}{suffix}", callback_data=f"team:reassigndo:{batch_id}:{employee['id']}")])
-    rows.append(nav_row(f"team:batch:{batch_id}", "← Партия"))
+    rows.append(nav_row(f"team:batch:{batch_id}", "Партия"))
     await present(target, f"<b>Сменить складмена</b>\n\nПартия #{batch_id} · {money(value)}", InlineKeyboardMarkup(inline_keyboard=rows))
 
 
@@ -375,7 +376,7 @@ def terms_root_keyboard() -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="Закладчики", callback_data="team:terms:courier"),
             InlineKeyboardButton(text="Складмены", callback_data="team:terms:warehouse"),
         ],
-        nav_row("menu:team", "← Команда"),
+        nav_row(TEAM),
     ])
 
 
@@ -437,7 +438,7 @@ def recruitment_root_keyboard(candidate_count: int) -> InlineKeyboardMarkup:
     if candidate_count:
         rows.append([InlineKeyboardButton(text=f"Кандидаты · {candidate_count}", callback_data="team:candidates")])
     rows.append([InlineKeyboardButton(text="Новый поиск", callback_data="team:recruit:new")])
-    rows.append(nav_row("menu:team", "← Команда"))
+    rows.append(nav_row(TEAM))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -450,7 +451,7 @@ async def render_recruitment_root(target: Message, recruitment, player_id: int, 
 
 def channels_keyboard() -> InlineKeyboardMarkup:
     rows = [[InlineKeyboardButton(text=f"{channel.icon} {channel.title}", callback_data=f"recruit:channel:{code}")] for code, channel in CHANNELS.items()]
-    rows.append(nav_row("team:recruit", "← Найм"))
+    rows.append(nav_row("team:recruit", "Найм"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -483,7 +484,7 @@ def recruitment_draft_keyboard(draft, quote) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text=f"Охват: {coverage_labels[int(draft['traffic_multiplier'])]}", callback_data="recruit:cycle:coverage")],
         [InlineKeyboardButton(text=("✓ " if value == int(draft["duration_hours"]) else "") + f"{value} ч", callback_data=f"recruit:set:duration_hours:{value}") for value in DURATION_OPTIONS],
         [InlineKeyboardButton(text=f"Запустить · {money(quote['cost'])}", callback_data="recruit:run")],
-        nav_row("team:recruit:new", "← Каналы"),
+        nav_row("team:recruit:new", "Каналы"),
     ])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 

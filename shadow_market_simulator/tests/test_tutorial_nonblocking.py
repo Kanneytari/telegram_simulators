@@ -107,18 +107,18 @@ def test_tutorial_is_nonblocking_and_uses_plain_copy() -> None:
                 tutorial.STAGE_TEAM,
             )
             for stage in stages:
-                text = tutorial._instruction({"stage": stage, "data": {}})
+                text = tutorial.instruction({"stage": stage, "data": {}})
                 assert "—" not in text
                 assert ";" not in text
                 assert "«" not in text and "»" not in text
                 assert "позици" not in text.lower()
 
-            price = tutorial._instruction(
+            price = tutorial.instruction(
                 {"stage": tutorial.STAGE_PRICE, "data": {}}
             )
             assert price == "Нажми [🏷 Витрина]"
 
-            team = tutorial._instruction(
+            team = tutorial.instruction(
                 {"stage": tutorial.STAGE_TEAM, "data": {}}
             )
             assert (

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+from app.presentation.vocabulary import INBOX, nav_row
 import json
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-from .ui_common import clean, money, nav_row, notice, present, rating
+from .ui_common import clean, money, notice, present, rating
 from .ui_navigation import render_after_inbox_action
 
 
@@ -35,7 +36,7 @@ def decision_keyboard(dispute_id: int, page: int = 0, *, has_reply: bool = False
             InlineKeyboardButton(text="💵 Вернуть 50%", callback_data=f"dispute:amount:{dispute_id}:partial:{page}"),
         ],
         [InlineKeyboardButton(text="🚫 Отказать", callback_data=f"dispute:reject:{dispute_id}:{page}")],
-        nav_row(back, "← Входящие"),
+        nav_row(INBOX, callback_data=back),
     ])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -66,7 +67,7 @@ def source_keyboard(context, decision: str, page: int = 0) -> InlineKeyboardMark
         rows.append([InlineKeyboardButton(text="Со счёта магазина", callback_data=f"dispute:pay:{dispute_id}:{decision}:shop:{page}")])
     if int(context["employee_deposit"]) >= amount:
         rows.append([InlineKeyboardButton(text=f"Из депозита {context['employee_alias']}", callback_data=f"dispute:pay:{dispute_id}:{decision}:employee:{page}")])
-    rows.append(nav_row(f"dispute:view:{dispute_id}:{page}", "← Диспут"))
+    rows.append(nav_row(f"dispute:view:{dispute_id}:{page}", "Диспут"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 

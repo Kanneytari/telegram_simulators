@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.presentation.vocabulary import HOME, button
 from datetime import timedelta
 
 from aiogram import F, Router
@@ -28,7 +29,7 @@ def build_admin_router(db, simulation, recruitment, game, admin_ids: frozenset[i
                 InlineKeyboardButton(text=("✓ " if abs(current - 60) < 0.001 else "") + "×60", callback_data="admin:speed:60"),
             ],
             [InlineKeyboardButton(text="Сбросить игру", callback_data="admin:reset")],
-            [InlineKeyboardButton(text="Меню", callback_data="menu:home")],
+            [button(HOME)],
         ])
 
     def reset_keyboard() -> InlineKeyboardMarkup:

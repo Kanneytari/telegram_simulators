@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.presentation.vocabulary import ADMIN, ANALYTICS, HOME, INBOX, PRODUCT, REFRESH, STOREFRONT, TEAM, button, label
 from .tutorial import hooks as tutorial_hooks
 
 import json
@@ -16,23 +17,17 @@ INBOX_PAGE_SIZE = 8
 
 
 def home_keyboard(opened: int, urgent: int, *, is_admin: bool = False) -> InlineKeyboardMarkup:
-    inbox = f"📨 Входящие · {opened}"
+    inbox = label(INBOX, opened)
     if urgent:
         inbox += f" · 🔴 {urgent}"
     rows = [
-        [InlineKeyboardButton(text=inbox, callback_data="menu:inbox")],
-        [
-            InlineKeyboardButton(text="📦 Товар", callback_data="menu:product"),
-            InlineKeyboardButton(text="🏷 Витрина", callback_data="menu:storefront"),
-        ],
-        [
-            InlineKeyboardButton(text="👥 Команда", callback_data="menu:team"),
-            InlineKeyboardButton(text="📊 Аналитика", callback_data="menu:analytics"),
-        ],
+        [InlineKeyboardButton(text=inbox, callback_data=INBOX.callback_data)],
+        [button(PRODUCT), button(STOREFRONT)],
+        [button(TEAM), button(ANALYTICS)],
     ]
     if is_admin:
-        rows.append([InlineKeyboardButton(text="🛠 Админ", callback_data="admin:panel")])
-    rows.append([InlineKeyboardButton(text="🔄 Обновить", callback_data="menu:home")])
+        rows.append([button(ADMIN)])
+    rows.append([button(REFRESH)])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 def _home_snapshot(db, game, simulation, player_id: int) -> tuple[str, int, int]:
@@ -152,8 +147,8 @@ def inbox_keyboard(items, page: int = 0, total: int | None = None) -> InlineKeyb
     if paging:
         rows.append(paging)
     rows.append([
-        InlineKeyboardButton(text="Обновить", callback_data=f"inbox:page:{page}"),
-        InlineKeyboardButton(text="Меню", callback_data="menu:home"),
+        button(REFRESH, callback_data=f"inbox:page:{page}"),
+        button(HOME),
     ])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -220,8 +215,8 @@ def inbox_item_keyboard(item, page: int = 0) -> InlineKeyboardMarkup:
         rows.append([InlineKeyboardButton(text="Профиль сотрудника", callback_data=f"team:employee:{employee_id}")])
     back = f"inbox:page:{page}" if page else "menu:inbox"
     rows.append([
-        InlineKeyboardButton(text="Входящие", callback_data=back),
-        InlineKeyboardButton(text="Меню", callback_data="menu:home"),
+        button(INBOX, callback_data=back),
+        button(HOME),
     ])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 

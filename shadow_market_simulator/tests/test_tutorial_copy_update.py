@@ -18,7 +18,7 @@ def test_tutorial_copy_uses_blocks_and_exact_button_labels() -> None:
 
 
         
-        intro = tutorial._instruction(
+        intro = tutorial.instruction(
             {"stage": tutorial.STAGE_PROCUREMENT, "data": {}}
         )
         assert intro == (
@@ -33,7 +33,7 @@ def test_tutorial_copy_uses_blocks_and_exact_button_labels() -> None:
         )
         assert "Привет, бро!\n\nРад видеть." not in tutorial_hint(intro)
 
-        review = tutorial._instruction(
+        review = tutorial.instruction(
             {"stage": tutorial.STAGE_REVIEW, "data": {"order_id": 1}}
         )
         assert review == (
@@ -94,15 +94,15 @@ def test_tutorial_copy_uses_blocks_and_exact_button_labels() -> None:
             tutorial.STAGE_REVIEW,
             tutorial.STAGE_TEAM,
         ):
-            text = tutorial._instruction({"stage": stage, "data": {}})
+            text = tutorial.instruction({"stage": stage, "data": {}})
             assert "\n\n" in text
             for forbidden in ("—", "«", "»", "→", "←"):
                 assert forbidden not in text
 
-        assert tutorial._instruction(
+        assert tutorial.instruction(
             {"stage": tutorial.STAGE_HANDOFF, "data": {}}
         ) == "Нажми [📦 Товар]"
-        assert tutorial._instruction(
+        assert tutorial.instruction(
             {"stage": tutorial.STAGE_PRICE, "data": {}}
         ) == "Нажми [🏷 Витрина]"
         '''

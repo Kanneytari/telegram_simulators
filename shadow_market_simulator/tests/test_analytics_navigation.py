@@ -18,7 +18,7 @@ def test_overview_navigation_is_compact_and_has_only_agreed_sections():
     assert "Деньги" in names
     assert "✓ 7 дней" in names
     assert "30 дней" in names
-    assert "Меню" in names
+    assert "🏠 Меню" in names
     assert "👥 Команда" not in names
     assert "📅 По дням" not in names
     assert "🧪 Качество" not in names

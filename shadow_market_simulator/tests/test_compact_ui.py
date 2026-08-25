@@ -32,8 +32,8 @@ def test_inbox_is_flat_without_category_screen():
     assert labels(inbox_keyboard(items)) == [
         "🔴 Срочное событие",
         "Обычное событие",
-        "Обновить",
-        "Меню",
+        "🔄 Обновить",
+        "🏠 Меню",
     ]
 
 
@@ -77,7 +77,7 @@ def test_suppliers_screen_contains_product_categories(monkeypatch):
             {"id": 3, "title": "Кокаин"},
         ],
     )
-    assert labels(markup) == ["Амфетамин", "Кокаин", "← Товар", "🏠 Меню"]
+    assert labels(markup) == ["Амфетамин", "Кокаин", "📦 Товар", "🏠 Меню"]
     assert callbacks(markup) == [
         "proc:product:1", "proc:product:3", "menu:product", "menu:home"
     ]
@@ -89,5 +89,5 @@ def test_analytics_uses_same_compact_navigation_language():
         "Деньги",
         "✓ 7 дней",
         "30 дней",
-        "Меню",
+        "🏠 Меню",
     ]
