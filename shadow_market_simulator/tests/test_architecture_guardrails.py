@@ -78,7 +78,6 @@ LEGACY_ENGINE_INHERITANCE = {
 }
 
 LEGACY_SERVICE_INHERITANCE = {
-    ("dispute_payments.py", "DisputePaymentGameService"),
     ("operations.py", "OperationsGameService"),
     ("workflow.py", "WorkflowGameService"),
     ("staff_insights.py", "StaffInsightGameService"),
