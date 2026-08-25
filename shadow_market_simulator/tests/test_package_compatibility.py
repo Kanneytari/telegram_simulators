@@ -1,4 +1,4 @@
-from app.commerce import OperationsGameService, OperationsSimulationEngine
+from app.commerce.inventory import OperationsGameService, OperationsSimulationEngine
 from app.commerce.packaging import GlobalPackagingGameService
 from app.config import Settings as LegacySettings
 from app.core.config import Settings
