@@ -19,18 +19,18 @@ def analytics_view_keyboard(view: str, period: str) -> InlineKeyboardMarkup:
     rows = [
         [
             InlineKeyboardButton(
-                text=("✅ " if view == key else "⚪ ") + label,
+                text=("✓ " if view == key else "") + label,
                 callback_data=f"analytics:view:{key}:{period}",
             )
             for key, label in labels
         ],
         [
             InlineKeyboardButton(
-                text=("✅ " if period == "7" else "⚪ ") + "7 дней",
+                text=("✓ " if period == "7" else "") + "7 дней",
                 callback_data=f"analytics:view:{view}:7",
             ),
             InlineKeyboardButton(
-                text=("✅ " if period == "30" else "⚪ ") + "30 дней",
+                text=("✓ " if period == "30" else "") + "30 дней",
                 callback_data=f"analytics:view:{view}:30",
             ),
         ],

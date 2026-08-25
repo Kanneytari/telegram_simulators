@@ -470,7 +470,7 @@ def soft_listing(original):
             text += '\n\n' + tutorial_hint('Измени цену на −5% или +5%.')
         else:
             text += '\n\n' + tutorial_hint('Цена выставлена. Теперь дождись первой продажи или нажми ⏩ Пропустить ожидание.')
-        rows = [[InlineKeyboardButton(text='➖ 5%', callback_data=f'sales:price:{listing_id}:-5'), InlineKeyboardButton(text='➕ 5%', callback_data=f'sales:price:{listing_id}:5')], [InlineKeyboardButton(text=f"📦 {str(row['title'])[:18]}", callback_data=f"sales:product:{row['product_id']}")]]
+        rows = [[InlineKeyboardButton(text='−5%', callback_data=f'sales:price:{listing_id}:-5'), InlineKeyboardButton(text='+5%', callback_data=f'sales:price:{listing_id}:5')], [InlineKeyboardButton(text=f"📦 {str(row['title'])[:18]}", callback_data=f"sales:product:{row['product_id']}")]]
         markup = InlineKeyboardMarkup(inline_keyboard=rows)
         markup = _append_tutorial_action(markup, state)
         await present(target, text, markup)

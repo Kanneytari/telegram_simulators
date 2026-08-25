@@ -352,8 +352,8 @@ async def render_listing(target: Message, db, game, player_id: int, listing_id: 
     )
     await present(target, text, InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="➖ 5%", callback_data=f"sales:price:{listing_id}:-5"),
-            InlineKeyboardButton(text="➕ 5%", callback_data=f"sales:price:{listing_id}:5"),
+            InlineKeyboardButton(text="−5%", callback_data=f"sales:price:{listing_id}:-5"),
+            InlineKeyboardButton(text="+5%", callback_data=f"sales:price:{listing_id}:5"),
         ],
         nav_row(f"sales:product:{row['product_id']}", f"📦 {str(row['title'])[:18]}"),
     ]))
@@ -363,8 +363,8 @@ def packaging_keyboard(rule) -> InlineKeyboardMarkup:
     rows = []
     for size in (1, 2, 5):
         rows.append([
-            InlineKeyboardButton(text=f"➖ ×{size} · 10", callback_data=f"sales:packadj:{size}:-10"),
-            InlineKeyboardButton(text=f"➕ ×{size} · 10", callback_data=f"sales:packadj:{size}:10"),
+            InlineKeyboardButton(text=f"×{size} −10", callback_data=f"sales:packadj:{size}:-10"),
+            InlineKeyboardButton(text=f"×{size} +10", callback_data=f"sales:packadj:{size}:10"),
         ])
     rows.append(nav_row(STOREFRONT))
     return InlineKeyboardMarkup(inline_keyboard=rows)

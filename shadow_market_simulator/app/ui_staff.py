@@ -239,11 +239,11 @@ async def render_development(target: Message, game, player_id: int, employee_id:
 
 def deposit_keyboard(employee_id: int, snapshot) -> InlineKeyboardMarkup:
     pct_row = [InlineKeyboardButton(
-        text=("✅ " if int(snapshot["deposit_pct"]) == value else "⚪ ") + f"{value}%",
+        text=("✓ " if int(snapshot["deposit_pct"]) == value else "") + f"{value}%",
         callback_data=f"team:depositpct:{employee_id}:{value}",
     ) for value in DEPOSIT_PCTS]
     target_rows = [[InlineKeyboardButton(
-        text=("✅ " if int(snapshot["deposit_target"]) == value else "⚪ ") + money(value),
+        text=("✓ " if int(snapshot["deposit_target"]) == value else "") + money(value),
         callback_data=f"team:deposittarget:{employee_id}:{value}",
     )] for value in DEPOSIT_TARGETS]
     return InlineKeyboardMarkup(inline_keyboard=[pct_row, *target_rows, nav_row(f"team:development:{employee_id}", "📈 Развитие", menu=False)])
@@ -265,9 +265,9 @@ async def render_deposit(target: Message, game, player_id: int, employee_id: int
 
 def more_keyboard(employee_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✏️ Переименовать", callback_data=f"team:rename:{employee_id}")],
-        [InlineKeyboardButton(text="🔄 Сменить роль", callback_data=f"team:role:{employee_id}")],
-        [InlineKeyboardButton(text="🗑️ Уволить", callback_data=f"team:fire:{employee_id}")],
+        [InlineKeyboardButton(text="Переименовать", callback_data=f"team:rename:{employee_id}")],
+        [InlineKeyboardButton(text="Сменить роль", callback_data=f"team:role:{employee_id}")],
+        [InlineKeyboardButton(text="Уволить", callback_data=f"team:fire:{employee_id}")],
         nav_row(f"team:employee:{employee_id}", "👤 Профиль"),
     ])
 
@@ -323,9 +323,9 @@ async def render_allocation(target: Message, game, player_id: int, batch_id: int
     after = int(employee["exposure"]) + value
     unsecured = max(0, after - int(employee["deposit"]))
     rows: list[list[InlineKeyboardButton]] = [[
-        InlineKeyboardButton(text="➖ 5", callback_data=f"team:alloc:{batch_id}:{employee_id}:{max(0, quantity-5)}"),
+        InlineKeyboardButton(text="−5", callback_data=f"team:alloc:{batch_id}:{employee_id}:{max(0, quantity-5)}"),
         InlineKeyboardButton(text=f"📦 {quantity} ед.", callback_data=f"team:alloc:{batch_id}:{employee_id}:{quantity}"),
-        InlineKeyboardButton(text="➕ 5", callback_data=f"team:alloc:{batch_id}:{employee_id}:{min(int(batch['remaining']), quantity+5)}"),
+        InlineKeyboardButton(text="+5", callback_data=f"team:alloc:{batch_id}:{employee_id}:{min(int(batch['remaining']), quantity+5)}"),
     ]]
     if quantity > 0:
         rows.append([InlineKeyboardButton(text=f"✅ Отправить {quantity} ед.", callback_data=f"team:allocdo:{batch_id}:{employee_id}:{quantity}")])
@@ -401,15 +401,15 @@ def terms_editor_keyboard(role: str) -> InlineKeyboardMarkup:
     rows: list[list[InlineKeyboardButton]] = []
     if role == "courier":
         rows.extend([
-            [InlineKeyboardButton(text="➖ Фикс 50", callback_data="team:termsdraft:fixed_fee:-50"), InlineKeyboardButton(text="➕ Фикс 50", callback_data="team:termsdraft:fixed_fee:50")],
-            [InlineKeyboardButton(text="➖ Продажа 0,5%", callback_data="team:termsdraft:base_rate_bps:-50"), InlineKeyboardButton(text="➕ Продажа 0,5%", callback_data="team:termsdraft:base_rate_bps:50")],
+            [InlineKeyboardButton(text="Фикс −50", callback_data="team:termsdraft:fixed_fee:-50"), InlineKeyboardButton(text="Фикс +50", callback_data="team:termsdraft:fixed_fee:50")],
+            [InlineKeyboardButton(text="Продажа −0,5%", callback_data="team:termsdraft:base_rate_bps:-50"), InlineKeyboardButton(text="Продажа +0,5%", callback_data="team:termsdraft:base_rate_bps:50")],
         ])
     else:
         rows.extend([
-            [InlineKeyboardButton(text="➖ Передача 0,5%", callback_data="team:termsdraft:base_rate_bps:-50"), InlineKeyboardButton(text="➕ Передача 0,5%", callback_data="team:termsdraft:base_rate_bps:50")],
-            [InlineKeyboardButton(text="➖ Риск 0,5%", callback_data="team:termsdraft:risk_rate_bps:-50"), InlineKeyboardButton(text="➕ Риск 0,5%", callback_data="team:termsdraft:risk_rate_bps:50")],
+            [InlineKeyboardButton(text="Передача −0,5%", callback_data="team:termsdraft:base_rate_bps:-50"), InlineKeyboardButton(text="Передача +0,5%", callback_data="team:termsdraft:base_rate_bps:50")],
+            [InlineKeyboardButton(text="Риск −0,5%", callback_data="team:termsdraft:risk_rate_bps:-50"), InlineKeyboardButton(text="Риск +0,5%", callback_data="team:termsdraft:risk_rate_bps:50")],
         ])
-    rows.append([InlineKeyboardButton(text="➖ Депозит 5%", callback_data="team:termsdraft:deposit_contribution_pct:-5"), InlineKeyboardButton(text="➕ Депозит 5%", callback_data="team:termsdraft:deposit_contribution_pct:5")])
+    rows.append([InlineKeyboardButton(text="Депозит −5%", callback_data="team:termsdraft:deposit_contribution_pct:-5"), InlineKeyboardButton(text="Депозит +5%", callback_data="team:termsdraft:deposit_contribution_pct:5")])
     rows.append([InlineKeyboardButton(text="✅ Применить", callback_data="team:termsapply")])
     rows.append([InlineKeyboardButton(text="↩️ Отмена", callback_data="team:terms")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
@@ -473,18 +473,18 @@ def recruitment_draft_keyboard(draft, quote) -> InlineKeyboardMarkup:
     rows: list[list[InlineKeyboardButton]] = [
         [InlineKeyboardButton(text=f"🔄 Роль: {role_label_text}", callback_data="recruit:cycle:role")],
         [
-            InlineKeyboardButton(text=f"➖ Депозит {money(deposit_step)}", callback_data=f"recruit:adj:min_deposit:-{deposit_step}"),
-            InlineKeyboardButton(text=f"➕ Депозит {money(deposit_step)}", callback_data=f"recruit:adj:min_deposit:{deposit_step}"),
+            InlineKeyboardButton(text=f"Депозит −{money(deposit_step)}", callback_data=f"recruit:adj:min_deposit:-{deposit_step}"),
+            InlineKeyboardButton(text=f"Депозит +{money(deposit_step)}", callback_data=f"recruit:adj:min_deposit:{deposit_step}"),
         ],
-        [InlineKeyboardButton(text="🎓 Опыт: Обязателен" if draft["experience_required"] else "🎓 Опыт: Не важен", callback_data="recruit:cycle:experience")],
+        [InlineKeyboardButton(text="Опыт: Обязателен" if draft["experience_required"] else "Опыт: Не важен", callback_data="recruit:cycle:experience")],
     ]
     if role == "courier":
         transport_labels = {0: "Пеший курьер", 1: "Велокурьер", 2: "Автокурьер"}
-        rows.append([InlineKeyboardButton(text=f"🚗 Транспорт: {transport_labels[int(draft['transport_required'])]}", callback_data="recruit:cycle:transport")])
+        rows.append([InlineKeyboardButton(text=f"Транспорт: {transport_labels[int(draft['transport_required'])]}", callback_data="recruit:cycle:transport")])
     rows.extend([
-        [InlineKeyboardButton(text=f"📣 Охват: {coverage_labels[int(draft['traffic_multiplier'])]}", callback_data="recruit:cycle:coverage")],
-        [InlineKeyboardButton(text=("✓ " if value == int(draft["duration_hours"]) else "") + f"⏱ {value} ч", callback_data=f"recruit:set:duration_hours:{value}") for value in DURATION_OPTIONS],
-        [InlineKeyboardButton(text=f"▶️ Запустить · {money(quote['cost'])}", callback_data="recruit:run")],
+        [InlineKeyboardButton(text=f"Охват: {coverage_labels[int(draft['traffic_multiplier'])]}", callback_data="recruit:cycle:coverage")],
+        [InlineKeyboardButton(text=("✓ " if value == int(draft["duration_hours"]) else "") + f"{value} ч", callback_data=f"recruit:set:duration_hours:{value}") for value in DURATION_OPTIONS],
+        [InlineKeyboardButton(text=f"Запустить · {money(quote['cost'])}", callback_data="recruit:run")],
         nav_row("team:recruit:new", "📣 Каналы"),
     ])
     return InlineKeyboardMarkup(inline_keyboard=rows)

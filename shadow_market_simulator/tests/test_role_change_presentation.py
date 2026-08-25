@@ -7,3 +7,4 @@ def test_role_change_screen_uses_entity_helpers() -> None:
     assert 'Новая роль: {role_html(new_role)}' in source
     assert 'Сменить на {role_label(new_role)}' in source
     assert 'Сменить на {new}' not in source
+

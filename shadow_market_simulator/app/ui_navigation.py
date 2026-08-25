@@ -133,10 +133,10 @@ def inbox_keyboard(items, page: int = 0, total: int | None = None) -> InlineKeyb
     total = len(items) if total is None else int(total)
     rows: list[list[InlineKeyboardButton]] = []
     for item in items:
-        marker = "🔴 " if item["priority"] == "urgent" else "🟡 " if item["priority"] == "important" else "⚪ "
+        marker = "🔴 " if item["priority"] == "urgent" else "🟡 " if item["priority"] == "important" else "📨 "
         rows.append([
             InlineKeyboardButton(
-                text=f"📨 {marker}{str(item['title'])[:48]}",
+                text=f"{marker}{str(item['title'])[:48]}",
                 callback_data=f"inbox:item:{item['id']}:{page}",
             )
         ])

@@ -173,7 +173,7 @@ def test_first_handoff_tutorial_guides_product_warehouse_and_batch(tmp_path):
     asyncio.run(render_allocation(target, game, PLAYER_ID, batch_id, int(recipient["id"]), quantity))
     assert f"<blockquote>Проверь количество и нажми кнопку [✅ Отправить {quantity} ед.].</blockquote>" in target.text
     allocation_rows = [[button.text for button in row] for row in target.reply_markup.inline_keyboard]
-    assert allocation_rows[0] == ["➖ 5", f"📦 {quantity} ед.", "➕ 5"]
+    assert allocation_rows[0] == ["−5", f"📦 {quantity} ед.", "+5"]
     assert allocation_rows[1] == [f"✅ Отправить {quantity} ед."]
     assert allocation_rows[-1] == ["⬅️ Назад", "🏠 Меню"]
     assert not any("Всё" in label for row in allocation_rows for label in row)

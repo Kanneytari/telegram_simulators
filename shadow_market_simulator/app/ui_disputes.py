@@ -30,13 +30,13 @@ def decision_keyboard(dispute_id: int, page: int = 0, *, has_reply: bool = False
     back = f"inbox:page:{page}" if page else "menu:inbox"
     rows: list[list[InlineKeyboardButton]] = []
     if not has_reply:
-        rows.append([InlineKeyboardButton(text="💬 Запросить пояснение", callback_data=f"dispute:ask:{dispute_id}:{page}")])
+        rows.append([InlineKeyboardButton(text="Запросить пояснение", callback_data=f"dispute:ask:{dispute_id}:{page}")])
     rows.extend([
         [
             InlineKeyboardButton(text="💵 Вернуть 100%", callback_data=f"dispute:amount:{dispute_id}:refund:{page}"),
             InlineKeyboardButton(text="💵 Вернуть 50%", callback_data=f"dispute:amount:{dispute_id}:partial:{page}"),
         ],
-        [InlineKeyboardButton(text="❌ Отказать", callback_data=f"dispute:reject:{dispute_id}:{page}")],
+        [InlineKeyboardButton(text="Отказать", callback_data=f"dispute:reject:{dispute_id}:{page}")],
         nav_row(INBOX, callback_data=back),
     ])
     return InlineKeyboardMarkup(inline_keyboard=rows)

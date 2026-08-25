@@ -19,22 +19,22 @@ def build_admin_router(db, simulation, recruitment, game, admin_ids: frozenset[i
 
     def panel_keyboard(current: float) -> InlineKeyboardMarkup:
         return InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="⏩ +6 игровых часов", callback_data="admin:tick")],
+            [InlineKeyboardButton(text="+6 игровых часов", callback_data="admin:tick")],
             [
-                InlineKeyboardButton(text=("✅ " if abs(current - 1) < 0.001 else "⚪ ") + "×1", callback_data="admin:speed:1"),
-                InlineKeyboardButton(text=("✅ " if abs(current - 15) < 0.001 else "⚪ ") + "×15", callback_data="admin:speed:15"),
+                InlineKeyboardButton(text=("✓ " if abs(current - 1) < 0.001 else "") + "×1", callback_data="admin:speed:1"),
+                InlineKeyboardButton(text=("✓ " if abs(current - 15) < 0.001 else "") + "×15", callback_data="admin:speed:15"),
             ],
             [
-                InlineKeyboardButton(text=("✅ " if abs(current - 30) < 0.001 else "⚪ ") + "×30", callback_data="admin:speed:30"),
-                InlineKeyboardButton(text=("✅ " if abs(current - 60) < 0.001 else "⚪ ") + "×60", callback_data="admin:speed:60"),
+                InlineKeyboardButton(text=("✓ " if abs(current - 30) < 0.001 else "") + "×30", callback_data="admin:speed:30"),
+                InlineKeyboardButton(text=("✓ " if abs(current - 60) < 0.001 else "") + "×60", callback_data="admin:speed:60"),
             ],
-            [InlineKeyboardButton(text="🗑️ Сбросить игру", callback_data="admin:reset")],
+            [InlineKeyboardButton(text="Сбросить игру", callback_data="admin:reset")],
             [button(HOME)],
         ])
 
     def reset_keyboard() -> InlineKeyboardMarkup:
         return InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="🗑️ Сбросить игру", callback_data="admin:reset:confirm")],
+            [InlineKeyboardButton(text="Сбросить игру", callback_data="admin:reset:confirm")],
             [InlineKeyboardButton(text="↩️ Отмена", callback_data="admin:panel")],
         ])
 

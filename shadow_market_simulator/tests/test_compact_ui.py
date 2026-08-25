@@ -30,8 +30,8 @@ def test_inbox_is_flat_without_category_screen():
         {"id": 2, "priority": "normal", "title": "Обычное событие"},
     ]
     assert labels(inbox_keyboard(items)) == [
-        "📨 🔴 Срочное событие",
-        "📨 ⚪ Обычное событие",
+        "🔴 Срочное событие",
+        "📨 Обычное событие",
         "🔄 Обновить",
         "🏠 Меню",
     ]
@@ -47,7 +47,7 @@ def test_courier_profile_separates_frequent_and_rare_actions():
     assert "Уволить" not in profile
 
     more = labels(more_keyboard(42))
-    assert more[:3] == ["✏️ Переименовать", "🔄 Сменить роль", "🗑️ Уволить"]
+    assert more[:3] == ["Переименовать", "Сменить роль", "Уволить"]
 
 
 def test_packaging_is_nested_under_sales():
@@ -84,10 +84,10 @@ def test_suppliers_screen_contains_product_categories(monkeypatch):
 
 def test_analytics_uses_same_compact_navigation_language():
     assert labels(analytics_view_keyboard("overview", "7")) == [
-        "✅ 📊 Обзор",
-        "⚪ 📦 Товары",
-        "⚪ 💰 Деньги",
-        "✅ 7 дней",
-        "⚪ 30 дней",
+        "✓ 📊 Обзор",
+        "📦 Товары",
+        "💰 Деньги",
+        "✓ 7 дней",
+        "30 дней",
         "🏠 Меню",
     ]
