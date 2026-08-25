@@ -11,9 +11,9 @@ from .analytics_handlers import build_analytics_router
 from .analytics_log import AnalyticsLogger, AnalyticsLoggingMiddleware
 from .bot import OneShotCallbackMiddleware
 from .core import Database, Settings, load_settings
-from .courier_management import CourierManagementGameService, CourierManagementSimulationEngine
 from .gameplay_updates import apply_gameplay_updates
 from .inbox import install_inbox_lifecycle
+from .staff.couriers.management import CourierManagementGameService, CourierManagementSimulationEngine
 from .staff.couriers.recruitment import CourierRecruitmentService
 from .tutorial import apply_tutorial_updates, build_tutorial_router
 from .tutorial_copy_update import apply_tutorial_copy_update
