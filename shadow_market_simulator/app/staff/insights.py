@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from ..commerce.workflow import _format_game_duration
 from .simulation import parse_dt, utcnow
 from .workflow import WorkflowGameService, WorkflowSimulationEngine
 
@@ -142,7 +143,7 @@ class StaffInsightGameService(WorkflowGameService):
                     (parse_dt(task["completes_at"]) - now).total_seconds() / 3600.0,
                 )
                 remaining_game = remaining_real * self.simulation.effective_speed(player_id)
-                eta = "менее 1 ч" if remaining_game < 1 else f"~{remaining_game:.1f} ч"
+                eta = _format_game_duration(remaining_game)
                 labels = {
                     "receive_batch": "получает партию",
                     "handoff": "готовит мастер-клад",
@@ -161,9 +162,7 @@ class StaffInsightGameService(WorkflowGameService):
                     remaining_game = remaining_real * self.simulation.effective_speed(
                         player_id
                     )
-                    eta = (
-                        "менее 1 ч" if remaining_game < 1 else f"~{remaining_game:.1f} ч"
-                    )
+                    eta = _format_game_duration(remaining_game)
                     return (
                         f"отдыхает · {eta}"
                         if employee["role"] == "courier"
@@ -253,9 +252,7 @@ class StaffInsightGameService(WorkflowGameService):
                 if remaining_real_min < 1
                 else f"~{remaining_real_min:.0f} мин"
             )
-            game_eta = (
-                "менее 1 ч" if remaining_game_h < 1 else f"~{remaining_game_h:.1f} ч"
-            )
+            game_eta = _format_game_duration(remaining_game_h)
             lines.append(f"Осталось: {game_eta} игровых · {real_eta} реальных")
         return lines
 

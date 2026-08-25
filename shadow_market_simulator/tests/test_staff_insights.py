@@ -139,6 +139,6 @@ def test_short_eta_is_safe_for_html_parse_mode(tmp_path):
         )
 
     text = game.employee_details(1001, courier["id"])
-    assert "менее 1 ч" in text
+    assert "20 м" in text
     assert "<1 ч" not in text
     assert "<1 мин" not in text
