@@ -40,17 +40,6 @@ class Application:
     dispatcher: Dispatcher
 
 
-def _apply_legacy_overlays() -> None:
-    """Single migration boundary for behavior not yet absorbed by feature modules."""
-    apply_gameplay_updates()
-    apply_handoff_copy_update()
-    apply_product_ui_update()
-    apply_tutorial_updates()
-    apply_tutorial_runtime_fixes()
-    apply_tutorial_copy_update()
-    apply_release_fixes()
-
-
 def build_application() -> Application:
     settings = load_settings()
     logging.basicConfig(
@@ -58,8 +47,8 @@ def build_application() -> Application:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
-    # During migration all remaining runtime overlays are deliberately installed
-    # in one place. This function disappears as their behavior becomes canonical.
+    # Transitional boundary: all remaining runtime overlays are deliberately
+    # installed here and nowhere else while their behavior is made canonical.
     apply_gameplay_updates()
     apply_handoff_copy_update()
     apply_product_ui_update()
