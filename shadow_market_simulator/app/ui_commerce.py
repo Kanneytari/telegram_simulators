@@ -87,6 +87,9 @@ def _procurement_products_keyboard(db, player_id: int, products) -> InlineKeyboa
     rows.append(nav_row("menu:product", "← Товар"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
+@tutorial_hooks.handoff_product_root
+@tutorial_hooks.affordable_empty_product_root
+@tutorial_hooks.soft_product_root
 async def render_product_root(target: Message, db, game, player_id: int, *, flash: str | None = None) -> None:
     with db.connect() as conn:
         free_cash = game._free_cash_conn(conn, player_id) if hasattr(game, "_free_cash_conn") else int(
