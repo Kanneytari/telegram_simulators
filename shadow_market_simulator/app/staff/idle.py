@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from .couriers.idle import courier_idle_ready
-from ..staff_relationships import StaffRelationshipGameService
 
 
-class IdleAwareGameService(StaffRelationshipGameService):
-    """Expose one consistent 'completely idle courier' flag to every UI surface."""
+class IdleAwareMixin:
+    """Add courier-idle semantics to a cooperative game-service MRO."""
 
     def employees(self, player_id: int):
         rows = super().employees(player_id)
