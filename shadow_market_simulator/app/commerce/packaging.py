@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ..staff_idle import IdleAwareGameService
+from ..staff.idle import IdleAwareGameService
 
 
 class GlobalPackagingGameService(IdleAwareGameService):
