@@ -64,7 +64,6 @@ LEGACY_OVERLAY_MODULES = {
 # The existing inheritance staircase is frozen. The migration may relocate or
 # remove entries, but a new feature must not extend it with another layer.
 LEGACY_ENGINE_INHERITANCE = {
-    ("runtime.py", "PlayerSimulationEngine"),
     ("operations.py", "OperationsSimulationEngine"),
     ("workflow.py", "WorkflowSimulationEngine"),
     ("staff_insights.py", "StaffInsightSimulationEngine"),
