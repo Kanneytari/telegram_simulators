@@ -20,6 +20,8 @@ from app.compensation import _policy_conn as legacy_policy_conn
 from app.config import Settings as LegacySettings
 from app.core.config import Settings
 from app.core.database import Database
+from app.courier_core import CourierCoreGameService as LegacyCourierCoreGameService
+from app.courier_core import CourierCoreSimulationEngine as LegacyCourierCoreSimulationEngine
 from app.courier_idle import courier_idle_ready as legacy_courier_idle_ready
 from app.courier_model import CourierBlueprint as LegacyCourierBlueprint
 from app.courier_recruitment import CourierRecruitmentService as LegacyCourierRecruitmentService
@@ -56,6 +58,7 @@ from app.staff.compensation import (
     _money_from_bps,
     _policy_conn,
 )
+from app.staff.couriers.core import CourierCoreGameService, CourierCoreSimulationEngine
 from app.staff.couriers.idle import courier_idle_ready
 from app.staff.couriers.model import CourierBlueprint
 from app.staff.couriers.recruitment import CourierRecruitmentService
@@ -133,3 +136,5 @@ def test_legacy_imports_are_thin_aliases_to_canonical_packages() -> None:
     assert legacy_bayesian_rating is _bayesian_rating
     assert legacy_premium_allowance is premium_allowance
     assert legacy_trust_band is trust_band
+    assert LegacyCourierCoreGameService is CourierCoreGameService
+    assert LegacyCourierCoreSimulationEngine is CourierCoreSimulationEngine
