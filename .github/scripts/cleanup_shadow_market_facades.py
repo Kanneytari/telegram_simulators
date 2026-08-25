@@ -92,6 +92,37 @@ def rewrite_relative_imports(path: Path, text: str) -> str:
     return "".join(lines)
 
 
+def rewrite_from_app_imports(path: Path, text: str) -> str:
+    try:
+        tree = ast.parse(text, filename=str(path))
+    except SyntaxError:
+        return text
+    lines = text.splitlines(keepends=True)
+    replacements: list[tuple[int, int, str]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ImportFrom) or node.level != 0 or node.module != "app":
+            continue
+        legacy = [alias for alias in node.names if alias.name in FACADES]
+        if not legacy:
+            continue
+        keep = [alias for alias in node.names if alias.name not in FACADES]
+        indent = " " * node.col_offset
+        output: list[str] = []
+        if keep:
+            names = ", ".join(
+                alias.name + (f" as {alias.asname}" if alias.asname else "")
+                for alias in keep
+            )
+            output.append(f"{indent}from app import {names}\n")
+        for alias in legacy:
+            local_name = alias.asname or alias.name
+            output.append(f"{indent}import app.{FACADES[alias.name]} as {local_name}\n")
+        replacements.append((node.lineno - 1, (node.end_lineno or node.lineno), "".join(output)))
+    for start, end, replacement in sorted(replacements, reverse=True):
+        lines[start:end] = [replacement]
+    return "".join(lines)
+
+
 def rewrite_file(path: Path) -> None:
     text = path.read_text(encoding="utf-8")
     original = text
@@ -103,20 +134,20 @@ def rewrite_file(path: Path) -> None:
             rf"\1import {new}",
             text,
         )
-    if path.suffix == ".py" and (path == APP / "__init__.py" or APP in path.parents):
-        text = rewrite_relative_imports(path, text)
+    if path.suffix == ".py":
+        text = rewrite_from_app_imports(path, text)
+        if path == APP / "__init__.py" or APP in path.parents:
+            text = rewrite_relative_imports(path, text)
     if text != original:
         path.write_text(text, encoding="utf-8")
 
 
-# Verify that every target scheduled for deletion is still only a facade.
 for old in FACADES:
     path = APP / f"{old}.py"
     if not path.exists():
         raise SystemExit(f"expected compatibility facade is missing before cleanup: {path}")
     assert_facade_only(path)
 
-# Rewrite imports in application, tests, workflow smoke scripts and docs.
 text_roots = [APP, TESTS, ROOT / "docs"]
 for base in text_roots:
     for path in base.rglob("*"):
@@ -125,16 +156,13 @@ for base in text_roots:
 rewrite_file(ROOT / "README.md")
 rewrite_file(Path(".github/workflows/shadow-market-tests.yml"))
 
-# Compatibility identity tests are obsolete once the aliases are gone.
 compat_test = TESTS / "test_package_compatibility.py"
 if compat_test.exists():
     compat_test.unlink()
 
-# Remove the root compatibility layer.
 for old in FACADES:
     (APP / f"{old}.py").unlink()
 
-# Make the flat-root contract explicit: only assembly and UI modules may remain.
 guardrail = TESTS / "test_architecture_guardrails.py"
 text = guardrail.read_text(encoding="utf-8")
 start = text.index("ALLOWED_FLAT_MODULES = {")
@@ -155,7 +183,6 @@ block = "ALLOWED_FLAT_MODULES = {\n" + "".join(f'    "{name}",\n' for name in al
 text = text[:start] + block + text[end:]
 guardrail.write_text(text, encoding="utf-8")
 
-# Replace the old compatibility policy/status with the final state.
 status = ROOT / "docs" / "ARCHITECTURE_STATUS.md"
 status_text = status.read_text(encoding="utf-8")
 status_text = status_text.replace(
@@ -176,7 +203,6 @@ status_text = re.sub(
 )
 status.write_text(status_text, encoding="utf-8")
 
-# No source/test/workflow may still import a deleted facade.
 scan_files = [
     *APP.rglob("*.py"),
     *TESTS.rglob("*.py"),
@@ -185,16 +211,22 @@ scan_files = [
 leftovers: list[str] = []
 for path in scan_files:
     body = path.read_text(encoding="utf-8")
+    try:
+        tree = ast.parse(body, filename=str(path)) if path.suffix == ".py" else None
+    except SyntaxError:
+        tree = None
     for old in FACADES:
-        patterns = (
-            f"from app.{old} import",
-            f"import app.{old}",
-        )
+        patterns = (f"from app.{old} import", f"import app.{old}")
         if any(pattern in body for pattern in patterns):
             leftovers.append(f"{path}: app.{old}")
+    if tree is not None:
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.module == "app":
+                for alias in node.names:
+                    if alias.name in FACADES:
+                        leftovers.append(f"{path}: from app import {alias.name}")
 if leftovers:
-    raise SystemExit("legacy facade imports remain:\n" + "\n".join(leftovers))
+    raise SystemExit("legacy facade imports remain:\n" + "\n".join(sorted(set(leftovers))))
 
-# The cleanup helper/workflow are one-shot infrastructure and must not survive.
 Path(".github/scripts/cleanup_shadow_market_facades.py").unlink(missing_ok=True)
 Path(".github/workflows/shadow-market-facade-cleanup.yml").unlink(missing_ok=True)
