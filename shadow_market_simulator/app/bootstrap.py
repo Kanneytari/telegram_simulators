@@ -15,7 +15,6 @@ from .courier_management import CourierManagementGameService, CourierManagementS
 from .courier_recruitment import CourierRecruitmentService
 from .gameplay_updates import apply_gameplay_updates
 from .inbox_lifecycle import install_inbox_lifecycle
-from .release_fixes import apply_release_fixes
 from .tutorial import apply_tutorial_updates, build_tutorial_router
 from .tutorial_copy_update import apply_tutorial_copy_update
 from .tutorial_runtime import apply_tutorial_runtime_fixes
@@ -54,7 +53,6 @@ def build_application() -> Application:
     apply_tutorial_updates()
     apply_tutorial_runtime_fixes()
     apply_tutorial_copy_update()
-    apply_release_fixes()
 
     simulation = CourierManagementSimulationEngine(db, speed=settings.simulation_speed)
     simulation.seed_catalog()
