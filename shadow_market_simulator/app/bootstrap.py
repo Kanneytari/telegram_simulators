@@ -15,7 +15,6 @@ from .courier_management import CourierManagementGameService, CourierManagementS
 from .courier_recruitment import CourierRecruitmentService
 from .gameplay_updates import apply_gameplay_updates
 from .inbox_lifecycle import install_inbox_lifecycle
-from .product_ui_update import apply_product_ui_update
 from .release_fixes import apply_release_fixes
 from .tutorial import apply_tutorial_updates, build_tutorial_router
 from .tutorial_copy_update import apply_tutorial_copy_update
@@ -46,10 +45,8 @@ def build_application() -> Application:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
-    # Transitional boundary: all remaining runtime overlays are deliberately
-    # installed here and nowhere else while their behavior is made canonical.
+    # Transitional boundary: only behavior that is not canonical yet is installed here.
     apply_gameplay_updates()
-    apply_product_ui_update()
 
     db = Database(settings.db_path)
     db.init()
