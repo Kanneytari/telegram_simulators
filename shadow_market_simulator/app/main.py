@@ -19,6 +19,7 @@ from .gameplay_updates import apply_gameplay_updates
 from .handoff_copy_update import apply_handoff_copy_update
 from .inbox_lifecycle import install_inbox_lifecycle
 from .product_ui_update import apply_product_ui_update
+from .release_fixes import OneShotCallbackMiddleware, apply_release_fixes
 from .simulation import iso, utcnow
 from .tutorial import apply_tutorial_updates, build_tutorial_router
 from .tutorial_copy_update import apply_tutorial_copy_update
@@ -120,6 +121,7 @@ async def main() -> None:
     apply_tutorial_updates()
     apply_tutorial_runtime_fixes()
     apply_tutorial_copy_update()
+    apply_release_fixes()
     simulation = CourierManagementSimulationEngine(db, speed=settings.simulation_speed)
     simulation.seed_catalog()
     game = CourierManagementGameService(db, simulation)
@@ -131,6 +133,7 @@ async def main() -> None:
 
     bot = Bot(settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dispatcher = Dispatcher()
+    dispatcher.callback_query.outer_middleware(OneShotCallbackMiddleware())
     dispatcher.message.outer_middleware(AnalyticsLoggingMiddleware(analytics))
     dispatcher.callback_query.outer_middleware(AnalyticsLoggingMiddleware(analytics))
 
