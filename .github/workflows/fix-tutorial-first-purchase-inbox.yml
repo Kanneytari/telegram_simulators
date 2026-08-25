@@ -43,3 +43,5 @@ jobs:
           git add shadow_market_simulator/app/tutorial/hooks.py shadow_market_simulator/tests/test_tutorial_flow.py
           git commit -m "fix(shadow-market): keep tutorial inbox state accurate"
           git push origin HEAD:fix/tutorial-first-purchase-inbox
+
+# retry after covering copy_rules override
