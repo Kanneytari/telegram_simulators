@@ -33,6 +33,7 @@ jobs:
         run: |
           python .github/scripts/patch_shadow_market_tutorial_migration.py
           python .github/scripts/migrate_shadow_market_tutorial.py
+          python .github/scripts/finalize_shadow_market_tutorial_migration.py
           rm -f .github/scripts/patch_shadow_market_tutorial_migration.py
 
       - name: Verify migrated sources
@@ -49,5 +50,3 @@ jobs:
           git add -A
           git commit -m "refactor(shadow-market): remove tutorial runtime overlays"
           git push origin HEAD:refactor/shadow-market-tutorial-overlays
-
-# final embedded-script indentation retry
