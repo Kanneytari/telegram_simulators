@@ -65,7 +65,7 @@ LEGACY_OVERLAY_MODULES = {
 # remove entries, but a new feature must not extend it with another layer.
 LEGACY_ENGINE_INHERITANCE = {
     ("commerce/inventory.py", "OperationsSimulationEngine"),
-    ("workflow.py", "WorkflowSimulationEngine"),
+    ("commerce/workflow.py", "WorkflowSimulationEngine"),
     ("staff_insights.py", "StaffInsightSimulationEngine"),
     ("procurement_market.py", "ProcurementMarketSimulationEngine"),
     ("compensation.py", "CompensationSimulationEngine"),
@@ -77,7 +77,7 @@ LEGACY_ENGINE_INHERITANCE = {
 
 LEGACY_SERVICE_INHERITANCE = {
     ("commerce/inventory.py", "OperationsGameService"),
-    ("workflow.py", "WorkflowGameService"),
+    ("commerce/workflow.py", "WorkflowGameService"),
     ("staff_insights.py", "StaffInsightGameService"),
     ("procurement_market.py", "ProcurementMarketGameService"),
     ("compensation.py", "CompensationGameService"),
