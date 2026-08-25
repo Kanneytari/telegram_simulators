@@ -67,8 +67,8 @@ LEGACY_OVERLAY_MODULES = {
     "tutorial_runtime.py",
 }
 
-# The existing inheritance staircase is frozen. The migration may remove entries,
-# but a new feature must not extend the staircase with another Engine/GameService.
+# The existing inheritance staircase is frozen. The migration may relocate or
+# remove entries, but a new feature must not extend it with another layer.
 LEGACY_ENGINE_INHERITANCE = {
     ("runtime.py", "PlayerSimulationEngine"),
     ("nightshift.py", "NightshiftSimulationEngine"),
@@ -92,7 +92,7 @@ LEGACY_SERVICE_INHERITANCE = {
     ("compensation.py", "CompensationGameService"),
     ("staff_relationships.py", "StaffRelationshipGameService"),
     ("staff_idle.py", "IdleAwareGameService"),
-    ("global_packaging.py", "GlobalPackagingGameService"),
+    ("commerce/packaging.py", "GlobalPackagingGameService"),
     ("customer_trust.py", "CustomerTrustGameService"),
     ("courier_core.py", "CourierCoreGameService"),
     ("courier_management.py", "CourierManagementGameService"),
@@ -162,7 +162,9 @@ def test_new_packages_do_not_monkey_patch_imported_modules() -> None:
         imported_modules: set[str] = set()
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
-                imported_modules.update(alias.asname or alias.name.split(".")[0] for alias in node.names)
+                imported_modules.update(
+                    alias.asname or alias.name.split(".")[0] for alias in node.names
+                )
             elif isinstance(node, ast.ImportFrom) and node.module is None:
                 imported_modules.update(alias.asname or alias.name for alias in node.names)
 
