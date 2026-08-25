@@ -32,8 +32,7 @@ class Target:
 
 def test_final_product_screen_contract(tmp_path):
     from app import ui_commerce
-        from app.ui_common import tutorial_hint
-
+    from app.ui_common import tutorial_hint
 
     db = Database(str(tmp_path / "product-ui-final.db"))
     db.init()
@@ -65,6 +64,6 @@ def test_final_product_screen_contract(tmp_path):
     assert tutorial_hint("Нажми на кнопку 📦 Товар") == (
         "<blockquote>Нажми на кнопку [📦 Товар]</blockquote>"
     )
-    assert tutorial_hint("Проверь и нажми кнопку «✅ Отправить 10 ед.»." ) == (
+    assert tutorial_hint("Проверь и нажми кнопку «✅ Отправить 10 ед.».") == (
         "<blockquote>Проверь и нажми кнопку [✅ Отправить 10 ед.].</blockquote>"
     )
