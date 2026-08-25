@@ -103,9 +103,9 @@ jobs:
           tests = Path("shadow_market_simulator/tests")
           docs = Path("shadow_market_simulator/docs")
           files = [
-              *app.glob("*.py"),
-              *tests.glob("*.py"),
-              *docs.glob("*.md"),
+              *app.rglob("*.py"),
+              *tests.rglob("*.py"),
+              *docs.rglob("*.md"),
               Path("shadow_market_simulator/README.md"),
               Path("README.md"),
               Path("docs/PROJECT_RULES.md"),
