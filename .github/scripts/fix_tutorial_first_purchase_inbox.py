@@ -7,17 +7,25 @@ new_start = "body='Сейчас у тебя нет товара. Начни с �
 if old_start not in text:
     raise SystemExit('starter inbox copy not found')
 text = text.replace(old_start, new_start, 1)
-old_copy_rule = "body='Склад пуст. Начни с первой закупки в разделе Товар.'"
-new_copy_rule = "body='Сейчас у тебя нет товара. Начни с первой закупки в разделе Товар.'"
-if old_copy_rule not in text:
-    raise SystemExit('copy-rule inbox text not found')
-text = text.replace(old_copy_rule, new_copy_rule, 1)
+
+copy_start = text.index('\ndef copy_rules(original):')
+copy_end = text.index('\ndef affordable_empty_product_root(original):', copy_start)
+text = text[:copy_start] + '\n' + text[copy_end:]
+
 old_purchase = """        if batch:\n            _set_stage(self.db, player_id, STAGE_PICKUP_WAIT, batch_id=int(batch['id']), product_id=int(batch['product_id']), warehouse_employee_id=employee_id)\n            result += '\\n\\n' + tutorial_hint('Складмен забирает товар. Обычно это занимает время. Можешь продолжать играть или вернуться в меню и нажать ⏩ Пропустить ожидание.')\n"""
 new_purchase = """        if batch:\n            _set_stage(self.db, player_id, STAGE_PICKUP_WAIT, batch_id=int(batch['id']), product_id=int(batch['product_id']), warehouse_employee_id=employee_id)\n            with self.db.connect() as conn:\n                conn.execute(\n                    \"\"\"UPDATE inbox\n                       SET body='Складмен забирает первую партию. Обычно это занимает игровое время.'\n                       WHERE player_id=? AND kind='tutorial' AND status='open'\"\"\",\n                    (player_id,),\n                )\n            result += '\\n\\n' + tutorial_hint('Складмен забирает товар. Обычно это занимает время. Можешь продолжать играть или вернуться в меню и нажать ⏩ Пропустить ожидание.')\n"""
 if old_purchase not in text:
     raise SystemExit('first purchase tutorial block not found')
 text = text.replace(old_purchase, new_purchase, 1)
 hooks.write_text(text, encoding='utf-8')
+
+simulation = Path('shadow_market_simulator/app/engine/simulation.py')
+text = simulation.read_text(encoding='utf-8')
+decorator = '    @tutorial_hooks.copy_rules\n'
+if decorator not in text:
+    raise SystemExit('copy_rules decorator not found')
+text = text.replace(decorator, '', 1)
+simulation.write_text(text, encoding='utf-8')
 
 test = Path('shadow_market_simulator/tests/test_tutorial_flow.py')
 text = test.read_text(encoding='utf-8')
