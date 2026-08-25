@@ -1,7 +1,18 @@
 from pathlib import Path
 
-path = Path('shadow_market_simulator/tests/test_entity_text_consistency.py')
-path.write_text('''from pathlib import Path
+ROOT = Path("shadow_market_simulator")
+APP = ROOT / "app"
+TESTS = ROOT / "tests"
+
+
+def replace_once(path: Path, old: str, new: str) -> None:
+    text = path.read_text(encoding="utf-8")
+    if old not in text:
+        raise RuntimeError(f"anchor not found in {path}: {old!r}")
+    path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+
+(TESTS / "test_entity_text_consistency.py").write_text('''from pathlib import Path
 
 
 APP = Path(__file__).resolve().parents[1] / "app"
@@ -41,4 +52,20 @@ def test_numeric_controls_remain_compact() -> None:
     assert 'text="+5%"' in commerce
     assert 'text="−5"' in staff
     assert 'text="+5"' in staff
-''', encoding='utf-8')
+''', encoding="utf-8")
+
+replace_once(
+    TESTS / "test_tutorial_copy_update.py",
+    '"После продаж появляются оценки товара и закладчика.\\n\\n"',
+    '"После продаж появляются оценки товара и 👤 <b>закладчика</b>.\\n\\n"',
+)
+replace_once(
+    TESTS / "test_tutorial_flow.py",
+    'assert "Складмен забирает первую партию" in onboarding["body"], repr(onboarding["body"])',
+    'assert "🚚 <b>Складмен</b> забирает первую партию" in onboarding["body"], repr(onboarding["body"])',
+)
+replace_once(
+    TESTS / "test_zz_gameplay_updates.py",
+    'assert "Выберите кладмена" in target.text',
+    'assert "Выберите 👤 <b>кладмена</b>" in target.text',
+)
