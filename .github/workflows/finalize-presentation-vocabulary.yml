@@ -30,6 +30,7 @@ jobs:
         run: |
           python .github/scripts/finalize_presentation_vocabulary.py
           python .github/scripts/strengthen_ui_vocabulary_guardrail.py
+          python .github/scripts/finalize_hire_action_vocabulary.py
       - name: Verify
         run: |
           cd shadow_market_simulator
