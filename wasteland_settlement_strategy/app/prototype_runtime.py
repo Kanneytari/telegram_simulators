@@ -51,6 +51,11 @@ class ManualClock:
         self._now += timedelta(minutes=minutes, hours=hours, days=days)
         return self._now
 
+    def advance_to(self, moment: datetime) -> datetime:
+        if moment > self._now:
+            self._now = moment
+        return self._now
+
 
 class RandomFacade:
     def __init__(self, rng: random.Random, trace: list[dict[str, Any]]):
