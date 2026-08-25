@@ -27,6 +27,14 @@ if decorator not in text:
 text = text.replace(decorator, '', 1)
 simulation.write_text(text, encoding='utf-8')
 
+insights = Path('shadow_market_simulator/app/staff/insights.py')
+text = insights.read_text(encoding='utf-8')
+old_insight_copy = """            if created:\n                conn.execute(\n                    \"\"\"UPDATE inbox\n                       SET title='Первая смена',\n                           body='Склад пуст. Начни с первой закупки в разделе Товар.'\n                       WHERE player_id=? AND kind='tutorial' AND status='open'\"\"\",\n                    (player_id,),\n                )\n"""
+if old_insight_copy not in text:
+    raise SystemExit('staff insight tutorial copy block not found')
+text = text.replace(old_insight_copy, '', 1)
+insights.write_text(text, encoding='utf-8')
+
 test = Path('shadow_market_simulator/tests/test_tutorial_flow.py')
 text = test.read_text(encoding='utf-8')
 old_assert = '                assert onboarding and "Склад пуст" in onboarding["body"]\n'
