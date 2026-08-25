@@ -17,6 +17,7 @@ def test_guided_first_cycle_end_to_end() -> None:
         from app.gameplay_updates import apply_gameplay_updates
         from app.handoff_copy_update import apply_handoff_copy_update
         from app.product_ui_update import apply_product_ui_update
+        from app.release_fixes import apply_release_fixes
         from app.tutorial import (
             STAGE_DISPUTE,
             STAGE_HANDOFF,
@@ -31,6 +32,7 @@ def test_guided_first_cycle_end_to_end() -> None:
             create_tutorial_dispute,
             tutorial_state,
         )
+        from app.tutorial_copy_update import apply_tutorial_copy_update
         from app.tutorial_runtime import apply_tutorial_runtime_fixes
         import app.tutorial as tutorial
 
@@ -44,6 +46,8 @@ def test_guided_first_cycle_end_to_end() -> None:
 
             tutorial.apply_tutorial_updates()
             apply_tutorial_runtime_fixes()
+            apply_tutorial_copy_update()
+            apply_release_fixes()
 
             simulation = CourierManagementSimulationEngine(
                 db,
@@ -68,6 +72,12 @@ def test_guided_first_cycle_end_to_end() -> None:
                     (player_id,),
                 ).fetchone()[0] == 0
                 assert game._free_cash_conn(conn, player_id) == 500_000
+                onboarding = conn.execute(
+                    """SELECT body FROM inbox
+                       WHERE player_id=? AND kind='tutorial' AND status='open'""",
+                    (player_id,),
+                ).fetchone()
+                assert onboarding and "Склад пуст" in onboarding["body"]
 
             products = game.procurement_products(player_id)
             assert products
