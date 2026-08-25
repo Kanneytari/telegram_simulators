@@ -1,8 +1,5 @@
-from .inventory import OperationsGameService, OperationsSimulationEngine
-from .packaging import GlobalPackagingGameService
+"""Commerce feature package.
 
-__all__ = [
-    "GlobalPackagingGameService",
-    "OperationsGameService",
-    "OperationsSimulationEngine",
-]
+Import concrete services from their owning modules to keep package initialization
+free of cross-feature dependency cycles.
+"""
