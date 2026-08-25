@@ -1,3 +1,4 @@
+from app.commerce import OperationsGameService, OperationsSimulationEngine
 from app.commerce.packaging import GlobalPackagingGameService
 from app.config import Settings as LegacySettings
 from app.core.config import Settings
@@ -14,6 +15,8 @@ from app.global_packaging import GlobalPackagingGameService as LegacyPackagingSe
 from app.inbox.lifecycle import install_inbox_lifecycle
 from app.inbox_lifecycle import install_inbox_lifecycle as legacy_install_inbox_lifecycle
 from app.nightshift import NightshiftSimulationMixin as LegacyNightshiftSimulationMixin
+from app.operations import OperationsGameService as LegacyOperationsGameService
+from app.operations import OperationsSimulationEngine as LegacyOperationsSimulationEngine
 from app.runtime import PlayerSimulationMixin as LegacyPlayerSimulationMixin
 from app.staff.couriers.idle import courier_idle_ready
 from app.staff.couriers.model import CourierBlueprint
@@ -36,3 +39,5 @@ def test_legacy_imports_are_thin_aliases_to_canonical_packages() -> None:
     assert LegacyCourierRecruitmentService is CourierRecruitmentService
     assert LegacyNightshiftSimulationMixin is NightshiftSimulationMixin
     assert LegacyPlayerSimulationMixin is PlayerSimulationMixin
+    assert LegacyOperationsGameService is OperationsGameService
+    assert LegacyOperationsSimulationEngine is OperationsSimulationEngine
