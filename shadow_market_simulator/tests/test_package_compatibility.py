@@ -9,6 +9,14 @@ from app.commerce.procurement import (
     ProcurementMarketSimulationEngine,
 )
 from app.commerce.workflow import TASK_LABELS, WorkflowGameService, WorkflowSimulationEngine
+from app.compensation import COMPENSATION_RANGES as LegacyCompensationRanges
+from app.compensation import DEFAULT_POLICIES as LegacyDefaultPolicies
+from app.compensation import CompensationGameService as LegacyCompensationGameService
+from app.compensation import CompensationSimulationEngine as LegacyCompensationSimulationEngine
+from app.compensation import _deposit_part as legacy_deposit_part
+from app.compensation import _ensure_policy_conn as legacy_ensure_policy_conn
+from app.compensation import _money_from_bps as legacy_money_from_bps
+from app.compensation import _policy_conn as legacy_policy_conn
 from app.config import Settings as LegacySettings
 from app.core.config import Settings
 from app.core.database import Database
@@ -33,6 +41,16 @@ from app.procurement_market import VOLUME_DISCOUNTS as LegacyVolumeDiscounts
 from app.procurement_market import ProcurementMarketGameService as LegacyProcurementMarketGameService
 from app.procurement_market import ProcurementMarketSimulationEngine as LegacyProcurementMarketSimulationEngine
 from app.runtime import PlayerSimulationMixin as LegacyPlayerSimulationMixin
+from app.staff.compensation import (
+    COMPENSATION_RANGES,
+    DEFAULT_POLICIES,
+    CompensationGameService,
+    CompensationSimulationEngine,
+    _deposit_part,
+    _ensure_policy_conn,
+    _money_from_bps,
+    _policy_conn,
+)
 from app.staff.couriers.idle import courier_idle_ready
 from app.staff.couriers.model import CourierBlueprint
 from app.staff.couriers.recruitment import CourierRecruitmentService
@@ -73,3 +91,11 @@ def test_legacy_imports_are_thin_aliases_to_canonical_packages() -> None:
     assert LegacyVolumeDiscounts is VOLUME_DISCOUNTS
     assert LegacyMinimumBatchSize == MINIMUM_BATCH_SIZE
     assert LegacyRotationMinutes == ROTATION_MINUTES
+    assert LegacyCompensationGameService is CompensationGameService
+    assert LegacyCompensationSimulationEngine is CompensationSimulationEngine
+    assert LegacyCompensationRanges is COMPENSATION_RANGES
+    assert LegacyDefaultPolicies is DEFAULT_POLICIES
+    assert legacy_deposit_part is _deposit_part
+    assert legacy_ensure_policy_conn is _ensure_policy_conn
+    assert legacy_money_from_bps is _money_from_bps
+    assert legacy_policy_conn is _policy_conn
