@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from .simulation import SimulationEngine, TickResult, iso, parse_dt, utcnow
+from .simulation import TickResult, iso, parse_dt, utcnow
 
 
-class PlayerSimulationEngine(SimulationEngine):
+class PlayerSimulationMixin:
+    """Per-player speed and advance semantics for a cooperative simulation MRO."""
+
     def player_multiplier(self, player_id: int) -> float:
         with self.db.connect() as conn:
             row = conn.execute(
@@ -18,7 +20,9 @@ class PlayerSimulationEngine(SimulationEngine):
     def advance(self, player_id: int, now=None) -> TickResult:
         now = now or utcnow()
         with self.db.connect() as conn:
-            shop = conn.execute("SELECT * FROM shops WHERE player_id=?", (player_id,)).fetchone()
+            shop = conn.execute(
+                "SELECT * FROM shops WHERE player_id=?", (player_id,)
+            ).fetchone()
             if not shop:
                 return TickResult()
             last = parse_dt(shop["last_simulated_at"])
@@ -26,8 +30,12 @@ class PlayerSimulationEngine(SimulationEngine):
             sim_hours = min(real_hours * self.effective_speed(player_id), 72.0)
             if sim_hours < 0.015:
                 return TickResult()
-            orders, disputes = self._simulate_sales(conn, player_id, shop, sim_hours, now)
-            messages = self._simulate_management_events(conn, player_id, sim_hours, now)
+            orders, disputes = self._simulate_sales(
+                conn, player_id, shop, sim_hours, now
+            )
+            messages = self._simulate_management_events(
+                conn, player_id, sim_hours, now
+            )
             self._reactivate_employees(conn, player_id, now)
             self._expire_items(conn, player_id, now)
             self._maybe_refresh_offer(conn, player_id, now)
@@ -36,3 +44,6 @@ class PlayerSimulationEngine(SimulationEngine):
                 (iso(now), iso(now), player_id),
             )
             return TickResult(orders, disputes, messages)
+
+
+__all__ = ["PlayerSimulationMixin"]
