@@ -56,10 +56,22 @@ from app.staff.couriers.model import CourierBlueprint
 from app.staff.couriers.recruitment import CourierRecruitmentService
 from app.staff.idle import IdleAwareMixin
 from app.staff.insights import StaffInsightGameService, StaffInsightSimulationEngine
+from app.staff.relationships import (
+    SALES_ACTIVITY_MULTIPLIER,
+    StaffRelationshipGameService,
+    StaffRelationshipSimulationEngine,
+    _apply_overexposure_effect,
+    _apply_relationship_delta,
+)
 from app.staff.rename import rename_employee
 from app.staff_idle import IdleAwareGameService as LegacyIdleAwareGameService
 from app.staff_insights import StaffInsightGameService as LegacyStaffInsightGameService
 from app.staff_insights import StaffInsightSimulationEngine as LegacyStaffInsightSimulationEngine
+from app.staff_relationships import SALES_ACTIVITY_MULTIPLIER as LegacySalesActivityMultiplier
+from app.staff_relationships import StaffRelationshipGameService as LegacyStaffRelationshipGameService
+from app.staff_relationships import StaffRelationshipSimulationEngine as LegacyStaffRelationshipSimulationEngine
+from app.staff_relationships import _apply_overexposure_effect as legacy_apply_overexposure_effect
+from app.staff_relationships import _apply_relationship_delta as legacy_apply_relationship_delta
 from app.workflow import TASK_LABELS as LegacyTaskLabels
 from app.workflow import WorkflowGameService as LegacyWorkflowGameService
 from app.workflow import WorkflowSimulationEngine as LegacyWorkflowSimulationEngine
@@ -99,3 +111,8 @@ def test_legacy_imports_are_thin_aliases_to_canonical_packages() -> None:
     assert legacy_ensure_policy_conn is _ensure_policy_conn
     assert legacy_money_from_bps is _money_from_bps
     assert legacy_policy_conn is _policy_conn
+    assert LegacyStaffRelationshipGameService is StaffRelationshipGameService
+    assert LegacyStaffRelationshipSimulationEngine is StaffRelationshipSimulationEngine
+    assert LegacySalesActivityMultiplier == SALES_ACTIVITY_MULTIPLIER
+    assert legacy_apply_overexposure_effect is _apply_overexposure_effect
+    assert legacy_apply_relationship_delta is _apply_relationship_delta
