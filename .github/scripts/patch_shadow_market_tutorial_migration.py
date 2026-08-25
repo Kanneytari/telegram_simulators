@@ -62,4 +62,25 @@ pattern = re.compile(
 text, count = pattern.subn('', text, count=1)
 assert count == 1, count
 
+# Release-audit imports a retained constant and a removed installer on one line.
+# Teach the migration to preserve the constant while dropping only the installer.
+needle = '''    text = text.replace(
+        "                from app.tutorial import (",
+        "        from app.tutorial import (",
+    )
+    path.write_text(text, encoding="utf-8")
+'''
+replacement = '''    text = text.replace(
+        "                from app.tutorial import (",
+        "        from app.tutorial import (",
+    )
+    text = text.replace(
+        "from app.tutorial import STARTING_FREE_CASH, apply_tutorial_updates",
+        "from app.tutorial import STARTING_FREE_CASH",
+    )
+    path.write_text(text, encoding="utf-8")
+'''
+assert needle in text
+text = text.replace(needle, replacement, 1)
+
 path.write_text(text, encoding='utf-8')
