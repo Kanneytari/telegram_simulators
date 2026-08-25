@@ -50,4 +50,4 @@ jobs:
           git commit -m "refactor(shadow-market): remove tutorial runtime overlays"
           git push origin HEAD:refactor/shadow-market-tutorial-overlays
 
-# opt-in runtime boundary retry
+# narrowed stale-symbol guard retry
