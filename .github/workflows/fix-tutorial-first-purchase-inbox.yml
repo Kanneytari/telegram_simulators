@@ -1,0 +1,45 @@
+name: NIGHTSHIFT tutorial inbox copy fix
+
+on:
+  push:
+    branches:
+      - fix/tutorial-first-purchase-inbox
+    paths:
+      - .github/workflows/fix-tutorial-first-purchase-inbox.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}/shadow_market_simulator
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/tutorial-first-purchase-inbox
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        working-directory: shadow_market_simulator
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install ruff
+      - name: Apply copy-state fix
+        run: python .github/scripts/fix_tutorial_first_purchase_inbox.py
+      - name: Verify
+        working-directory: shadow_market_simulator
+        run: |
+          python -m compileall -q app tests
+          python -m pytest -q tests/test_tutorial_flow.py tests/test_tutorial_copy_update.py tests/test_tutorial_nonblocking.py
+          ruff check app tests --select F401,F821,F841
+      - name: Commit project changes
+        run: |
+          git config user.name "Kanneytari"
+          git config user.email "hitroplan@yandex.ru"
+          git add shadow_market_simulator/app/tutorial/hooks.py shadow_market_simulator/tests/test_tutorial_flow.py
+          git commit -m "fix(shadow-market): keep tutorial inbox state accurate"
+          git push origin HEAD:fix/tutorial-first-purchase-inbox
