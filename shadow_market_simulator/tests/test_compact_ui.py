@@ -68,7 +68,7 @@ def test_product_root_nests_procurement_under_suppliers():
 
 
 def test_suppliers_screen_contains_product_categories(monkeypatch):
-    monkeypatch.setattr(ui_commerce, "_stock_status", lambda *_args: "нет запаса")
+    monkeypatch.setattr(ui_commerce, "_warehouse_stock_units", lambda *_args: 0)
     markup = ui_commerce._procurement_products_keyboard(
         object(),
         1,
@@ -77,7 +77,7 @@ def test_suppliers_screen_contains_product_categories(monkeypatch):
             {"id": 3, "title": "Кокаин"},
         ],
     )
-    assert labels(markup) == ["📦 Амфетамин", "📦 Кокаин", "📦 Товар", "🏠 Меню"]
+    assert labels(markup) == ["Амфетамин · 🚚 0 ед.", "Кокаин · 🚚 0 ед.", "📦 Товар", "🏠 Меню"]
     assert callbacks(markup) == [
         "proc:product:1", "proc:product:3", "menu:product", "menu:home"
     ]

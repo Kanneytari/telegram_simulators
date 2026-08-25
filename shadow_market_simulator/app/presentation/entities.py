@@ -42,7 +42,7 @@ def employee_html(alias: object, role: str) -> str:
 
 
 def product_html(title: object) -> str:
-    return f"📦 <b>{escape(str(title or ''))}</b>"
+    return f"<b>{escape(str(title or ''))}</b>"
 
 
 def batch_html(batch_id: int) -> str:

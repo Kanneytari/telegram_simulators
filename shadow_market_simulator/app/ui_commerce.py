@@ -24,36 +24,13 @@ def _offer_marker(profile: str) -> str:
     return {"bargain": "💎 ", "dubious": "⚠️ ", "premium": "⭐ "}.get(profile, "")
 
 
-def _stock_status(db, player_id: int, product_id: int) -> str:
+def _warehouse_stock_units(db, player_id: int, product_id: int) -> int:
     with db.connect() as conn:
-        sold = int(conn.execute(
-            """SELECT COALESCE(SUM(quantity),0) FROM orders
-               WHERE player_id=? AND product_id=? AND created_at>=datetime('now','-7 day')""",
-            (player_id, product_id),
-        ).fetchone()[0])
-        warehouse = int(conn.execute(
+        return int(conn.execute(
             """SELECT COALESCE(SUM(remaining),0) FROM batches
-               WHERE player_id=? AND product_id=? AND status IN ('receiving','warehouse')""",
+               WHERE player_id=? AND product_id=? AND status='warehouse' AND remaining>0""",
             (player_id, product_id),
         ).fetchone()[0])
-        transit = int(conn.execute(
-            """SELECT COALESCE(SUM(quantity),0) FROM retail_allocations
-               WHERE player_id=? AND product_id=? AND status IN ('waiting','preparing')""",
-            (player_id, product_id),
-        ).fetchone()[0])
-        ready = int(conn.execute(
-            """SELECT COALESCE(SUM(rp.position_count*rp.pack_size),0)
-               FROM retail_positions rp JOIN employees e ON e.id=rp.employee_id
-               WHERE rp.player_id=? AND rp.product_id=? AND rp.position_count>0 AND e.active=1""",
-            (player_id, product_id),
-        ).fetchone()[0])
-    stock = warehouse + transit + ready
-    if stock <= 0:
-        return "нет запаса"
-    if sold <= 0:
-        return f"{stock} ед."
-    days = stock / (sold / 7.0)
-    return f"~{max(1, round(days))} дн."
 
 
 def _warehouse_batch_count(db, player_id: int) -> int:
@@ -75,13 +52,10 @@ def _product_root_keyboard(batch_count: int) -> InlineKeyboardMarkup:
 def _procurement_products_keyboard(db, player_id: int, products) -> InlineKeyboardMarkup:
     rows: list[list[InlineKeyboardButton]] = []
     for product in products:
-        status = _stock_status(db, player_id, int(product["id"]))
-        text = str(product["title"])
-        if status != "нет запаса":
-            text += f" · 🚚 {status}"
+        warehouse_units = _warehouse_stock_units(db, player_id, int(product["id"]))
         rows.append([
             InlineKeyboardButton(
-                text=f"📦 {text}",
+                text=f"{product['title']} · 🚚 {warehouse_units} ед.",
                 callback_data=f"proc:product:{product['id']}",
             )
         ])
@@ -186,7 +160,7 @@ async def render_offer(target: Message, game, player_id: int, offer_id: int, emp
     else:
         price_relation = "около обычной цены"
     text = (
-        f"📦 <b>{clean(offer['product_title'])} · {offer['quantity']} ед.</b>\n\n"
+        f"<b>{clean(offer['product_title'])} · {offer['quantity']} ед.</b>\n\n"
         f"{money(total)} · {price_relation}\n"
         f"Качество: <b>{_quality_label(quality)}</b> · {quality:.0f}/100\n"
         f"Надёжность поставки: {reliability:.0f}%"
@@ -249,7 +223,7 @@ def _sales_products(db, player_id: int):
 
 def _sales_root_keyboard(rows) -> InlineKeyboardMarkup:
     buttons = [[InlineKeyboardButton(
-        text=f"📦 {row['title']} · {int(row['stock'])} ед. · {rating(float(row['quality_avg']), int(row['rating_count']))}",
+        text=f"{row['title']} · {int(row['stock'])} ед. · {rating(float(row['quality_avg']), int(row['rating_count']))}",
         callback_data=f"sales:product:{row['id']}",
     )] for row in rows]
     buttons.append([

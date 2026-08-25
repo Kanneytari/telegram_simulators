@@ -12,4 +12,4 @@ def test_role_entity_styles_are_canonical() -> None:
 def test_named_entities_have_icon_and_bold_text() -> None:
     assert employee_html("Сова", "courier") == "👤 <b>Сова</b>"
     assert employee_html("Маяк", "warehouse") == "🚚 <b>Маяк</b>"
-    assert product_html("Кокаин") == "📦 <b>Кокаин</b>"
+    assert product_html("Кокаин") == "<b>Кокаин</b>"

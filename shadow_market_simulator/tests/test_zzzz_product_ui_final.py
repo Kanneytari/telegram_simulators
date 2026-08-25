@@ -48,11 +48,8 @@ def test_final_product_screen_contract(tmp_path):
     product_labels = labels[: len(products)]
     assert all("нет запаса" not in label.lower() for label in product_labels)
     for product, label in zip(products, product_labels):
-        stock_status = ui_commerce._stock_status(db, PLAYER_ID, int(product["id"]))
-        if stock_status == "нет запаса":
-            assert label == f"📦 {product['title']}"
-        else:
-            assert label == f"📦 {product['title']} · 🚚 {stock_status}"
+        warehouse_units = ui_commerce._warehouse_stock_units(db, PLAYER_ID, int(product["id"]))
+        assert label == f"{product['title']} · 🚚 {warehouse_units} ед."
 
     assert labels[len(products)] == "📦 Товар"
     assert labels[-1] == "🏠 Меню"
