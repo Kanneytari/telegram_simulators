@@ -27,7 +27,9 @@ jobs:
           python -m pip install -r requirements.txt
           python -m pip install ruff
       - name: Apply entity presentation pass
-        run: python .github/scripts/unify_nightshift_entity_presentation.py
+        run: |
+          python .github/scripts/unify_nightshift_entity_presentation.py
+          python .github/scripts/fix_remaining_entity_presentation.py
       - name: Verify
         run: |
           cd shadow_market_simulator
