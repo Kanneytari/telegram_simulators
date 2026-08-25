@@ -1,0 +1,215 @@
+name: NIGHTSHIFT one-shot overlay cleanup
+
+on:
+  push:
+    branches:
+      - refactor/shadow-market-tutorial-overlays
+    paths:
+      - .github/workflows/shadow-market-refactor-edit.yml
+
+permissions:
+  contents: write
+
+jobs:
+  edit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/shadow-market-tutorial-overlays
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fold gameplay overlay into canonical modules
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          root = Path("shadow_market_simulator")
+
+          # 1. Canonical staff batch renderer: replace exactly one function.
+          path = root / "app/ui_staff_handlers.py"
+          text = path.read_text(encoding="utf-8")
+          start = text.index("async def render_batch(")
+          end = text.index("\nasync def render_candidate", start)
+          replacement = '''async def render_batch(
+              target: Message,
+              game,
+              player_id: int,
+              batch_id: int,
+              *,
+              flash: str | None = None,
+          ) -> None:
+              batch, staff = game.retail_staff_for_batch(player_id, batch_id)
+              if not batch:
+                  await render_batches(target, game, player_id, flash="Партия недоступна.")
+                  return
+
+              with game.db.connect() as conn:
+                  product = conn.execute(
+                      "SELECT title FROM products WHERE id=?",
+                      (batch["product_id"],),
+                  ).fetchone()
+                  responsible = (
+                      conn.execute(
+                          "SELECT alias FROM employees WHERE id=? AND active=1",
+                          (batch["responsible_employee_id"],),
+                      ).fetchone()
+                      if batch["responsible_employee_id"]
+                      else None
+                  )
+                  warehouse_count = int(
+                      conn.execute(
+                          """SELECT COUNT(*) FROM employees
+                             WHERE player_id=? AND active=1 AND role='warehouse'""",
+                          (player_id,),
+                      ).fetchone()[0]
+                  )
+
+              warehouse_line = (
+                  f"Складмен: 🚚 {clean(responsible['alias'])}"
+                  if responsible
+                  else "Складмен: не назначен"
+              )
+              if responsible and batch["status"] == "receiving":
+                  warehouse_line += " · получает"
+
+              text = (
+                  f"<b>{clean(product['title'])} · партия #{batch_id}</b>\\n\\n"
+                  f"Осталось: {int(batch['remaining'])} ед. · "
+                  f"{money(int(batch['remaining'] * batch['unit_cost']))}\\n"
+                  f"{warehouse_line}"
+              )
+              rows: list[list[InlineKeyboardButton]] = []
+              tutorial = game.needs_first_handoff_tutorial(player_id)
+
+              if not responsible:
+                  text += "\\n\\n🔴 Сначала назначь складмена."
+                  if tutorial:
+                      text += "\\n\\n" + tutorial_hint("Назначь складмена на эту партию.")
+                  if warehouse_count:
+                      rows.append([
+                          InlineKeyboardButton(
+                              text="Назначить складмена",
+                              callback_data=f"team:reassign:{batch_id}",
+                          )
+                      ])
+                  else:
+                      rows.append([
+                          InlineKeyboardButton(
+                              text="Нанять сотрудника",
+                              callback_data="team:recruit",
+                          )
+                      ])
+              elif batch["status"] == "warehouse":
+                  text += "\\n\\nВыберите кладмена"
+                  if tutorial:
+                      text += "\\n\\n" + tutorial_hint(
+                          "Выбери закладчика, которому передашь стафф."
+                      )
+                  employees = {int(row["id"]): row for row in game.employees(player_id)}
+                  for employee in staff:
+                      live = employees.get(int(employee["id"]), {})
+                      status = str(live.get("status_text") or "свободен")
+                      if status == "свободен":
+                          status = "готов принять"
+                      unsecured = max(
+                          0,
+                          int(employee.get("exposure", 0)) - int(employee["deposit"]),
+                      )
+                      risk = (
+                          f" · 🔴 уже не покрыто {money(unsecured)}" if unsecured else ""
+                      )
+                      rows.append([
+                          InlineKeyboardButton(
+                              text=f"👤 {employee['alias']} · {status}{risk}",
+                              callback_data=(
+                                  f"team:alloc:{batch_id}:{employee['id']}:"
+                                  f"{int(employee.get('recommended_quantity', 0))}"
+                              ),
+                          )
+                      ])
+                  if warehouse_count > 1:
+                      rows.append([
+                          InlineKeyboardButton(
+                              text="Сменить складмена",
+                              callback_data=f"team:reassign:{batch_id}",
+                          )
+                      ])
+
+              if tutorial and responsible and batch["status"] == "receiving":
+                  text += "\\n\\n" + tutorial_hint(
+                      "Складмен ещё получает партию. Вернись сюда, когда она будет готова."
+                  )
+              rows.append(nav_row("team:batches", "← Склад"))
+              await present(
+                  target,
+                  notice(flash, text),
+                  InlineKeyboardMarkup(inline_keyboard=rows),
+              )
+          '''
+          path.write_text(text[:start] + replacement + text[end:], encoding="utf-8")
+
+          # 2. Handoff task copy becomes canonical workflow data.
+          path = root / "app/commerce/workflow.py"
+          text = path.read_text(encoding="utf-8")
+          old = '"handoff": "готовит передачу закладчику"'
+          new = '"handoff": "готовит мастер-клад"'
+          assert text.count(old) == 1, text.count(old)
+          path.write_text(text.replace(old, new), encoding="utf-8")
+
+          # 3. Bootstrap no longer installs gameplay overlays.
+          path = root / "app/bootstrap.py"
+          text = path.read_text(encoding="utf-8")
+          text = text.replace("from .gameplay_updates import apply_gameplay_updates\n", "")
+          text = text.replace(
+              "    # Transitional boundary: only behavior that is not canonical yet is installed here.\n"
+              "    apply_gameplay_updates()\n\n",
+              "",
+          )
+          assert "apply_gameplay_updates" not in text
+          path.write_text(text, encoding="utf-8")
+
+          # 4. Tests should exercise canonical behavior directly, not install overlays first.
+          for path in (root / "tests").glob("*.py"):
+              text = path.read_text(encoding="utf-8")
+              text = text.replace("from app.gameplay_updates import apply_gameplay_updates\n", "")
+              text = text.replace("    from app.gameplay_updates import apply_gameplay_updates\n\n", "")
+              text = text.replace("    apply_gameplay_updates()\n", "")
+              text = text.replace("apply_gameplay_updates()\n", "")
+              path.write_text(text, encoding="utf-8")
+
+          # 5. Architecture allow-lists shrink with the deleted overlay.
+          path = root / "tests/test_architecture_guardrails.py"
+          text = path.read_text(encoding="utf-8")
+          text = text.replace('    "gameplay_updates.py",\n', "")
+          assert '"gameplay_updates.py"' not in text
+          path.write_text(text, encoding="utf-8")
+
+          # 6. Remove obsolete overlay source.
+          (root / "app/gameplay_updates.py").unlink()
+
+          # No Python code should still refer to the deleted overlay.
+          offenders = []
+          for path in root.rglob("*.py"):
+              if "gameplay_updates" in path.read_text(encoding="utf-8"):
+                  offenders.append(str(path))
+          assert not offenders, offenders
+          PY
+
+      - name: Verify transformed sources
+        working-directory: shadow_market_simulator
+        run: |
+          python -m compileall -q app
+          python -m pytest -q tests/test_zz_gameplay_updates.py tests/test_ux_clarity.py tests/test_architecture_guardrails.py
+
+      - name: Commit transformed sources
+        run: |
+          git config user.name "Kanneytari"
+          git config user.email "hitroplan@yandex.ru"
+          git add shadow_market_simulator
+          git commit -m "refactor(shadow-market): remove gameplay runtime overlay"
+          git push origin HEAD:refactor/shadow-market-tutorial-overlays
