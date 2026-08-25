@@ -1,0 +1,45 @@
+name: NIGHTSHIFT final presentation vocabulary
+
+on:
+  push:
+    branches:
+      - refactor/nightshift-ui-vocabulary
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    env:
+      PYTHONPATH: ${{ github.workspace }}/shadow_market_simulator
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/nightshift-ui-vocabulary
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          cd shadow_market_simulator
+          python -m pip install -r requirements.txt
+          python -m pip install ruff
+      - name: Apply final vocabulary cleanup
+        run: |
+          python .github/scripts/finalize_presentation_vocabulary.py
+          python .github/scripts/strengthen_ui_vocabulary_guardrail.py
+      - name: Verify
+        run: |
+          cd shadow_market_simulator
+          python -m compileall -q app tests
+          python -m pytest -q
+          ruff check app tests --select F401,F821,F841
+      - name: Commit permanent changes
+        run: |
+          git config user.name "Kanneytari"
+          git config user.email "hitroplan@yandex.ru"
+          git add shadow_market_simulator/app shadow_market_simulator/tests
+          git commit -m "refactor(shadow-market): enforce canonical UI vocabulary"
+          git push origin HEAD:refactor/nightshift-ui-vocabulary
