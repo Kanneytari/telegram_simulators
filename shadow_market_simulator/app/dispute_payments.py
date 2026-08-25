@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-from .game import GameService
 from .simulation import iso, utcnow
 
 
-class DisputePaymentGameService(GameService):
-    def dispute_payment_context(self, player_id: int, dispute_id: int, decision: str) -> dict | None:
+class DisputePaymentMixin:
+    """Add explicit refund-source handling to a cooperative game service."""
+
+    def dispute_payment_context(
+        self, player_id: int, dispute_id: int, decision: str
+    ) -> dict | None:
         if decision not in {"refund", "partial"}:
             return None
         with self.db.connect() as conn:
@@ -22,7 +25,11 @@ class DisputePaymentGameService(GameService):
             ).fetchone()
         if not row or row["status"] != "open":
             return None
-        amount = int(row["revenue"]) if decision == "refund" else int(row["revenue"] * 0.5)
+        amount = (
+            int(row["revenue"])
+            if decision == "refund"
+            else int(row["revenue"] * 0.5)
+        )
         return {
             "dispute_id": dispute_id,
             "order_id": int(row["order_id"]),
@@ -34,7 +41,9 @@ class DisputePaymentGameService(GameService):
             "shop_reserve": int(row["reserve_target"]),
         }
 
-    def _resolve_from_shop_or_reject(self, player_id: int, dispute_id: int, decision: str) -> str:
+    def _resolve_from_shop_or_reject(
+        self, player_id: int, dispute_id: int, decision: str
+    ) -> str:
         now = utcnow()
         with self.db.connect() as conn:
             row = conn.execute(
@@ -59,7 +68,7 @@ class DisputePaymentGameService(GameService):
             )
             if refund and int(row["shop_balance"]) < refund:
                 return (
-                    f"На счёте магазина недостаточно денег.\n\n"
+                    "На счёте магазина недостаточно денег.\n\n"
                     f"Нужно: {refund:,} ₽\n"
                     f"Доступно: {int(row['shop_balance']):,} ₽"
                 )
@@ -72,7 +81,12 @@ class DisputePaymentGameService(GameService):
                 conn.execute(
                     """INSERT INTO ledger(player_id, amount, kind, reference_type, reference_id, note)
                        VALUES (?, ?, 'refund', 'order', ?, ?)""",
-                    (player_id, -refund, row["order_id"], f"Решение по диспуту #{dispute_id}"),
+                    (
+                        player_id,
+                        -refund,
+                        row["order_id"],
+                        f"Решение по диспуту #{dispute_id}",
+                    ),
                 )
 
             good = self._decision_quality(row["true_cause"], decision)
@@ -121,7 +135,13 @@ class DisputePaymentGameService(GameService):
         )
         return f"Диспут закрыт. Компенсация: {refund:,} ₽. {quality_text}"
 
-    def resolve_dispute_with_source(self, player_id: int, dispute_id: int, decision: str, source: str) -> str:
+    def resolve_dispute_with_source(
+        self,
+        player_id: int,
+        dispute_id: int,
+        decision: str,
+        source: str,
+    ) -> str:
         if decision not in {"refund", "partial", "reject"}:
             raise ValueError("Unsupported dispute decision")
         if source not in {"shop", "employee", "none"}:
@@ -138,7 +158,9 @@ class DisputePaymentGameService(GameService):
             return "Этот диспут уже закрыт."
         refund = int(context["amount"])
         if source == "shop":
-            result = self._resolve_from_shop_or_reject(player_id, dispute_id, decision)
+            result = self._resolve_from_shop_or_reject(
+                player_id, dispute_id, decision
+            )
             if result.startswith("На счёте магазина недостаточно денег."):
                 return result
             if result == "Этот диспут уже закрыт.":
@@ -146,7 +168,11 @@ class DisputePaymentGameService(GameService):
             return f"{result}\nИсточник: счёт магазина."
 
         if int(context["employee_deposit"]) < refund:
-            return f"Недостаточно средств в депозите сотрудника.\n\nНужно: {refund:,} ₽\nДоступно: {context['employee_deposit']:,} ₽"
+            return (
+                "Недостаточно средств в депозите сотрудника.\n\n"
+                f"Нужно: {refund:,} ₽\n"
+                f"Доступно: {context['employee_deposit']:,} ₽"
+            )
 
         now = utcnow()
         with self.db.connect() as conn:
@@ -162,14 +188,24 @@ class DisputePaymentGameService(GameService):
             if int(row["deposit"]) < refund:
                 return "Депозит сотрудника уже недостаточен для этой компенсации."
             conn.execute(
-                "UPDATE employees SET deposit=deposit-?, losses=losses+?, stress=MIN(100, stress+2.5) WHERE id=?",
+                """UPDATE employees
+                   SET deposit=deposit-?, losses=losses+?, stress=MIN(100, stress+2.5)
+                   WHERE id=?""",
                 (refund, refund, row["eid"]),
             )
-            conn.execute("UPDATE shops SET balance=balance-? WHERE player_id=?", (refund, player_id))
+            conn.execute(
+                "UPDATE shops SET balance=balance-? WHERE player_id=?",
+                (refund, player_id),
+            )
             conn.execute(
                 """INSERT INTO ledger(player_id, amount, kind, reference_type, reference_id, note)
                    VALUES (?, ?, 'refund_employee_deposit', 'employee', ?, ?)""",
-                (player_id, -refund, row["eid"], f"Компенсация по диспуту #{dispute_id} из депозита {row['employee_alias']}"),
+                (
+                    player_id,
+                    -refund,
+                    row["eid"],
+                    f"Компенсация по диспуту #{dispute_id} из депозита {row['employee_alias']}",
+                ),
             )
             good = self._decision_quality(row["true_cause"], decision)
             if good > 0:
@@ -183,10 +219,31 @@ class DisputePaymentGameService(GameService):
                        refund_employee_id=?, resolved_at=? WHERE id=?""",
                 (decision, refund, row["eid"], iso(now), dispute_id),
             )
-            conn.execute("UPDATE orders SET status='completed' WHERE id=?", (row["order_id"],))
             conn.execute(
-                "UPDATE inbox SET status='closed' WHERE player_id=? AND kind='dispute' AND json_extract(payload_json, '$.dispute_id')=?",
+                "UPDATE orders SET status='completed' WHERE id=?",
+                (row["order_id"],),
+            )
+            conn.execute(
+                """UPDATE inbox SET status='closed'
+                   WHERE player_id=? AND kind='dispute'
+                     AND json_extract(payload_json, '$.dispute_id')=?""",
                 (player_id, dispute_id),
             )
-        quality_text = "Решение выглядит удачным." if good > 0 else "Решение может иметь неприятные последствия." if good < 0 else "Ситуация осталась неоднозначной."
-        return f"Диспут закрыт. Компенсация: {refund:,} ₽.\nИсточник: депозит {context['employee_alias']}.\n\n{quality_text}"
+        quality_text = (
+            "Решение выглядит удачным."
+            if good > 0
+            else "Решение может иметь неприятные последствия."
+            if good < 0
+            else "Ситуация осталась неоднозначной."
+        )
+        return (
+            f"Диспут закрыт. Компенсация: {refund:,} ₽.\n"
+            f"Источник: депозит {context['employee_alias']}.\n\n"
+            f"{quality_text}"
+        )
+
+
+# Transitional import compatibility. This is an alias, not an inheritance layer.
+DisputePaymentGameService = DisputePaymentMixin
+
+__all__ = ["DisputePaymentMixin", "DisputePaymentGameService"]
