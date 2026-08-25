@@ -65,7 +65,6 @@ LEGACY_OVERLAY_MODULES = {
 # remove entries, but a new feature must not extend it with another layer.
 LEGACY_ENGINE_INHERITANCE = {
     ("runtime.py", "PlayerSimulationEngine"),
-    ("nightshift.py", "NightshiftSimulationEngine"),
     ("operations.py", "OperationsSimulationEngine"),
     ("workflow.py", "WorkflowSimulationEngine"),
     ("staff_insights.py", "StaffInsightSimulationEngine"),
