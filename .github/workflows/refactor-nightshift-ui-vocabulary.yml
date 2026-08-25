@@ -30,6 +30,8 @@ jobs:
         run: python .github/scripts/fix_ui_refactor_templates.py
       - name: Apply presentation refactor
         run: python .github/scripts/refactor_nightshift_ui_vocabulary.py
+      - name: Finalize presentation refactor
+        run: python .github/scripts/finalize_ui_refactor.py
       - name: Verify
         run: |
           cd shadow_market_simulator
