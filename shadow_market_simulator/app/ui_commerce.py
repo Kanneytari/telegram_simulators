@@ -281,7 +281,7 @@ async def render_sales_product(target: Message, db, player_id: int, product_id: 
     if not product:
         return
     rows = [[InlineKeyboardButton(
-        text=f"🏷 ×{listing['pack_size']} · {money(listing['price'])} · доступно {int(listing['positions'])}",
+        text=f"×{listing['pack_size']} · {money(listing['price'])} · доступно {int(listing['positions'])}",
         callback_data=f"sales:listing:{listing['id']}",
     )] for listing in listings]
     rows.append(nav_row(STOREFRONT))
