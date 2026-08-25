@@ -1,4 +1,4 @@
-from app.analytics_handlers import analytics_view_keyboard
+from app.analytics.analytics_handlers import analytics_view_keyboard
 from app.ui_commerce import packaging_keyboard
 from app.ui_navigation import home_keyboard, inbox_keyboard
 from app.ui_staff import _profile_keyboard, more_keyboard

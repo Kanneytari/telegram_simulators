@@ -1,8 +1,8 @@
 import asyncio
 import random
 
-from app.courier_management import CourierManagementGameService, CourierManagementSimulationEngine
-from app.db import Database
+from app.staff.couriers.management import CourierManagementGameService, CourierManagementSimulationEngine
+from app.core.database import Database
 
 
 PLAYER_ID = 93001
@@ -32,10 +32,7 @@ class Target:
 
 def test_final_product_screen_contract(tmp_path):
     from app import ui_commerce
-    from app.gameplay_updates import apply_gameplay_updates
     from app.ui_common import tutorial_hint
-
-    apply_gameplay_updates()
 
     db = Database(str(tmp_path / "product-ui-final.db"))
     db.init()
@@ -67,6 +64,6 @@ def test_final_product_screen_contract(tmp_path):
     assert tutorial_hint("Нажми на кнопку 📦 Товар") == (
         "<blockquote>Нажми на кнопку [📦 Товар]</blockquote>"
     )
-    assert tutorial_hint("Проверь и нажми кнопку «✅ Отправить 10 ед.»." ) == (
+    assert tutorial_hint("Проверь и нажми кнопку «✅ Отправить 10 ед.».") == (
         "<blockquote>Проверь и нажми кнопку [✅ Отправить 10 ед.].</blockquote>"
     )

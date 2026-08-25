@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from contextlib import suppress
 
-from app.db import Database
+from app.core.database import Database
 from app.main import notification_loop
 
 

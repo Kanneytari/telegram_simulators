@@ -11,13 +11,10 @@ from .analytics.analytics_handlers import build_analytics_router
 from .analytics.analytics_log import AnalyticsLogger, AnalyticsLoggingMiddleware
 from .bot import OneShotCallbackMiddleware
 from .core import Database, Settings, load_settings
-from .gameplay_updates import apply_gameplay_updates
 from .inbox import install_inbox_lifecycle
 from .staff.couriers.management import CourierManagementGameService, CourierManagementSimulationEngine
 from .staff.couriers.recruitment import CourierRecruitmentService
-from .tutorial import apply_tutorial_updates, build_tutorial_router
-from .tutorial_copy_update import apply_tutorial_copy_update
-from .tutorial_runtime import apply_tutorial_runtime_fixes
+from .tutorial import build_tutorial_router, enable_runtime
 from .ui_admin import build_admin_router
 from .ui_commerce import build_commerce_router
 from .ui_disputes import build_dispute_router
@@ -44,15 +41,10 @@ def build_application() -> Application:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
-    # Transitional boundary: only behavior that is not canonical yet is installed here.
-    apply_gameplay_updates()
-
     db = Database(settings.db_path)
     db.init()
+    enable_runtime(db)
 
-    apply_tutorial_updates()
-    apply_tutorial_runtime_fixes()
-    apply_tutorial_copy_update()
 
     simulation = CourierManagementSimulationEngine(db, speed=settings.simulation_speed)
     simulation.seed_catalog()

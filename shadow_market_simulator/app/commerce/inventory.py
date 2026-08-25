@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from ..disputes import DisputePaymentMixin
 from ..engine import NightshiftSimulationMixin, PlayerSimulationMixin
-from ..game import GameService
-from ..simulation import SimulationEngine
+from app.core.game import GameService
+from app.engine.simulation import SimulationEngine
 
 
 class OperationsSimulationEngine(

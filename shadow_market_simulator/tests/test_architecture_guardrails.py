@@ -10,38 +10,8 @@ APP = Path(__file__).resolve().parents[1] / "app"
 # but new flat modules must not be added: new functionality belongs in packages.
 ALLOWED_FLAT_MODULES = {
     "__init__.py",
-    "analytics_handlers.py",
-    "analytics_log.py",
     "bootstrap.py",
-    "business_analytics.py",
-    "compensation.py",
-    "config.py",
-    "courier_core.py",
-    "courier_idle.py",
-    "courier_management.py",
-    "courier_model.py",
-    "courier_recruitment.py",
-    "customer_trust.py",
-    "db.py",
-    "dispute_payments.py",
-    "employee_rename.py",
-    "game.py",
-    "gameplay_updates.py",
-    "global_packaging.py",
-    "inbox_lifecycle.py",
     "main.py",
-    "nightshift.py",
-    "operations.py",
-    "procurement_market.py",
-    "recruitment.py",
-    "runtime.py",
-    "simulation.py",
-    "staff_idle.py",
-    "staff_insights.py",
-    "staff_relationships.py",
-    "tutorial.py",
-    "tutorial_copy_update.py",
-    "tutorial_runtime.py",
     "ui_admin.py",
     "ui_commerce.py",
     "ui_common.py",
@@ -49,17 +19,11 @@ ALLOWED_FLAT_MODULES = {
     "ui_navigation.py",
     "ui_staff.py",
     "ui_staff_handlers.py",
-    "workflow.py",
 }
 
 # Existing runtime overlays are migration debt, not an extension mechanism.
 # This exact set can only shrink.
-LEGACY_OVERLAY_MODULES = {
-    "gameplay_updates.py",
-    "tutorial.py",
-    "tutorial_copy_update.py",
-    "tutorial_runtime.py",
-}
+LEGACY_OVERLAY_MODULES: set[str] = set()
 
 # The existing inheritance staircase is frozen. The migration may relocate or
 # remove entries, but a new feature must not extend it with another layer.

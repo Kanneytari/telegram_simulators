@@ -14,14 +14,12 @@ def test_tutorial_is_nonblocking_and_uses_plain_copy() -> None:
         from pathlib import Path
 
         from app import tutorial, ui_commerce, ui_navigation
-        from app.courier_management import (
+        from app.staff.couriers.management import (
             CourierManagementGameService,
             CourierManagementSimulationEngine,
         )
-        from app.db import Database
-        from app.gameplay_updates import apply_gameplay_updates
-        from app.tutorial_runtime import apply_tutorial_runtime_fixes
-
+        from app.core.database import Database
+                
 
         class Target:
             def __init__(self):
@@ -47,14 +45,12 @@ def test_tutorial_is_nonblocking_and_uses_plain_copy() -> None:
             }
 
 
-        apply_gameplay_updates()
-
+    
         with tempfile.TemporaryDirectory() as tmp:
             db = Database(str(Path(tmp) / "tutorial-nonblocking.db"))
             db.init()
-            tutorial.apply_tutorial_updates()
-            apply_tutorial_runtime_fixes()
-
+            tutorial.enable_runtime(db)
+                        
             simulation = CourierManagementSimulationEngine(
                 db,
                 speed=1.0,
@@ -120,13 +116,13 @@ def test_tutorial_is_nonblocking_and_uses_plain_copy() -> None:
             price = tutorial._instruction(
                 {"stage": tutorial.STAGE_PRICE, "data": {}}
             )
-            assert price.startswith("Вернись в меню и нажми 🏷 Витрина.")
+            assert price == "Нажми [🏷 Витрина]"
 
             team = tutorial._instruction(
                 {"stage": tutorial.STAGE_TEAM, "data": {}}
             )
             assert (
-                "какая часть нового товара будет продаваться по 1, 2 и 5 единиц"
+                "сколько нового товара продавать фасовками по 1, 2 и 5 единиц"
                 in team
             )
             assert "публикац" not in team.lower()

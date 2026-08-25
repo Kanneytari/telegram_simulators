@@ -17,7 +17,7 @@ The following packages now own the real implementation:
 - `app/inbox/` — inbox lifecycle;
 - `app/bot/` — Telegram middleware and notification runtime.
 
-Large legacy files in the root of `app/` that correspond to these domains are compatibility facades. New production code must import the canonical package path, not add behavior to those facades.
+Legacy root compatibility facades have been removed. Production code and tests import canonical package paths directly.
 
 ## Runtime assembly
 
@@ -33,25 +33,25 @@ Base simulation now lives in `app/engine/simulation.py`. Internal feature bridge
 
 ## Runtime overlays
 
-The old release/update overlay layer has been reduced substantially:
+Runtime overlay debt is now zero.
 
 Removed completely:
 
 - `release_fixes.py`;
 - `handoff_copy_update.py`;
-- `product_ui_update.py`.
+- `product_ui_update.py`;
+- `gameplay_updates.py`;
+- `tutorial.py` as a runtime installer;
+- `tutorial_runtime.py`;
+- `tutorial_copy_update.py`.
 
-`gameplay_updates.py` no longer owns commerce UI behavior. Its remaining runtime responsibility is limited to the final batch renderer / handoff presentation compatibility path and the associated handoff task copy. This is intentionally retained until it can be removed without rewriting the large staff router through an unsafe whole-file API replacement.
+Onboarding now lives in `app/tutorial/`. Tutorial state and flow are in `core.py`; cross-cutting first-cycle behavior is attached explicitly through static decorators in `hooks.py`. `app/bootstrap.py` does not install or mutate tutorial behavior at runtime.
 
-Tutorial overlays (`tutorial.py`, `tutorial_runtime.py`, `tutorial_copy_update.py`) remain the largest migration debt. They combine onboarding state, first-run protection, copy and UI guidance. They should be migrated as one isolated follow-up rather than partially rewritten during an otherwise behavior-preserving architecture change.
-
-No new overlay module is allowed by the architecture guardrail; the exact legacy set can only shrink.
+No runtime overlay module is allowed by the architecture guardrail.
 
 ## Compatibility policy
 
-Legacy import paths are kept only where existing tests or external code can still depend on them. Compatibility tests assert object identity between old and canonical imports for migrated domains.
-
-A compatibility facade must not become a second source of business behavior. New code goes directly into feature packages.
+The temporary root compatibility layer has been removed. Old import paths are intentionally unsupported inside this application; architecture guardrails prevent those facade modules from returning.
 
 ## Validation policy
 
@@ -67,11 +67,4 @@ The refactor is considered safe only when all of these checks are green on the c
 
 ## Remaining work
 
-Before declaring architecture-v2 migration complete:
-
-1. keep the branch green while finalizing documentation and compatibility boundaries;
-2. migrate/remove the tutorial overlay as a dedicated follow-up block;
-3. remove the last `gameplay_updates.py` presentation hook when the staff UI router can be edited safely and covered by direct renderer regression tests;
-4. remove compatibility facades only after no production/tests depend on their legacy paths.
-
-These remaining items are architecture cleanup, not new gameplay mechanics.
+The architecture-v2 structural migration is complete for the active runtime. Future changes should extend the canonical feature packages directly rather than recreating root facades, runtime overlays, or one-class-per-feature inheritance layers.

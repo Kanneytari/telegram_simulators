@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from ...tutorial import hooks as tutorial_hooks
+
 import json
 import math
 from datetime import timedelta
@@ -155,6 +157,7 @@ class CourierCoreSimulationEngine(CustomerTrustSimulationEngine):
             return 2
         return 1
 
+    @tutorial_hooks.dispute_probability_protection
     def _dispute_probability(self, client, employee, quality: float, modifier: float) -> float:
         employee_id = self._employee_id(employee)
         profile = self._profile(employee_id) if employee_id else None
@@ -392,6 +395,7 @@ class CourierCoreSimulationEngine(CustomerTrustSimulationEngine):
             return 1
         return 0
 
+    @tutorial_hooks.management_event_protection
     def _simulate_management_events(self, conn, player_id: int, sim_hours: float, now) -> int:
         self._ensure_courier_profiles_conn(conn, player_id)
         self._recover_courier_state_conn(conn, player_id, sim_hours)

@@ -6,7 +6,7 @@ from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-from .simulation import iso, parse_dt, utcnow
+from app.engine.simulation import iso, parse_dt, utcnow
 from .ui_common import present
 
 

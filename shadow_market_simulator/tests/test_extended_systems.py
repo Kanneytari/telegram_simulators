@@ -3,10 +3,10 @@ from __future__ import annotations
 import random
 from datetime import timedelta
 
-from app.compensation import CompensationGameService, CompensationSimulationEngine
-from app.db import Database
-from app.recruitment import RecruitmentService
-from app.simulation import iso, parse_dt, utcnow
+from app.staff.compensation import CompensationGameService, CompensationSimulationEngine
+from app.core.database import Database
+from app.staff.recruitment import RecruitmentService
+from app.engine.simulation import iso, parse_dt, utcnow
 
 
 def make_system(tmp_path):

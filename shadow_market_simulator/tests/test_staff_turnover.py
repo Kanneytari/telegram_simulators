@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import random
 
-from app.courier_management import CourierManagementGameService, CourierManagementSimulationEngine
-from app.db import Database
-from app.simulation import utcnow
+from app.staff.couriers.management import CourierManagementGameService, CourierManagementSimulationEngine
+from app.core.database import Database
+from app.engine.simulation import utcnow
 
 
 def make_system(tmp_path):

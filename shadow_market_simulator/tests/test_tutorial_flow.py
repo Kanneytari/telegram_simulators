@@ -12,9 +12,8 @@ def test_guided_first_cycle_end_to_end() -> None:
         import tempfile
         from pathlib import Path
 
-        from app.courier_management import CourierManagementGameService, CourierManagementSimulationEngine
-        from app.db import Database
-        from app.gameplay_updates import apply_gameplay_updates
+        from app.staff.couriers.management import CourierManagementGameService, CourierManagementSimulationEngine
+        from app.core.database import Database
         from app.tutorial import (
             STAGE_DISPUTE,
             STAGE_HANDOFF,
@@ -29,20 +28,15 @@ def test_guided_first_cycle_end_to_end() -> None:
             create_tutorial_dispute,
             tutorial_state,
         )
-        from app.tutorial_copy_update import apply_tutorial_copy_update
-        from app.tutorial_runtime import apply_tutorial_runtime_fixes
         import app.tutorial as tutorial
 
-        apply_gameplay_updates()
-
+    
         with tempfile.TemporaryDirectory() as tmp:
             db = Database(str(Path(tmp) / "tutorial.db"))
             db.init()
+            tutorial.enable_runtime(db)
 
-            tutorial.apply_tutorial_updates()
-            apply_tutorial_runtime_fixes()
-            apply_tutorial_copy_update()
-
+                                    
             simulation = CourierManagementSimulationEngine(
                 db,
                 speed=60.0,

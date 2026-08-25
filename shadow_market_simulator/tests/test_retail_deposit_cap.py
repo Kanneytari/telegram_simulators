@@ -3,12 +3,12 @@ from __future__ import annotations
 import random
 from dataclasses import replace
 
-from app.courier_management import CourierManagementSimulationEngine
-from app.courier_recruitment import CourierRecruitmentService
-from app.db import Database
-from app.recruitment import CHANNELS
-from app.recruitment import RETAIL_STARTING_DEPOSIT_CAP
-from app.simulation import utcnow
+from app.staff.couriers.management import CourierManagementSimulationEngine
+from app.staff.couriers.recruitment import CourierRecruitmentService
+from app.core.database import Database
+from app.staff.recruitment import CHANNELS
+from app.staff.recruitment import RETAIL_STARTING_DEPOSIT_CAP
+from app.engine.simulation import utcnow
 
 
 PLAYER_ID = 1001

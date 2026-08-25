@@ -13,12 +13,11 @@ def test_tutorial_copy_uses_blocks_and_exact_button_labels() -> None:
         from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
         from app import tutorial, ui_navigation
-        from app.tutorial_copy_update import CONTINUE_LABEL, apply_tutorial_copy_update
+        from app.tutorial import CONTINUE_LABEL
         from app.ui_common import normalize_text, tutorial_hint
 
 
-        apply_tutorial_copy_update()
-
+        
         intro = tutorial._instruction(
             {"stage": tutorial.STAGE_PROCUREMENT, "data": {}}
         )

@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import random
 
-from app.customer_trust import (
+from app.trust.customer import (
     CustomerTrustGameService,
     CustomerTrustSimulationEngine,
     premium_allowance,
 )
-from app.db import Database
+from app.core.database import Database
 
 
 def make_system(tmp_path):

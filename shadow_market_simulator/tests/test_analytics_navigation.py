@@ -1,4 +1,4 @@
-from app.analytics_handlers import analytics_payroll_keyboard, analytics_view_keyboard
+from app.analytics.analytics_handlers import analytics_payroll_keyboard, analytics_view_keyboard
 
 
 def labels(markup):

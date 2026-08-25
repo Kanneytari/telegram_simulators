@@ -4,9 +4,9 @@ import json
 import random
 from datetime import timedelta
 
-from app.courier_management import CourierManagementGameService, CourierManagementSimulationEngine
-from app.db import Database
-from app.simulation import iso, utcnow
+from app.staff.couriers.management import CourierManagementGameService, CourierManagementSimulationEngine
+from app.core.database import Database
+from app.engine.simulation import iso, utcnow
 
 
 CURRENT_PRODUCT_TITLES = [

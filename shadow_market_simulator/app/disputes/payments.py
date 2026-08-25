@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from ..simulation import iso, utcnow
+from ..tutorial import hooks as tutorial_hooks
+
+from app.engine.simulation import iso, utcnow
 
 
 class DisputePaymentMixin:
@@ -135,6 +137,7 @@ class DisputePaymentMixin:
         )
         return f"Диспут закрыт. Компенсация: {refund:,} ₽. {quality_text}"
 
+    @tutorial_hooks.dispute_progress
     def resolve_dispute_with_source(
         self,
         player_id: int,

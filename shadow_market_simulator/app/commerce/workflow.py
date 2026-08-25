@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from ..tutorial import hooks as tutorial_hooks
+
 import json
 import math
 from datetime import timedelta
@@ -12,7 +14,7 @@ from .simulation import clamp, iso, parse_dt, utcnow
 
 TASK_LABELS = {
     "receive_batch": "получает партию",
-    "handoff": "готовит передачу закладчику",
+    "handoff": "готовит мастер-клад",
     "place_stashes": "раскидывает клады",
 }
 
@@ -440,6 +442,7 @@ class WorkflowSimulationEngine(OperationsSimulationEngine):
 
 class WorkflowGameService(OperationsGameService):
 
+    @tutorial_hooks.handoff_tutorial_flag
     def needs_first_handoff_tutorial(self, player_id: int) -> bool:
         with self.db.connect() as conn:
             return conn.execute(
@@ -594,6 +597,7 @@ class WorkflowGameService(OperationsGameService):
             f"{risk}"
         )
 
+    @tutorial_hooks.handoff_progress
     def allocate_to_retail(self, player_id: int, batch_id: int, retail_employee_id: int, quantity: int) -> str:
         now = utcnow()
         quantity = max(1, int(quantity))

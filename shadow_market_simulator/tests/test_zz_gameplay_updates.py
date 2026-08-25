@@ -4,9 +4,9 @@ from datetime import timedelta
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-from app.courier_management import CourierManagementGameService, CourierManagementSimulationEngine
-from app.db import Database
-from app.simulation import iso, utcnow
+from app.staff.couriers.management import CourierManagementGameService, CourierManagementSimulationEngine
+from app.core.database import Database
+from app.engine.simulation import iso, utcnow
 
 
 PLAYER_ID = 91001
@@ -23,9 +23,7 @@ EXPECTED_BATCH_SIZES = {50, 100, 250, 500, 1000}
 
 
 def make_system(tmp_path, seed=101):
-    from app.gameplay_updates import apply_gameplay_updates
-
-    apply_gameplay_updates()
+    
     db = Database(str(tmp_path / "game.db"))
     db.init()
     simulation = CourierManagementSimulationEngine(db, speed=1.0, rng=random.Random(seed))
@@ -40,7 +38,7 @@ def _labels(markup):
 
 
 def test_updated_catalog_market_and_sales_pacing(tmp_path):
-    from app import staff_relationships
+    import app.staff.relationships as staff_relationships
 
     db, _, game = make_system(tmp_path)
 
@@ -213,7 +211,8 @@ def test_product_screen_uses_package_warehouse_button_and_tutorial(tmp_path):
 
 
 def test_handoff_copy_icons_and_master_stash_status(tmp_path):
-    from app import ui_staff_handlers, workflow
+    from app import ui_staff_handlers
+    import app.commerce.workflow as workflow
 
     db, _, game = make_system(tmp_path, seed=401)
     with db.connect() as conn:

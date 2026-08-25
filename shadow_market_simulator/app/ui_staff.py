@@ -1,19 +1,14 @@
 from __future__ import annotations
 
+from .tutorial import hooks as tutorial_hooks
+
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-from .courier_management import (
-    BONUS_COST,
-    DEPOSIT_PCTS,
-    DEPOSIT_TARGETS,
-    PHONE,
-    REST_OPTIONS,
-    TRANSPORT,
-)
-from .courier_model import condition_band, pace_band, relationship_band
-from .recruitment import CHANNELS, DURATION_OPTIONS
+from app.staff.couriers.management import BONUS_COST, DEPOSIT_PCTS, DEPOSIT_TARGETS, PHONE, REST_OPTIONS, TRANSPORT
+from app.staff.couriers.model import condition_band, pace_band, relationship_band
+from app.staff.recruitment import CHANNELS, DURATION_OPTIONS
 from .ui_common import claim_tip, clean, money, nav_row, notice, pct, present, rating, tutorial_hint
 
 
@@ -49,6 +44,7 @@ def _team_keyboard(game, player_id: int, employees) -> InlineKeyboardMarkup:
     rows.append([InlineKeyboardButton(text="Меню", callback_data="menu:home")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
+@tutorial_hooks.handoff_team
 async def render_team(target: Message, game, simulation, player_id: int, *, flash: str | None = None) -> None:
     simulation.advance(player_id)
     employees = _employee_dicts(game, player_id)

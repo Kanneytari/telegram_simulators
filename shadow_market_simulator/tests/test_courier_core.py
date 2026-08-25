@@ -3,17 +3,17 @@ from __future__ import annotations
 import random
 from datetime import timedelta
 
-from app.courier_core import CourierCoreGameService, CourierCoreSimulationEngine
-from app.courier_model import (
+from app.staff.couriers.core import CourierCoreGameService, CourierCoreSimulationEngine
+from app.staff.couriers.model import (
     TRAIT_METICULOUS,
     TRAIT_OVERHEATS,
     TRAIT_PRESSURE_PROOF,
     TRAIT_SENSITIVE,
 )
-from app.courier_recruitment import CourierRecruitmentService
-from app.db import Database
-from app.recruitment import CHANNELS
-from app.simulation import iso, utcnow
+from app.staff.couriers.recruitment import CourierRecruitmentService
+from app.core.database import Database
+from app.staff.recruitment import CHANNELS
+from app.engine.simulation import iso, utcnow
 
 
 PLAYER_ID = 1001

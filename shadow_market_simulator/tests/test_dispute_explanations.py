@@ -4,9 +4,9 @@ import json
 import random
 from datetime import timedelta
 
-from app.db import Database
-from app.procurement_market import ProcurementMarketGameService, ProcurementMarketSimulationEngine
-from app.simulation import iso, utcnow
+from app.core.database import Database
+from app.commerce.procurement import ProcurementMarketGameService, ProcurementMarketSimulationEngine
+from app.engine.simulation import iso, utcnow
 
 
 def make_game(tmp_path, speed: float = 1.0):
