@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ..simulation import TickResult, iso, parse_dt, utcnow
+from .simulation import TickResult, iso, parse_dt, utcnow
 
 
 class PlayerSimulationMixin:
