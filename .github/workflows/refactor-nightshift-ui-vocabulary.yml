@@ -26,6 +26,8 @@ jobs:
           cd shadow_market_simulator
           python -m pip install -r requirements.txt
           python -m pip install ruff
+      - name: Fix refactor templates
+        run: python .github/scripts/fix_ui_refactor_templates.py
       - name: Apply presentation refactor
         run: python .github/scripts/refactor_nightshift_ui_vocabulary.py
       - name: Verify
