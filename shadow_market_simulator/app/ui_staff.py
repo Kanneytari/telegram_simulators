@@ -189,7 +189,7 @@ async def render_rest(target: Message, game, player_id: int, employee_id: int) -
     if not snapshot:
         await render_profile(target, game, player_id, employee_id)
         return
-    text = f"<b>Отдых · {clean(snapshot['alias'])}</b>\n\nСейчас: {snapshot['condition_icon']} {snapshot['condition']}"
+    text = f"<b>Отдых</b> · {employee_html(snapshot['alias'], 'courier')}\n\nСейчас: {snapshot['condition_icon']} {snapshot['condition']}"
     await present(target, text, rest_keyboard(employee_id))
 
 
@@ -230,7 +230,7 @@ async def render_development(target: Message, game, player_id: int, employee_id:
         title, cost, _ = PHONE[p_level + 1]
         phone_text += f"\nСледующий: {title} · {money(cost)}\nЛучший телефон снижает вероятность ошибок."
     text = (
-        f"<b>Развитие · {clean(s['alias'])}</b>\n\n"
+        f"<b>Развитие</b> · {employee_html(s['alias'], 'courier')}\n\n"
         f"<b>Депозит</b>\n{deposit_text}\n\n"
         f"<b>Передвижение</b>\n{transport_text}\n\n"
         f"<b>Телефон</b>\n{phone_text}"
@@ -255,7 +255,7 @@ async def render_deposit(target: Message, game, player_id: int, employee_id: int
         await render_profile(target, game, player_id, employee_id)
         return
     text = (
-        f"<b>Депозит · {clean(s['alias'])}</b>\n\n"
+        f"<b>Депозит</b> · {employee_html(s['alias'], 'courier')}\n\n"
         f"Сейчас: {money(s['deposit'])} / {money(s['deposit_target'])}\n"
         f"Из заработка: <b>{s['deposit_pct']}%</b>\n\n"
         "Большая доля быстрее увеличивает покрытие, но сотрудник получает меньше денег на руки."
@@ -274,11 +274,11 @@ def more_keyboard(employee_id: int) -> InlineKeyboardMarkup:
 
 async def render_more(target: Message, game, player_id: int, employee_id: int) -> None:
     with game.db.connect() as conn:
-        employee = conn.execute("SELECT alias FROM employees WHERE id=? AND player_id=? AND active=1", (employee_id, player_id)).fetchone()
+        employee = conn.execute("SELECT alias, role FROM employees WHERE id=? AND player_id=? AND active=1", (employee_id, player_id)).fetchone()
     if not employee:
         await render_team(target, game, game.simulation, player_id, flash="Сотрудник недоступен.")
         return
-    await present(target, f"<b>{clean(employee['alias'])} · ещё</b>", more_keyboard(employee_id))
+    await present(target, f"{employee_html(employee['alias'], str(employee['role']))} · <b>Ещё</b>", more_keyboard(employee_id))
 
 
 def batches_keyboard(rows, back_callback: str = "menu:product", back_text: str = "📦 Товар") -> InlineKeyboardMarkup:
@@ -309,7 +309,7 @@ async def render_batches(target: Message, game, player_id: int, employee_id: int
         body += "\n\nНа складе нет активных партий."
     elif employee_id is None and game.needs_first_handoff_tutorial(player_id):
         body += "\n\n" + tutorial_hint(f"Выбери партию стаффа, которую хочешь передать {role_html('courier', form='закладчику')}.")
-    keyboard = batches_keyboard(rows) if employee_id is None else batches_keyboard(rows, f"team:employee:{employee_id}", "Профиль")
+    keyboard = batches_keyboard(rows) if employee_id is None else batches_keyboard(rows, f"team:employee:{employee_id}", "🚚 Профиль")
     await present(target, notice(flash, body), keyboard)
 
 async def render_allocation(target: Message, game, player_id: int, batch_id: int, employee_id: int, quantity: int) -> None:
@@ -368,7 +368,7 @@ async def render_reassign(target: Message, game, player_id: int, batch_id: int) 
         suffix = f" · 🔴 {money(unsecured)}" if unsecured else " · покрыто"
         rows.append([InlineKeyboardButton(text=f"🚚 {employee['alias']}{suffix}", callback_data=f"team:reassigndo:{batch_id}:{employee['id']}")])
     rows.append(nav_row(f"team:batch:{batch_id}", "📦 Партия"))
-    await present(target, f"<b>Сменить складмена</b>\n\nПартия #{batch_id} · {money(value)}", InlineKeyboardMarkup(inline_keyboard=rows))
+    await present(target, f"<b>Сменить</b> · {role_html('warehouse', form='складмена')}\n\n📦 <b>Партия #{batch_id}</b> · {money(value)}", InlineKeyboardMarkup(inline_keyboard=rows))
 
 
 def terms_root_keyboard() -> InlineKeyboardMarkup:
@@ -423,15 +423,14 @@ async def render_terms_editor(target: Message, game, player_id: int, state: FSMC
         policy = game.compensation_policy(player_id, role)
         draft = dict(policy); original = dict(policy)
         await state.update_data(terms_role=role, terms_draft=draft, terms_original=original)
-    title = "закладчики" if role == "courier" else "складмены"
     text = (
-        f"<b>Оплата · {title}</b>\n\n"
+        f"<b>Оплата</b> · {role_html(role, plural=True)}\n\n"
         f"Сейчас\n{_policy_line(role, original)}\n\n"
         f"Новые условия\n<b>{_policy_line(role, draft)}</b>\n\n"
         "Изменение повлияет на отношение всей группы."
     )
     if role == "warehouse":
-        text += "\n\nДоплата за риск начисляется только на стоимость товара сверх депозита складмена."
+        text += f"\n\nДоплата за риск начисляется только на стоимость товара сверх депозита {role_html('warehouse', form='складмена')}."
     await present(target, text, terms_editor_keyboard(role))
 
 def recruitment_root_keyboard(candidate_count: int) -> InlineKeyboardMarkup:
@@ -499,7 +498,7 @@ async def render_recruitment_draft(target: Message, recruitment, player_id: int)
     if draft["role"] == "courier":
         requirements.append({0: "пеший курьер", 1: "велокурьер", 2: "автокурьер"}[int(draft["transport_required"])])
     text = (
-        f"<b>{channel.icon} {clean(channel.title)} · {role}</b>\n\n"
+        f"<b>{channel.icon} {clean(channel.title)}</b> · {role}\n\n"
         f"Ожидаемо {quote['expected_min']}–{quote['expected_max']} откликов · <b>{money(quote['cost'])}</b>\n"
         + " · ".join(requirements)
         + f"\nОхват: {coverage} · срок {draft['duration_hours']} ч"

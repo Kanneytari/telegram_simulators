@@ -99,7 +99,7 @@ async def render_batch(
                 )
             ])
     elif batch["status"] == "warehouse":
-        text += "\n\nВыберите кладмена"
+        text += f"\n\nВыберите {role_html('courier', form='кладмена')}"
         if tutorial:
             text += "\n\n" + tutorial_hint(
                 f"Выбери {role_html('courier', form='закладчика')}, которому передашь стафф."
@@ -191,7 +191,7 @@ def candidates_keyboard(candidates) -> InlineKeyboardMarkup:
 
 async def render_candidates(target: Message, recruitment, player_id: int, *, flash: str | None = None) -> None:
     candidates = recruitment.candidates(player_id)
-    body = f"<b>Кандидаты · {len(candidates)}</b>"
+    body = f"<b>👥 Кандидаты · {len(candidates)}</b>"
     if not candidates:
         body += "\n\nСвежих откликов нет."
     await present(target, notice(flash, body), candidates_keyboard(candidates))
@@ -295,7 +295,7 @@ def build_staff_router(game, simulation, recruitment) -> Router:
         employee_id = int(callback.data.split(":")[2])
         with game.db.connect() as conn:
             employee = conn.execute(
-                "SELECT alias FROM employees WHERE id=? AND player_id=? AND active=1",
+                "SELECT alias, role FROM employees WHERE id=? AND player_id=? AND active=1",
                 (employee_id, callback.from_user.id),
             ).fetchone()
         if not employee:
@@ -304,7 +304,7 @@ def build_staff_router(game, simulation, recruitment) -> Router:
         await state.update_data(employee_id=employee_id)
         await present(
             callback.message,
-            f"<b>Переименовать</b> · 👤 <b>{clean(employee['alias'])}</b>\n\nОтправь новое имя. Максимум 24 символа.",
+            f"<b>Переименовать</b> · {employee_html(employee['alias'], str(employee['role']))}\n\nОтправь новое имя. Максимум 24 символа.",
             InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="↩️ Отмена", callback_data=f"team:more:{employee_id}")]]),
         )
 

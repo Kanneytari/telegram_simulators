@@ -54,9 +54,9 @@ async def render_dispute(target: Message, game, player_id: int, dispute_id: int,
         f"{role_html('courier', capitalize=True)}: {employee_html(row['employee_alias'], 'courier')} · оценка {courier_rating}"
     )
     if row["courier_reply"]:
-        text += f"\n\n<b>Пояснение закладчика</b>\n{clean(row['courier_reply'])}"
+        text += f"\n\n<b>Пояснение</b> · {role_html('courier')}\n{clean(row['courier_reply'])}"
     else:
-        text += "\n\nПояснение закладчика не запрошено."
+        text += f"\n\nПояснение {role_html('courier', form='закладчика')} не запрошено."
     await present(target, text, decision_keyboard(dispute_id, page, has_reply=bool(row["courier_reply"])))
     return True
 
@@ -67,7 +67,7 @@ def source_keyboard(context, decision: str, page: int = 0) -> InlineKeyboardMark
     if int(context["shop_balance"]) >= amount:
         rows.append([InlineKeyboardButton(text="🏪 Со счёта магазина", callback_data=f"dispute:pay:{dispute_id}:{decision}:shop:{page}")])
     if int(context["employee_deposit"]) >= amount:
-        rows.append([InlineKeyboardButton(text=f"💰 Из депозита {context['employee_alias']}", callback_data=f"dispute:pay:{dispute_id}:{decision}:employee:{page}")])
+        rows.append([InlineKeyboardButton(text=f"👤 Из депозита {context['employee_alias']}", callback_data=f"dispute:pay:{dispute_id}:{decision}:employee:{page}")])
     rows.append(nav_row(f"dispute:view:{dispute_id}:{page}", "⚖️ Диспут"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -80,7 +80,7 @@ async def render_source(target: Message, game, player_id: int, dispute_id: int, 
     text = (
         f"<b>Вернуть клиенту {money(amount)}</b>\n\n"
         f"Со счёта магазина\n{money(amount)} расхода · отношения с сотрудником не страдают\n\n"
-        f"Из депозита {clean(context['employee_alias'])}\n"
+        f"Из депозита {employee_html(context['employee_alias'], 'courier')}\n"
         f"Депозит уменьшится на {money(amount)} · отношения ухудшатся"
     )
     if int(context["shop_balance"]) < amount:

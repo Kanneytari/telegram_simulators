@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from html import escape
 
+from ..presentation.entities import employee_html, product_html, role_html
 from .db import Database
 from .simulation import parse_dt, utcnow
 
@@ -356,7 +357,7 @@ def _team_summary(team: dict, current: dict, previous: dict, ready: bool) -> str
         return f"🟡 {len(tense)} сотрудник(а) перегружены."
     if ready and current["rating_count"] >= 3 and previous["rating_count"] >= 3:
         if current["courier_rating"] <= previous["courier_rating"] - 0.35:
-            return "🟡 Покупатели стали хуже оценивать работу закладчиков."
+            return f"🟡 Покупатели стали хуже оценивать работу {role_html('courier', form='закладчиков')}."
     return "🟢 Команда работает нормально."
 
 
@@ -364,7 +365,7 @@ def _product_concerns(current_products: list[dict], previous_products: list[dict
     previous = _product_map(previous_products)
     concerns: list[tuple[int, str]] = []
     for row in current_products:
-        title = escape(row["title"])
+        title = product_html(row["title"])
         prev = previous.get(row["id"], {"units": 0})
         if row["rating_count"] >= 3 and row["rating"] < 3.7:
             concerns.append((95, f"🔴 Покупатели плохо оценивают {title}: {row['rating']:.1f}/5."))
@@ -401,13 +402,13 @@ def _overview_insights(current: dict, previous: dict, ready: bool, products: lis
     active = [e for e in team["employees"] if e["active"]]
     stressed = sorted(active, key=lambda e: float(e["stress"]), reverse=True)
     if stressed and float(stressed[0]["stress"]) >= 78:
-        candidates.append((85, f"🔴 {escape(str(stressed[0]['alias']))} работает на пределе — риск ошибок и срыва выше."))
+        candidates.append((85, f"🔴 {employee_html(stressed[0]['alias'], str(stressed[0]['role']))} работает на пределе — риск ошибок и срыва выше."))
     elif stressed and float(stressed[0]["stress"]) >= 52:
-        candidates.append((70, f"🟡 У {escape(str(stressed[0]['alias']))} высокий стресс; стоит проверить нагрузку."))
+        candidates.append((70, f"🟡 У {employee_html(stressed[0]['alias'], str(stressed[0]['role']))} высокий стресс; стоит проверить нагрузку."))
 
     if ready and current["rating_count"] >= 3 and previous["rating_count"] >= 3:
         if current["courier_rating"] <= previous["courier_rating"] - 0.35:
-            candidates.append((75, f"🟡 Оценка работы закладчиков снизилась до {current['courier_rating']:.1f}/5."))
+            candidates.append((75, f"🟡 Оценка работы {role_html('courier', form='закладчиков')} снизилась до {current['courier_rating']:.1f}/5."))
         if current["product_rating"] <= previous["product_rating"] - 0.35:
             candidates.append((76, f"🟡 Покупатели стали хуже оценивать товар: {current['product_rating']:.1f}/5."))
     if ready and current["orders"] > 0 and previous["orders"] > 0:
@@ -422,7 +423,7 @@ def _overview_insights(current: dict, previous: dict, ready: bool, products: lis
             continue
         growth = _pct_change(row["units"], prev["units"])
         if growth is not None and growth >= 20:
-            positives.append((45, f"🟢 {escape(row['title'])} продаётся заметно лучше прошлого периода."))
+            positives.append((45, f"🟢 {product_html(row['title'])} продаётся заметно лучше прошлого периода."))
     if ready and current["earned"] > previous["earned"] and current["earned"] > 0:
         positives.append((42, "🟢 Магазин зарабатывает больше, чем в прошлом периоде."))
     if ready and current["repeat_share"] >= previous["repeat_share"] + 0.08 and current["orders"] >= 5:
@@ -466,7 +467,7 @@ def overview_text(db: Database, player_id: int, period: str = "7", now: datetime
         f"Баланс сейчас: <b>{_money(team['balance'])}</b>\n\n"
         f"<b>Покупатели</b>\n"
         f"Товар: {_rating_with_trend(current['product_rating'], current['rating_count'], previous['product_rating'], previous['rating_count'], ready)}\n"
-        f"Закладчики: {_rating_with_trend(current['courier_rating'], current['rating_count'], previous['courier_rating'], previous['rating_count'], ready)}\n"
+        f"{role_html('courier', plural=True, capitalize=True)}: {_rating_with_trend(current['courier_rating'], current['rating_count'], previous['courier_rating'], previous['rating_count'], ready)}\n"
         f"Возвращаются: {_share_with_trend(current['repeat_share'], current['orders'], previous['repeat_share'], previous['orders'], ready)}\n"
         f"Доверие: <b>{team['trust']:.0f}/100</b>\n\n"
         f"<b>Команда</b>\n{team_text}\n\n"
@@ -495,7 +496,7 @@ def _product_block(row: dict, previous: dict | None, ready: bool, icon: str) -> 
         sales_trend = ""
     rating = f"Оценка {row['rating']:.1f}/5" if row["rating_count"] else "Оценок пока нет"
     return (
-        f"{icon} <b>{escape(row['title'])}</b>\n"
+        f"{icon} {product_html(row['title'])}\n"
         f"{row['units']} шт.{sales_trend} · заработано <b>{_money(row['earned'])}</b>\n"
         f"{rating} · {_stock_text(row)}"
     )

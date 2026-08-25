@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.presentation.entities import role_html
 from app.presentation.vocabulary import PRODUCT, STOREFRONT, SUPPLIERS, WAREHOUSE, button
 from functools import wraps
 
@@ -131,11 +132,14 @@ def first_purchase_protection(original):
             with self.db.connect() as conn:
                 conn.execute(
                     """UPDATE inbox
-                       SET body='Складмен забирает первую партию. Обычно это занимает игровое время.'
+                       SET body=?
                        WHERE player_id=? AND kind='tutorial' AND status='open'""",
-                    (player_id,),
+                    (
+                        f"{role_html('warehouse', capitalize=True)} забирает первую партию. Обычно это занимает игровое время.",
+                        player_id,
+                    ),
                 )
-            result += '\n\n' + tutorial_hint('Складмен забирает товар. Обычно это занимает время. Можешь продолжать играть или вернуться в меню и нажать ⏩ Пропустить ожидание.')
+            result += '\n\n' + tutorial_hint(f"{role_html('warehouse', capitalize=True)} забирает товар. Обычно это занимает время. Можешь продолжать играть или вернуться в меню и нажать ⏩ Пропустить ожидание.")
         return result
     decorated = buy_offer_for_employee
 

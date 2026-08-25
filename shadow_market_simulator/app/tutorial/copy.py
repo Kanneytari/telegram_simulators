@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.presentation.entities import role_html
 from app.presentation.vocabulary import ANALYTICS, INBOX, PACKAGING, PAYMENT, PRODUCT, RECRUIT, STOREFRONT, TEAM
 
 from .core import (
@@ -36,7 +37,7 @@ def instruction(state: dict) -> str:
         )
     if stage == STAGE_PICKUP_WAIT:
         return (
-            "Складмен забирает товар. Обычно это занимает игровое время.\n\n"
+            f"{role_html('warehouse', capitalize=True)} забирает товар. Обычно это занимает игровое время.\n\n"
             "Можешь заниматься другими делами и дождаться окончания.\n"
             "Если не хочешь ждать, нажми [⏩ Пропустить ожидание]."
         )
@@ -44,13 +45,13 @@ def instruction(state: dict) -> str:
         return f"Нажми [{PRODUCT.label}]"
     if stage == STAGE_HANDOFF_WAIT:
         return (
-            "Складмен передает товар закладчику.\n\n"
+            f"{role_html('warehouse', capitalize=True)} передает товар {role_html('courier', form='закладчику')}.\n\n"
             "Можешь продолжать заниматься магазином и дождаться окончания.\n"
             "Если не хочешь ждать, нажми [⏩ Пропустить ожидание]."
         )
     if stage == STAGE_PREP_WAIT:
         return (
-            "Закладчик готовит товар к витрине.\n\n"
+            f"{role_html('courier', capitalize=True)} готовит товар к витрине.\n\n"
             "Можешь дождаться окончания.\n"
             "Если не хочешь ждать, нажми [⏩ Пропустить ожидание]."
         )
@@ -68,7 +69,7 @@ def instruction(state: dict) -> str:
         return (
             f"Первый заказ{suffix} прошел.\n\n"
             "Выручка еще не равна чистой прибыли. Есть себестоимость товара и выплаты команде.\n\n"
-            "После продаж появляются оценки товара и закладчика.\n\n"
+            f"После продаж появляются оценки товара и {role_html('courier', form='закладчика')}.\n\n"
             f"Нажми [{CONTINUE_LABEL}], чтобы познакомиться с диспутами."
         )
     if stage == STAGE_DISPUTE:
@@ -81,7 +82,7 @@ def instruction(state: dict) -> str:
             f"[{RECRUIT.label}]\n"
             "Ищи новых сотрудников и задавай требования к кандидатам.\n\n"
             f"[{PAYMENT.label}]\n"
-            "Настраивай условия выплат для складменов и закладчиков.\n\n"
+            f"Настраивай условия выплат для {role_html('warehouse', form='складменов')} и {role_html('courier', form='закладчиков')}.\n\n"
             f"[{PACKAGING.label}]\n"
             "Настраивай, сколько нового товара продавать фасовками по 1, 2 и 5 единиц.\n\n"
             f"[{ANALYTICS.label}]\n"

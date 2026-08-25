@@ -133,7 +133,7 @@ async def render_procurement_product(target: Message, game, player_id: int, prod
     if not product:
         await render_product_root(target, game.db, game, player_id, flash=flash)
         return
-    body = f"<b>📦 {clean(product['title'])}</b>\n\nДоступно: {len(offers)} предложений."
+    body = f"{product_html(product['title'])}\n\nДоступно: {len(offers)} предложений."
     await present(target, notice(flash, body), _offers_keyboard(product_id, offers))
 
 
@@ -380,7 +380,7 @@ async def render_packaging(target: Message, game, player_id: int) -> None:
         f"×5 · <b>{rule['pct_5']}%</b>"
     )
     if claim_tip(game.db, player_id, "packaging"):
-        text += "\n\n💡 Эти доли применяются к товару, который закладчики будут готовить к витрине после следующих передач."
+        text += f"\n\n💡 Эти доли применяются к товару, который {role_html('courier', plural=True)} будут готовить к витрине после следующих передач."
     await present(target, text, packaging_keyboard(rule))
 
 

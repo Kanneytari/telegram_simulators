@@ -267,7 +267,7 @@ def test_handoff_copy_icons_and_master_stash_status(tmp_path):
     assert target.text.startswith("<b>✅ Принято</b>")
     assert f"🚚 <b>Складмен</b>: 🚚 <b>{warehouse['alias']}</b>" in target.text
     assert "готова к передаче" not in target.text
-    assert "Выберите кладмена" in target.text
+    assert "Выберите 👤 <b>кладмена</b>" in target.text
 
     labels = _labels(target.reply_markup)
     courier_buttons = [label for label in labels if retail["alias"] in label]
