@@ -40,8 +40,8 @@ jobs:
         run: |
           git config user.name "Kanneytari"
           git config user.email "hitroplan@yandex.ru"
-          git add shadow_market_simulator/app/tutorial/hooks.py shadow_market_simulator/tests/test_tutorial_flow.py
+          git add shadow_market_simulator/app/tutorial/hooks.py shadow_market_simulator/app/engine/simulation.py shadow_market_simulator/tests/test_tutorial_flow.py
           git commit -m "fix(shadow-market): keep tutorial inbox state accurate"
           git push origin HEAD:fix/tutorial-first-purchase-inbox
 
-# diagnostic retry
+# final retry without duplicate copy layer
