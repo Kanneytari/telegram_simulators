@@ -40,3 +40,11 @@ if old_batch not in text:
     raise SystemExit('receiving batch assertion block not found')
 text = text.replace(old_batch, new_batch, 1)
 test.write_text(text, encoding='utf-8')
+
+leftovers = []
+for path in Path('shadow_market_simulator/app').rglob('*.py'):
+    for lineno, line in enumerate(path.read_text(encoding='utf-8').splitlines(), 1):
+        if 'Склад пуст' in line or 'copy_rules' in line:
+            leftovers.append(f'{path}:{lineno}: {line.strip()}')
+if leftovers:
+    raise SystemExit('stale tutorial copy sources remain:\n' + '\n'.join(leftovers))
