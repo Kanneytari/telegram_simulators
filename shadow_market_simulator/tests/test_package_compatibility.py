@@ -23,6 +23,11 @@ from app.core.database import Database
 from app.courier_idle import courier_idle_ready as legacy_courier_idle_ready
 from app.courier_model import CourierBlueprint as LegacyCourierBlueprint
 from app.courier_recruitment import CourierRecruitmentService as LegacyCourierRecruitmentService
+from app.customer_trust import CustomerTrustGameService as LegacyCustomerTrustGameService
+from app.customer_trust import CustomerTrustSimulationEngine as LegacyCustomerTrustSimulationEngine
+from app.customer_trust import _bayesian_rating as legacy_bayesian_rating
+from app.customer_trust import premium_allowance as legacy_premium_allowance
+from app.customer_trust import trust_band as legacy_trust_band
 from app.db import Database as LegacyDatabase
 from app.dispute_payments import DisputePaymentMixin as LegacyDisputePaymentMixin
 from app.disputes.payments import DisputePaymentMixin
@@ -72,6 +77,13 @@ from app.staff_relationships import StaffRelationshipGameService as LegacyStaffR
 from app.staff_relationships import StaffRelationshipSimulationEngine as LegacyStaffRelationshipSimulationEngine
 from app.staff_relationships import _apply_overexposure_effect as legacy_apply_overexposure_effect
 from app.staff_relationships import _apply_relationship_delta as legacy_apply_relationship_delta
+from app.trust.customer import (
+    CustomerTrustGameService,
+    CustomerTrustSimulationEngine,
+    _bayesian_rating,
+    premium_allowance,
+    trust_band,
+)
 from app.workflow import TASK_LABELS as LegacyTaskLabels
 from app.workflow import WorkflowGameService as LegacyWorkflowGameService
 from app.workflow import WorkflowSimulationEngine as LegacyWorkflowSimulationEngine
@@ -116,3 +128,8 @@ def test_legacy_imports_are_thin_aliases_to_canonical_packages() -> None:
     assert LegacySalesActivityMultiplier == SALES_ACTIVITY_MULTIPLIER
     assert legacy_apply_overexposure_effect is _apply_overexposure_effect
     assert legacy_apply_relationship_delta is _apply_relationship_delta
+    assert LegacyCustomerTrustGameService is CustomerTrustGameService
+    assert LegacyCustomerTrustSimulationEngine is CustomerTrustSimulationEngine
+    assert legacy_bayesian_rating is _bayesian_rating
+    assert legacy_premium_allowance is premium_allowance
+    assert legacy_trust_band is trust_band
