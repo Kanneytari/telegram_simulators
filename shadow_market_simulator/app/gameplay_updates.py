@@ -1,360 +1,27 @@
 from __future__ import annotations
 
-from datetime import timedelta
-
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-from . import procurement_market, simulation, ui_commerce, ui_staff_handlers, workflow
+from . import ui_commerce, ui_staff_handlers, workflow
 from .ui_common import clean, money, nav_row, notice, present, tutorial_hint
 
 
-UPDATED_PRODUCTS = (
-    (1, "AMPHETAMINE", "Amphetamine", 6000, 18.0, 0.95),
-    (2, "MDMA", "MDMA", 8000, 10.0, 1.10),
-    (3, "COCAINE", "Cocaine", 11000, 6.0, 0.90),
-    (4, "MEPHEDRONE", "Mephedrone", 7000, 15.0, 1.00),
-    (6, "LSD", "LSD", 9000, 7.0, 0.85),
-    (7, "HASH", "Hash", 5000, 14.0, 0.90),
-    (8, "WEED", "Weed", 4000, 20.0, 0.85),
-)
-
-PROCUREMENT_BATCH_SIZES = (50, 100, 250, 500, 1000)
-MINIMUM_PROCUREMENT_BATCH_SIZE = 50
-VOLUME_DISCOUNTS = {
-    50: 1.00,
-    100: 0.93,
-    250: 0.84,
-    500: 0.76,
-    1000: 0.68,
-}
-
-
-def _install_catalog_update() -> None:
-    simulation.PRODUCTS = UPDATED_PRODUCTS
-    original = simulation.SimulationEngine.seed_catalog
-    if getattr(original, "_nightshift_updated", False):
-        return
-
-    def seed_catalog(self) -> None:
-        original(self)
-        with self.db.connect() as conn:
-            conn.execute("UPDATE products SET active=0 WHERE code='KETAMINE'")
-            conn.executemany(
-                """INSERT INTO products(
-                       id, code, title, base_market_price, base_demand,
-                       complaint_modifier, active
-                   ) VALUES (?, ?, ?, ?, ?, ?, 1)
-                   ON CONFLICT(id) DO UPDATE SET
-                       code=excluded.code,
-                       title=excluded.title,
-                       base_market_price=excluded.base_market_price,
-                       base_demand=excluded.base_demand,
-                       complaint_modifier=excluded.complaint_modifier,
-                       active=1""",
-                UPDATED_PRODUCTS,
-            )
-            ketamine = conn.execute(
-                "SELECT id FROM products WHERE code='KETAMINE'"
-            ).fetchone()
-            if ketamine:
-                conn.execute(
-                    """UPDATE supplier_offers
-                       SET status='rotated'
-                       WHERE product_id=? AND status='open'""",
-                    (int(ketamine["id"]),),
-                )
-
-            players = [
-                int(row["player_id"])
-                for row in conn.execute("SELECT player_id FROM shops").fetchall()
-            ]
-            for player_id in players:
-                for product_id, _, _, base_price, _, _ in UPDATED_PRODUCTS:
-                    for pack_size, multiplier in ((1, 1.05), (2, 1.95), (5, 4.55)):
-                        price = int(round(base_price * multiplier / 100.0) * 100)
-                        conn.execute(
-                            """INSERT OR IGNORE INTO listings(
-                                   player_id, product_id, pack_size, price
-                               ) VALUES (?, ?, ?, ?)""",
-                            (player_id, product_id, pack_size, price),
-                        )
-
-    seed_catalog._nightshift_updated = True
-    simulation.SimulationEngine.seed_catalog = seed_catalog
-
-
-def _seed_market_conn(self, conn, player_id: int, now) -> None:
-    products = [
-        int(row["id"])
-        for row in conn.execute(
-            "SELECT id FROM products WHERE active=1 ORDER BY id"
-        ).fetchall()
-    ]
-    for product_id in products:
-        _create_market_offer_conn(
-            self,
-            conn,
-            player_id,
-            product_id,
-            MINIMUM_PROCUREMENT_BATCH_SIZE,
-            now,
-        )
-        for _ in range(4):
-            _create_market_offer_conn(
-                self,
-                conn,
-                player_id,
-                product_id,
-                self.rng.choice(PROCUREMENT_BATCH_SIZES),
-                now,
-            )
-
-
-def _ensure_market_bounds_conn(self, conn, player_id: int, now) -> None:
-    placeholders = ",".join("?" for _ in PROCUREMENT_BATCH_SIZES)
-    conn.execute(
-        f"""UPDATE supplier_offers
-            SET status='rotated'
-            WHERE player_id=? AND status='open'
-              AND quantity NOT IN ({placeholders})""",
-        (player_id, *PROCUREMENT_BATCH_SIZES),
-    )
-    conn.execute(
-        """UPDATE supplier_offers
-           SET status='rotated'
-           WHERE player_id=? AND status='open'
-             AND product_id NOT IN (SELECT id FROM products WHERE active=1)""",
-        (player_id,),
-    )
-
-    products = [
-        int(row["id"])
-        for row in conn.execute(
-            "SELECT id FROM products WHERE active=1 ORDER BY id"
-        ).fetchall()
-    ]
-    for product_id in products:
-        rows = [
-            dict(row)
-            for row in conn.execute(
-                """SELECT id, quantity FROM supplier_offers
-                   WHERE player_id=? AND product_id=? AND status='open'
-                   ORDER BY id""",
-                (player_id, product_id),
-            ).fetchall()
-        ]
-        if len(rows) > 5:
-            for row in rows[5:]:
-                conn.execute(
-                    "UPDATE supplier_offers SET status='rotated' WHERE id=?",
-                    (int(row["id"]),),
-                )
-            rows = rows[:5]
-        while len(rows) < 5:
-            quantity = self.rng.choice(PROCUREMENT_BATCH_SIZES)
-            offer_id = _create_market_offer_conn(
-                self,
-                conn,
-                player_id,
-                product_id,
-                quantity,
-                now,
-            )
-            rows.append({"id": offer_id, "quantity": quantity})
-
-        if not any(
-            int(row["quantity"]) == MINIMUM_PROCUREMENT_BATCH_SIZE
-            for row in rows
-        ):
-            victim = rows[-1]
-            conn.execute(
-                "UPDATE supplier_offers SET status='rotated' WHERE id=?",
-                (int(victim["id"]),),
-            )
-            offer_id = _create_market_offer_conn(
-                self,
-                conn,
-                player_id,
-                product_id,
-                MINIMUM_PROCUREMENT_BATCH_SIZE,
-                now,
-            )
-            rows[-1] = {
-                "id": offer_id,
-                "quantity": MINIMUM_PROCUREMENT_BATCH_SIZE,
-            }
-
-
-def _rotate_market_once_conn(self, conn, player_id: int, now) -> int:
-    rows = list(
-        conn.execute(
-            """SELECT o.id, o.product_id, o.quantity
-               FROM supplier_offers o
-               JOIN products p ON p.id=o.product_id
-               WHERE o.player_id=? AND o.status='open' AND p.active=1""",
-            (player_id,),
-        ).fetchall()
-    )
-    if not rows:
-        return 0
-
-    count = min(len(rows), self.rng.randint(1, 2))
-    selected = self.rng.sample(rows, k=count)
-    for row in selected:
-        product_id = int(row["product_id"])
-        minimum_count = int(
-            conn.execute(
-                """SELECT COUNT(*) FROM supplier_offers
-                   WHERE player_id=? AND product_id=? AND status='open'
-                     AND quantity=?""",
-                (player_id, product_id, MINIMUM_PROCUREMENT_BATCH_SIZE),
-            ).fetchone()[0]
-        )
-        replacement_quantity = (
-            MINIMUM_PROCUREMENT_BATCH_SIZE
-            if int(row["quantity"]) == MINIMUM_PROCUREMENT_BATCH_SIZE
-            and minimum_count <= 1
-            else self.rng.choice(PROCUREMENT_BATCH_SIZES)
-        )
-        conn.execute(
-            "UPDATE supplier_offers SET status='rotated' WHERE id=?",
-            (int(row["id"]),),
-        )
-        _create_market_offer_conn(
-            self,
-            conn,
-            player_id,
-            product_id,
-            replacement_quantity,
-            now,
-        )
-    return count * 2
-
-
-def _create_market_offer_conn(
-    self,
-    conn,
-    player_id: int,
-    product_id: int,
-    quantity: int,
-    now,
-) -> int:
-    product = conn.execute(
-        "SELECT * FROM products WHERE id=? AND active=1",
-        (product_id,),
-    ).fetchone()
-    suppliers = conn.execute("SELECT * FROM suppliers ORDER BY id").fetchall()
-    if not product or not suppliers:
-        raise ValueError("Product or suppliers are unavailable")
-
-    supplier = self.rng.choice(list(suppliers))
-    volume_discount = VOLUME_DISCOUNTS[int(quantity)]
-    typical = float(product["base_market_price"]) * 0.56 * volume_discount
-    supplier_baseline = typical * float(supplier["price_modifier"])
-
-    roll = self.rng.random()
-    if roll < 0.81:
-        profile = "normal"
-        price_factor = procurement_market.clamp(
-            self.rng.gauss(1.0, 0.075), 0.82, 1.18
-        )
-        quality_mean = float(supplier["quality_mean"]) + self.rng.gauss(0.0, 3.5)
-        quality_sigma = float(supplier["quality_sigma"]) * self.rng.uniform(0.75, 1.10)
-        reliability = float(supplier["reliability"]) + self.rng.uniform(-0.025, 0.025)
-    elif roll < 0.87:
-        profile = "bargain"
-        price_factor = self.rng.uniform(0.62, 0.78)
-        quality_mean = max(
-            84.0,
-            float(supplier["quality_mean"]) + self.rng.uniform(4.0, 10.0),
-        )
-        quality_sigma = self.rng.uniform(2.5, 5.5)
-        reliability = max(
-            0.90,
-            float(supplier["reliability"]) + self.rng.uniform(0.02, 0.08),
-        )
-    elif roll < 0.95:
-        profile = "dubious"
-        price_factor = self.rng.uniform(0.72, 1.28)
-        quality_mean = self.rng.uniform(48.0, 69.0)
-        quality_sigma = self.rng.uniform(10.0, 18.0)
-        reliability = self.rng.uniform(0.55, 0.79)
-    else:
-        profile = "premium"
-        price_factor = self.rng.uniform(1.12, 1.34)
-        quality_mean = self.rng.uniform(91.0, 97.0)
-        quality_sigma = self.rng.uniform(2.0, 4.0)
-        reliability = self.rng.uniform(0.95, 0.995)
-
-    unit_cost = max(
-        100,
-        int(round(supplier_baseline * price_factor / 50.0) * 50),
-    )
-    quality_mean = procurement_market.clamp(quality_mean, 40.0, 98.0)
-    quality_sigma = procurement_market.clamp(quality_sigma, 2.0, 20.0)
-    reliability = procurement_market.clamp(reliability, 0.50, 0.995)
-    stability = (
-        "стабильно"
-        if quality_sigma <= 4.5
-        else "обычный разброс"
-        if quality_sigma <= 8
-        else "сильный разброс"
-    )
-    quality_hint = f"~{quality_mean:.0f}/100 · {stability}"
-
-    cur = conn.execute(
-        """INSERT INTO supplier_offers(
-               player_id, supplier_id, product_id, quantity, unit_cost,
-               quality_hint, offer_quality_mean, offer_quality_sigma,
-               offer_reliability, market_profile, expires_at
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        (
-            player_id,
-            supplier["id"],
-            product_id,
-            quantity,
-            unit_cost,
-            quality_hint,
-            quality_mean,
-            quality_sigma,
-            reliability,
-            profile,
-            procurement_market.iso(now + timedelta(days=7)),
-        ),
-    )
-    return int(cur.lastrowid)
-
-
-def _offer_typical_unit_cost(offer) -> float:
-    volume_discount = VOLUME_DISCOUNTS.get(int(offer["quantity"]), 1.0)
-    return float(offer["base_market_price"]) * 0.56 * volume_discount
-
-
-def _install_procurement_update() -> None:
-    procurement_market.PROCUREMENT_BATCH_SIZES = PROCUREMENT_BATCH_SIZES
-    procurement_market.MINIMUM_BATCH_SIZE = MINIMUM_PROCUREMENT_BATCH_SIZE
-    procurement_market.ProcurementMarketSimulationEngine._seed_market_conn = _seed_market_conn
-    procurement_market.ProcurementMarketSimulationEngine._ensure_bounds_conn = _ensure_market_bounds_conn
-    procurement_market.ProcurementMarketSimulationEngine._rotate_once_conn = _rotate_market_once_conn
-    procurement_market.ProcurementMarketSimulationEngine._create_market_offer_conn = _create_market_offer_conn
-    procurement_market.ProcurementMarketGameService.offer_typical_unit_cost = staticmethod(
-        _offer_typical_unit_cost
-    )
-
-
 def _procurement_products_keyboard(db, player_id: int, products) -> InlineKeyboardMarkup:
-    rows = [
-        [
-            InlineKeyboardButton(
-                text=(
-                    f"{product['title']} · 🚚 "
-                    f"{ui_commerce._stock_status(db, player_id, int(product['id']))}"
-                ),
-                callback_data=f"proc:product:{product['id']}",
-            )
-        ]
-        for product in products
-    ]
+    rows: list[list[InlineKeyboardButton]] = []
+    for product in products:
+        status = ui_commerce._stock_status(db, player_id, int(product["id"]))
+        text = str(product["title"])
+        if status != "нет запаса":
+            text += f" · 🚚 {status}"
+        rows.append(
+            [
+                InlineKeyboardButton(
+                    text=text,
+                    callback_data=f"proc:product:{product['id']}",
+                )
+            ]
+        )
+
     with db.connect() as conn:
         batch_count = int(
             conn.execute(
@@ -367,14 +34,12 @@ def _procurement_products_keyboard(db, player_id: int, products) -> InlineKeyboa
     rows.append(
         [
             InlineKeyboardButton(
-                text=f"🚚 Склад · {batch_count}",
+                text=f"📦 Склад · {batch_count}",
                 callback_data="team:batches",
             )
         ]
     )
-    rows.append(
-        [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:home")]
-    )
+    rows.append([InlineKeyboardButton(text="🏠 Меню", callback_data="menu:home")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -504,10 +169,7 @@ async def _render_batch(
             text += "\n\n" + tutorial_hint(
                 "Выбери закладчика, которому передашь стафф."
             )
-        employees = {
-            int(row["id"]): row
-            for row in game.employees(player_id)
-        }
+        employees = {int(row["id"]): row for row in game.employees(player_id)}
         for employee in staff:
             live = employees.get(int(employee["id"]), {})
             status = str(live.get("status_text") or "свободен")
@@ -518,9 +180,7 @@ async def _render_batch(
                 int(employee.get("exposure", 0)) - int(employee["deposit"]),
             )
             risk = (
-                f" · 🔴 уже не покрыто {money(unsecured)}"
-                if unsecured
-                else ""
+                f" · 🔴 уже не покрыто {money(unsecured)}" if unsecured else ""
             )
             rows.append(
                 [
@@ -633,7 +293,6 @@ def _install_ui_update() -> None:
 
 
 def apply_gameplay_updates() -> None:
-    _install_catalog_update()
-    _install_procurement_update()
+    """Install the two remaining legacy presentation/handoff overlays."""
     _install_handoff_update()
     _install_ui_update()
