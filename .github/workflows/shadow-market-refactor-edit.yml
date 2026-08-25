@@ -30,7 +30,10 @@ jobs:
           python -m pip install ruff
 
       - name: Migrate tutorial overlays into static package hooks
-        run: python .github/scripts/migrate_shadow_market_tutorial.py
+        run: |
+          python .github/scripts/patch_shadow_market_tutorial_migration.py
+          python .github/scripts/migrate_shadow_market_tutorial.py
+          rm -f .github/scripts/patch_shadow_market_tutorial_migration.py
 
       - name: Verify migrated sources
         working-directory: shadow_market_simulator
