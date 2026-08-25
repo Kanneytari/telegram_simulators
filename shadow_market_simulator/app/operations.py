@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from .dispute_payments import DisputePaymentMixin
+from .game import GameService
 from .nightshift import NightshiftSimulationEngine
-from .dispute_payments import DisputePaymentGameService
 
 
 class OperationsSimulationEngine(NightshiftSimulationEngine):
@@ -28,11 +29,16 @@ class OperationsSimulationEngine(NightshiftSimulationEngine):
                     (player_id, deposit),
                 )
                 warehouse_id = int(cur.lastrowid)
-            deposits = int(conn.execute(
-                "SELECT COALESCE(SUM(deposit),0) FROM employees WHERE player_id=? AND active=1",
-                (player_id,),
-            ).fetchone()[0])
-            conn.execute("UPDATE shops SET balance=balance+? WHERE player_id=?", (deposits, player_id))
+            deposits = int(
+                conn.execute(
+                    "SELECT COALESCE(SUM(deposit),0) FROM employees WHERE player_id=? AND active=1",
+                    (player_id,),
+                ).fetchone()[0]
+            )
+            conn.execute(
+                "UPDATE shops SET balance=balance+? WHERE player_id=?",
+                (deposits, player_id),
+            )
             conn.execute(
                 "INSERT INTO ledger(player_id, amount, kind, note) VALUES (?, ?, 'deposit_in', 'Стартовые депозиты команды')",
                 (player_id, deposits),
@@ -44,7 +50,7 @@ class OperationsSimulationEngine(NightshiftSimulationEngine):
         return True
 
 
-class OperationsGameService(DisputePaymentGameService):
+class OperationsGameService(DisputePaymentMixin, GameService):
     """UI-facing accountable inventory and employment operations."""
 
     def employee_inventory(self, player_id: int, employee_id: int):
@@ -81,12 +87,14 @@ class OperationsGameService(DisputePaymentGameService):
         options = []
         for employee in employees:
             free = max(0, int(employee["deposit"]) - int(employee["exposure"] or 0))
-            options.append({
-                "id": int(employee["id"]),
-                "alias": employee["alias"],
-                "free": free,
-                "eligible": free >= value,
-            })
+            options.append(
+                {
+                    "id": int(employee["id"]),
+                    "alias": employee["alias"],
+                    "free": free,
+                    "eligible": free >= value,
+                }
+            )
         return batch, options
 
     def reassign_batch(self, player_id: int, batch_id: int, employee_id: int) -> str:
@@ -110,27 +118,40 @@ class OperationsGameService(DisputePaymentGameService):
                 (employee_id, player_id),
             ).fetchone()
             if not employee:
-                return {"status": "missing", "message": "Сотрудник уже не работает в магазине."}
-            exposure = int(conn.execute(
-                """SELECT COALESCE(SUM(remaining*unit_cost),0) FROM batches
-                   WHERE player_id=? AND responsible_employee_id=? AND status='warehouse'""",
-                (player_id, employee_id),
-            ).fetchone()[0])
+                return {
+                    "status": "missing",
+                    "message": "Сотрудник уже не работает в магазине.",
+                }
+            exposure = int(
+                conn.execute(
+                    """SELECT COALESCE(SUM(remaining*unit_cost),0) FROM batches
+                       WHERE player_id=? AND responsible_employee_id=? AND status='warehouse'""",
+                    (player_id, employee_id),
+                ).fetchone()[0]
+            )
             if exposure > 0:
                 return {
                     "status": "inventory",
-                    "message": f"Нельзя уволить сотрудника: на нём числится товар на {exposure:,} ₽. Сначала передай партии другому оптовому сотруднику.",
+                    "message": (
+                        "Нельзя уволить сотрудника: на нём числится товар на "
+                        f"{exposure:,} ₽. Сначала передай партии другому оптовому сотруднику."
+                    ),
                 }
             payout = int(employee["deposit"]) + int(employee["wages_accrued"])
-            balance = int(conn.execute(
-                "SELECT balance FROM shops WHERE player_id=?", (player_id,)
-            ).fetchone()[0])
+            balance = int(
+                conn.execute(
+                    "SELECT balance FROM shops WHERE player_id=?", (player_id,)
+                ).fetchone()[0]
+            )
             if balance < payout:
                 return {
                     "status": "money",
                     "message": f"Для расчёта нужно {payout:,} ₽, на счёте {balance:,} ₽.",
                 }
-            conn.execute("UPDATE shops SET balance=balance-? WHERE player_id=?", (payout, player_id))
+            conn.execute(
+                "UPDATE shops SET balance=balance-? WHERE player_id=?",
+                (payout, player_id),
+            )
             conn.execute(
                 """UPDATE employees SET active=0, available=0, deposit=0,
                        total_wages_paid=total_wages_paid+wages_accrued, wages_accrued=0
@@ -140,7 +161,12 @@ class OperationsGameService(DisputePaymentGameService):
             conn.execute(
                 """INSERT INTO ledger(player_id, amount, kind, reference_type, reference_id, note)
                    VALUES (?, ?, 'employee_settlement', 'employee', ?, ?)""",
-                (player_id, -payout, employee_id, f"Расчёт при увольнении {employee['alias']}"),
+                (
+                    player_id,
+                    -payout,
+                    employee_id,
+                    f"Расчёт при увольнении {employee['alias']}",
+                ),
             )
             conn.execute(
                 """UPDATE inbox SET status='closed'
