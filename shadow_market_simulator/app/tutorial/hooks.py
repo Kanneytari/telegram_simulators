@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.presentation.entities import role_html
+from app.presentation.vocabulary import PRODUCT, STOREFRONT, SUPPLIERS, WAREHOUSE, button
 from functools import wraps
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
@@ -19,17 +21,14 @@ from .core import (
     _append_tutorial_action,
     _ensure_schema_conn,
     _free_cash,
-    _instruction,
     _set_stage,
     runtime_enabled,
     sync_tutorial_state,
     tutorial_active,
     tutorial_state,
 )
+from .copy import RETURN_TO_MENU, instruction
 from ..ui_common import clean, money, notice, present, rating, tutorial_hint
-
-
-RETURN_TO_MENU = "Вернись в Меню, чтобы продолжить обучение"
 
 
 def _runtime_db(args, kwargs):
@@ -133,11 +132,14 @@ def first_purchase_protection(original):
             with self.db.connect() as conn:
                 conn.execute(
                     """UPDATE inbox
-                       SET body='Складмен забирает первую партию. Обычно это занимает игровое время.'
+                       SET body=?
                        WHERE player_id=? AND kind='tutorial' AND status='open'""",
-                    (player_id,),
+                    (
+                        f"{role_html('warehouse', capitalize=True)} забирает первую партию. Обычно это занимает игровое время.",
+                        player_id,
+                    ),
                 )
-            result += '\n\n' + tutorial_hint('Складмен забирает товар. Обычно это занимает время. Можешь продолжать играть или вернуться в меню и нажать ⏩ Пропустить ожидание.')
+            result += '\n\n' + tutorial_hint(f"{role_html('warehouse', capitalize=True)} забирает товар. Обычно это занимает время. Можешь продолжать играть или вернуться в меню и нажать ⏩ Пропустить ожидание.")
         return result
     decorated = buy_offer_for_employee
 
@@ -296,7 +298,7 @@ def soft_home(original):
         state = sync_tutorial_state(db, player_id)
         markup = ui_navigation.home_keyboard(opened, urgent, is_admin=player_id in admin_ids)
         if state and state['active']:
-            text += '\n\n' + tutorial_hint(_instruction(state))
+            text += '\n\n' + tutorial_hint(instruction(state))
             markup = _append_tutorial_action(markup, state)
         await present(target, text, markup, edit=edit)
     decorated = render_home
@@ -319,7 +321,7 @@ def soft_product_root(original):
         if not state or not state['active'] or state['stage'] != STAGE_PROCUREMENT:
             await original(target, db, game, player_id, flash=flash)
             return
-        body = f'<b>📦 Товар</b>\n\nСвободно: <b>{money(_free_cash(game, player_id))}</b>\n\n' + tutorial_hint('Нажми [🤝 Поставщики]')
+        body = f'<b>{PRODUCT.label}</b>\n\nСвободно: <b>{money(_free_cash(game, player_id))}</b>\n\n' + tutorial_hint(f'Нажми [{SUPPLIERS.label}]')
         if flash:
             body = f'{flash}\n\n{body}'
         markup = ui_commerce._product_root_keyboard(ui_commerce._warehouse_batch_count(db, player_id))
@@ -344,7 +346,7 @@ def soft_suppliers_root(original):
             await original(target, db, game, player_id, flash=flash)
             return
         products = game.procurement_products(player_id)
-        body = '<b>🤝 Поставщики</b>\n\n' + tutorial_hint('Выбери товар для первой закупки.')
+        body = f'<b>{SUPPLIERS.label}</b>\n\n' + tutorial_hint('Выбери товар для первой закупки.')
         if flash:
             body = f'{flash}\n\n{body}'
         await present(target, body, ui_commerce._procurement_products_keyboard(db, player_id, products))
@@ -403,7 +405,7 @@ def soft_storefront(original):
         state = sync_tutorial_state(db, player_id)
         rows = ui_commerce._sales_products(db, player_id)
         trust = game.customer_metrics(player_id)
-        text = f"<b>🏷 Витрина</b>\n\nДоверие: {trust['trust_score']:.0f}/100\nНаценка до ~+{trust['premium_allowance'] * 100:.0f}% обычно не снижает спрос."
+        text = f"<b>{STOREFRONT.label}</b>\n\nДоверие: {trust['trust_score']:.0f}/100\nНаценка до ~+{trust['premium_allowance'] * 100:.0f}% обычно не снижает спрос."
         if state and state['active'] and (state['stage'] == STAGE_PRICE):
             text += '\n\n' + tutorial_hint('Выбери товар.')
         elif state and state['active'] and (state['stage'] == STAGE_SALE_WAIT):
@@ -435,8 +437,8 @@ def soft_sales_product(original):
         product, listings, published, avg, n = ui_commerce._product_listings(db, player_id, product_id)
         if not product:
             return
-        rows = [[InlineKeyboardButton(text=f"×{listing['pack_size']} · {money(listing['price'])} · доступно {int(listing['positions'])}", callback_data=f"sales:listing:{listing['id']}")] for listing in listings]
-        rows.append([InlineKeyboardButton(text='← Витрина', callback_data='menu:storefront')])
+        rows = [[InlineKeyboardButton(text=f"🏷 ×{listing['pack_size']} · {money(listing['price'])} · доступно {int(listing['positions'])}", callback_data=f"sales:listing:{listing['id']}")] for listing in listings]
+        rows.append([button(STOREFRONT)])
         text = f"<b>{clean(product['title'])}</b>\n\n{published} ед. готовы к продаже · оценка {rating(avg, n)}\n\n" + tutorial_hint('Выбери фасовку.')
         await present(target, text, InlineKeyboardMarkup(inline_keyboard=rows))
     decorated = render_sales_product
@@ -472,7 +474,7 @@ def soft_listing(original):
             text += '\n\n' + tutorial_hint('Измени цену на −5% или +5%.')
         else:
             text += '\n\n' + tutorial_hint('Цена выставлена. Теперь дождись первой продажи или нажми ⏩ Пропустить ожидание.')
-        rows = [[InlineKeyboardButton(text='−5%', callback_data=f'sales:price:{listing_id}:-5'), InlineKeyboardButton(text='+5%', callback_data=f'sales:price:{listing_id}:5')], [InlineKeyboardButton(text=f"← {str(row['title'])[:18]}", callback_data=f"sales:product:{row['product_id']}")]]
+        rows = [[InlineKeyboardButton(text='−5%', callback_data=f'sales:price:{listing_id}:-5'), InlineKeyboardButton(text='+5%', callback_data=f'sales:price:{listing_id}:5')], [InlineKeyboardButton(text=f"📦 {str(row['title'])[:18]}", callback_data=f"sales:product:{row['product_id']}")]]
         markup = InlineKeyboardMarkup(inline_keyboard=rows)
         markup = _append_tutorial_action(markup, state)
         await present(target, text, markup)
@@ -499,7 +501,7 @@ def affordable_empty_product_root(original):
             return
         with db.connect() as conn:
             free_cash = game._free_cash_conn(conn, player_id)
-        body = f'<b>📦 Товар</b>\n\nСвободно: <b>{money(free_cash)}</b>\n\nДоступных предложений нет.'
+        body = f'<b>{PRODUCT.label}</b>\n\nСвободно: <b>{money(free_cash)}</b>\n\nДоступных предложений нет.'
         markup = ui_commerce._product_root_keyboard(ui_commerce._warehouse_batch_count(db, player_id))
         await present(target, notice(flash, body), markup)
     decorated = render_product_root
@@ -521,7 +523,7 @@ def affordable_empty_suppliers_root(original):
         if any((int(product.get('total', 0)) > 0 for product in products)):
             await original(target, db, game, player_id, flash=flash)
             return
-        body = '<b>🤝 Поставщики</b>\n\nДоступных предложений нет.'
+        body = f'<b>{SUPPLIERS.label}</b>\n\nДоступных предложений нет.'
         await present(target, notice(flash, body), ui_commerce._procurement_products_keyboard(db, player_id, products))
     decorated = render_suppliers_root
 
@@ -570,7 +572,7 @@ def handoff_product_root(original):
             await original(target, db, game, player_id, flash=flash)
             return
         free_cash = tutorial._free_cash(game, player_id)
-        body = f'<b>📦 Товар</b>\n\nСвободно: <b>{money(free_cash)}</b>\n\n' + tutorial_hint('Нажми [📦 Склад]')
+        body = f'<b>{PRODUCT.label}</b>\n\nСвободно: <b>{money(free_cash)}</b>\n\n' + tutorial_hint(f'Нажми [{WAREHOUSE.label}]')
         markup = ui_commerce._product_root_keyboard(ui_commerce._warehouse_batch_count(db, player_id))
         await present(target, notice(flash, body), markup)
     decorated = render_product_root

@@ -2,8 +2,6 @@ import asyncio
 import random
 from datetime import timedelta
 
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-
 from app.staff.couriers.management import CourierManagementGameService, CourierManagementSimulationEngine
 from app.core.database import Database
 from app.engine.simulation import iso, utcnow
@@ -128,7 +126,7 @@ def test_market_rotates_one_or_two_offers_every_fifteen_minutes(tmp_path):
 
 def test_procurement_storefront_and_global_menu_labels(tmp_path):
     from app import ui_commerce
-    from app.ui_common import _normalize_menu_buttons
+    from app.presentation.vocabulary import HOME, button
 
     db, _, game = make_system(tmp_path, seed=307)
     products = game.procurement_products(PLAYER_ID)
@@ -141,10 +139,10 @@ def test_procurement_storefront_and_global_menu_labels(tmp_path):
     for product, label in zip(products, product_labels):
         stock_status = ui_commerce._stock_status(db, PLAYER_ID, int(product["id"]))
         if stock_status == "нет запаса":
-            assert label == product["title"]
+            assert label == f"📦 {product['title']}"
         else:
-            assert label == f"{product['title']} · 🚚 {stock_status}"
-    assert procurement_labels[len(EXPECTED_PRODUCTS)] == "← Товар"
+            assert label == f"📦 {product['title']} · 🚚 {stock_status}"
+    assert procurement_labels[len(EXPECTED_PRODUCTS)] == "📦 Товар"
     assert procurement_labels[-1] == "🏠 Меню"
     assert not any(label.startswith("📦 Склад") for label in procurement_labels)
 
@@ -160,13 +158,7 @@ def test_procurement_storefront_and_global_menu_labels(tmp_path):
     storefront = ui_commerce._sales_root_keyboard([])
     assert _labels(storefront) == ["⚙️ Фасовки", "🏠 Меню"]
 
-    raw = InlineKeyboardMarkup(
-        inline_keyboard=[[
-            InlineKeyboardButton(text="Меню", callback_data="menu:home")
-        ]]
-    )
-    normalized = _normalize_menu_buttons(raw)
-    assert _labels(normalized) == ["🏠 Меню"]
+    assert button(HOME).text == "🏠 Меню"
 
 
 def test_tutorial_button_mentions_use_square_brackets():
@@ -175,7 +167,7 @@ def test_tutorial_button_mentions_use_square_brackets():
     assert tutorial_hint("Нажми на кнопку 📦 Товар") == (
         "<blockquote>Нажми на кнопку [📦 Товар]</blockquote>"
     )
-    assert tutorial_hint("Нажми на кнопку 🚚 Склад") == (
+    assert tutorial_hint("Нажми на кнопку 📦 Склад") == (
         "<blockquote>Нажми на кнопку [📦 Склад]</blockquote>"
     )
     assert tutorial_hint("Проверь и нажми кнопку «✅ Отправить 10 ед.».") == (
@@ -273,9 +265,9 @@ def test_handoff_copy_icons_and_master_stash_status(tmp_path):
         )
     )
     assert target.text.startswith("<b>✅ Принято</b>")
-    assert f"Складмен: 🚚 {warehouse['alias']}" in target.text
+    assert f"🚚 <b>Складмен</b>: 🚚 <b>{warehouse['alias']}</b>" in target.text
     assert "готова к передаче" not in target.text
-    assert "Выберите кладмена" in target.text
+    assert "Выберите 👤 <b>кладмена</b>" in target.text
 
     labels = _labels(target.reply_markup)
     courier_buttons = [label for label in labels if retail["alias"] in label]

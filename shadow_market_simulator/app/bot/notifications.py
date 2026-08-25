@@ -15,17 +15,17 @@ def notification_markup(item) -> InlineKeyboardMarkup:
     kind = str(item["kind"])
     item_id = int(item["id"])
     if kind == "dispute":
-        text = "Разобрать"
+        text = "⚖️ Разобрать"
         callback = f"inbox:dispute:{item_id}"
     elif kind == "recruitment_result":
-        text = "Кандидаты"
+        text = "👥 Кандидаты"
         callback = "team:candidates"
     else:
-        text = "Открыть"
+        text = "📂 Открыть"
         callback = f"inbox:item:{item_id}"
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text=text, callback_data=callback)],
+            [InlineKeyboardButton(text=f"📨 {text}", callback_data=callback)],
             [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:home")],
         ]
     )

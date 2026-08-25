@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from ..presentation.entities import batch_html, employee_html, product_html, role_html
 from ..tutorial import hooks as tutorial_hooks
 
 import json
@@ -591,9 +592,9 @@ class WorkflowGameService(OperationsGameService):
         )
         return (
             f"Партия куплена за <b>{total:,} ₽</b>.\n\n"
-            f"Складмен: <b>{employee['alias']}</b>\n"
+            f"{role_html('warehouse', capitalize=True)}: {employee_html(employee['alias'], 'warehouse')}\n"
             "Статус: получает партию\n"
-            "Оплата за работу будет начислена после передачи товара закладчику."
+            f"Оплата за работу будет начислена после передачи товара {role_html('courier', form='закладчику')}."
             f"{risk}"
         )
 
@@ -616,7 +617,7 @@ class WorkflowGameService(OperationsGameService):
             if not batch:
                 return "Партия ещё не готова к распределению или уже закончилась."
             if not retail:
-                return "Закладчик недоступен."
+                return f"{role_html('courier', capitalize=True)} недоступен."
             quantity = min(quantity, int(batch["remaining"]))
             conn.execute("UPDATE batches SET remaining=remaining-? WHERE id=?", (quantity, batch_id))
             cur = conn.execute(
@@ -645,10 +646,10 @@ class WorkflowGameService(OperationsGameService):
             )
         retail_after = self._employee_exposure(player_id, retail_employee_id) + quantity * int(batch["unit_cost"])
         unsecured = max(0, retail_after - int(retail["deposit"]))
-        warning = f"\n\n🔴 После получения у закладчика будет не покрыто депозитом: {unsecured:,} ₽." if unsecured else ""
+        warning = f"\n\n🔴 После получения у {role_html('courier', form='закладчика')} будет не покрыто депозитом: {unsecured:,} ₽." if unsecured else ""
         return (
-            f"Назначено <b>{quantity} ед.</b> {batch['product_title']} сотруднику {retail['alias']}.\n\n"
-            f"{batch['wholesale_alias']} начал подготовку передачи. После завершения {retail['alias']} автоматически начнёт подготовку товара к витрине.{warning}"
+            f"Назначено <b>{quantity} ед.</b> {product_html(batch['product_title'])} сотруднику {employee_html(retail['alias'], 'courier')}.\n\n"
+            f"{employee_html(batch['wholesale_alias'], 'warehouse')} начал подготовку передачи. После завершения {employee_html(retail['alias'], 'courier')} автоматически начнёт подготовку товара к витрине.{warning}"
         )
 
     def retail_staff_for_batch(self, player_id: int, batch_id: int):
@@ -714,7 +715,7 @@ class WorkflowGameService(OperationsGameService):
         exposure = self._employee_exposure(player_id, employee_id)
         unsecured = max(0, exposure - int(employee["deposit"]))
         warning = f" Не покрыто депозитом: {unsecured:,} ₽." if unsecured else ""
-        return f"Партия #{batch_id} закреплена за {employee['alias']}.{warning}"
+        return f"{batch_html(batch_id)} закреплена за {employee_html(employee['alias'], 'warehouse')}.{warning}"
 
     def change_employee_role(self, player_id: int, employee_id: int) -> str:
         with self.db.connect() as conn:
@@ -739,8 +740,7 @@ class WorkflowGameService(OperationsGameService):
                 return "Сначала сотрудник должен завершить текущие задачи и не иметь назначенного товара."
             new_role = "warehouse" if employee["role"] == "courier" else "courier"
             conn.execute("UPDATE employees SET role=? WHERE id=?", (new_role, employee_id))
-        role_title = "складмен" if new_role == "warehouse" else "закладчик"
-        return f"{employee['alias']} переведён в роль «{role_title}»."
+        return f"{employee_html(employee['alias'], new_role)} переведён в роль {role_html(new_role)}."
 
 
 

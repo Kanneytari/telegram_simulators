@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from app.presentation.vocabulary import INBOX, nav_row
+from app.presentation.entities import employee_html, product_html, role_html
 import json
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-from .ui_common import clean, money, nav_row, notice, present, rating
+from .ui_common import clean, money, notice, present, rating
 from .ui_navigation import render_after_inbox_action
 
 
@@ -34,8 +36,8 @@ def decision_keyboard(dispute_id: int, page: int = 0, *, has_reply: bool = False
             InlineKeyboardButton(text="💵 Вернуть 100%", callback_data=f"dispute:amount:{dispute_id}:refund:{page}"),
             InlineKeyboardButton(text="💵 Вернуть 50%", callback_data=f"dispute:amount:{dispute_id}:partial:{page}"),
         ],
-        [InlineKeyboardButton(text="🚫 Отказать", callback_data=f"dispute:reject:{dispute_id}:{page}")],
-        nav_row(back, "← Входящие"),
+        [InlineKeyboardButton(text="Отказать", callback_data=f"dispute:reject:{dispute_id}:{page}")],
+        nav_row(INBOX, callback_data=back),
     ])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -48,13 +50,13 @@ async def render_dispute(target: Message, game, player_id: int, dispute_id: int,
     text = (
         f"<b>⚖️ Заказ #{row['order_id']} · {money(row['revenue'])}</b>\n\n"
         f"{clean(row['message'])}\n\n"
-        f"Товар: {clean(row['product_title'])} · оценка {product_rating}\n"
-        f"Закладчик: {clean(row['employee_alias'])} · оценка {courier_rating}"
+        f"Товар: {product_html(row['product_title'])} · оценка {product_rating}\n"
+        f"{role_html('courier', capitalize=True)}: {employee_html(row['employee_alias'], 'courier')} · оценка {courier_rating}"
     )
     if row["courier_reply"]:
-        text += f"\n\n<b>Пояснение закладчика</b>\n{clean(row['courier_reply'])}"
+        text += f"\n\n<b>Пояснение</b> · {role_html('courier')}\n{clean(row['courier_reply'])}"
     else:
-        text += "\n\nПояснение закладчика не запрошено."
+        text += f"\n\nПояснение {role_html('courier', form='закладчика')} не запрошено."
     await present(target, text, decision_keyboard(dispute_id, page, has_reply=bool(row["courier_reply"])))
     return True
 
@@ -63,10 +65,10 @@ def source_keyboard(context, decision: str, page: int = 0) -> InlineKeyboardMark
     amount = int(context["amount"])
     rows: list[list[InlineKeyboardButton]] = []
     if int(context["shop_balance"]) >= amount:
-        rows.append([InlineKeyboardButton(text="Со счёта магазина", callback_data=f"dispute:pay:{dispute_id}:{decision}:shop:{page}")])
+        rows.append([InlineKeyboardButton(text="🏪 Со счёта магазина", callback_data=f"dispute:pay:{dispute_id}:{decision}:shop:{page}")])
     if int(context["employee_deposit"]) >= amount:
-        rows.append([InlineKeyboardButton(text=f"Из депозита {context['employee_alias']}", callback_data=f"dispute:pay:{dispute_id}:{decision}:employee:{page}")])
-    rows.append(nav_row(f"dispute:view:{dispute_id}:{page}", "← Диспут"))
+        rows.append([InlineKeyboardButton(text=f"👤 Из депозита {context['employee_alias']}", callback_data=f"dispute:pay:{dispute_id}:{decision}:employee:{page}")])
+    rows.append(nav_row(f"dispute:view:{dispute_id}:{page}", "⚖️ Диспут"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -78,7 +80,7 @@ async def render_source(target: Message, game, player_id: int, dispute_id: int, 
     text = (
         f"<b>Вернуть клиенту {money(amount)}</b>\n\n"
         f"Со счёта магазина\n{money(amount)} расхода · отношения с сотрудником не страдают\n\n"
-        f"Из депозита {clean(context['employee_alias'])}\n"
+        f"Из депозита {employee_html(context['employee_alias'], 'courier')}\n"
         f"Депозит уменьшится на {money(amount)} · отношения ухудшатся"
     )
     if int(context["shop_balance"]) < amount:

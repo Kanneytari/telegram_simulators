@@ -102,7 +102,7 @@ def test_guided_first_cycle_end_to_end() -> None:
                     (player_id,),
                 ).fetchone()
                 assert onboarding, "tutorial inbox missing after purchase"
-                assert "Складмен забирает первую партию" in onboarding["body"], repr(onboarding["body"])
+                assert "🚚 <b>Складмен</b> забирает первую партию" in onboarding["body"], repr(onboarding["body"])
                 assert "Склад пуст" not in onboarding["body"], repr(onboarding["body"])
 
             tutorial.skip_tutorial_wait(game, simulation, player_id)

@@ -1,27 +1,12 @@
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-
-from app.ui_common import _normalize_menu_buttons
+from app.presentation.vocabulary import REFRESH, button
 
 
-def test_refresh_button_always_gets_refresh_emoji():
-    markup = InlineKeyboardMarkup(
-        inline_keyboard=[[
-            InlineKeyboardButton(text="Обновить", callback_data="anything:refresh")
-        ]]
-    )
-
-    normalized = _normalize_menu_buttons(markup)
-
-    assert normalized.inline_keyboard[0][0].text == "🔄 Обновить"
+def test_refresh_button_uses_canonical_refresh_label():
+    refresh = button(REFRESH, callback_data="anything:refresh")
+    assert refresh.text == "🔄 Обновить"
+    assert refresh.callback_data == "anything:refresh"
 
 
-def test_existing_refresh_emoji_is_not_duplicated():
-    markup = InlineKeyboardMarkup(
-        inline_keyboard=[[
-            InlineKeyboardButton(text="🔄 Обновить", callback_data="anything:refresh")
-        ]]
-    )
-
-    normalized = _normalize_menu_buttons(markup)
-
-    assert normalized.inline_keyboard[0][0].text == "🔄 Обновить"
+def test_refresh_label_has_single_emoji_source():
+    assert REFRESH.label == "🔄 Обновить"
+    assert REFRESH.label.count("🔄") == 1

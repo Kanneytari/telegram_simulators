@@ -5,6 +5,7 @@ from .core import (
     _ensure_schema_conn as _ensure_schema_conn,
     _finish_tutorial as _finish_tutorial,
     _free_cash as _free_cash,
-    _instruction as _instruction,
     _set_stage as _set_stage,
 )
+
+from .copy import instruction as instruction

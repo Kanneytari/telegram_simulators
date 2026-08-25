@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.presentation.entities import employee_html, product_html, role_html
+from app.presentation.vocabulary import ADMIN, ANALYTICS, HOME, INBOX, PRODUCT, REFRESH, STOREFRONT, TEAM, button, label
 from .tutorial import hooks as tutorial_hooks
 
 import json
@@ -16,23 +18,17 @@ INBOX_PAGE_SIZE = 8
 
 
 def home_keyboard(opened: int, urgent: int, *, is_admin: bool = False) -> InlineKeyboardMarkup:
-    inbox = f"📨 Входящие · {opened}"
+    inbox = label(INBOX, opened)
     if urgent:
         inbox += f" · 🔴 {urgent}"
     rows = [
-        [InlineKeyboardButton(text=inbox, callback_data="menu:inbox")],
-        [
-            InlineKeyboardButton(text="📦 Товар", callback_data="menu:product"),
-            InlineKeyboardButton(text="🏷 Витрина", callback_data="menu:storefront"),
-        ],
-        [
-            InlineKeyboardButton(text="👥 Команда", callback_data="menu:team"),
-            InlineKeyboardButton(text="📊 Аналитика", callback_data="menu:analytics"),
-        ],
+        [InlineKeyboardButton(text=inbox, callback_data=INBOX.callback_data)],
+        [button(PRODUCT), button(STOREFRONT)],
+        [button(TEAM), button(ANALYTICS)],
     ]
     if is_admin:
-        rows.append([InlineKeyboardButton(text="🛠 Админ", callback_data="admin:panel")])
-    rows.append([InlineKeyboardButton(text="🔄 Обновить", callback_data="menu:home")])
+        rows.append([button(ADMIN)])
+    rows.append([button(REFRESH)])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 def _home_snapshot(db, game, simulation, player_id: int) -> tuple[str, int, int]:
@@ -80,11 +76,11 @@ def _home_snapshot(db, game, simulation, player_id: int) -> tuple[str, int, int]
     elif important:
         alerts.append(f"🟡 {important} событий требуют внимания")
     if stressed:
-        alerts.append(f"🟡 {clean(stressed['alias'])} перегружен")
+        alerts.append(f"🟡 {employee_html(stressed['alias'], 'courier')} перегружен")
     low_stock = [p for p in products if p.get("stock_days") is not None and float(p["stock_days"]) < 3.0]
     if low_stock:
         item = min(low_stock, key=lambda row: float(row["stock_days"]))
-        alerts.append(f"🟡 {clean(item['title'])}: запаса примерно на {max(1, round(float(item['stock_days'])))} дн.")
+        alerts.append(f"🟡 {product_html(item['title'])}: запаса примерно на {max(1, round(float(item['stock_days'])))} дн.")
     if not alerts:
         alerts.append("Срочных проблем нет.")
 
@@ -137,7 +133,7 @@ def inbox_keyboard(items, page: int = 0, total: int | None = None) -> InlineKeyb
     total = len(items) if total is None else int(total)
     rows: list[list[InlineKeyboardButton]] = []
     for item in items:
-        marker = "🔴 " if item["priority"] == "urgent" else "🟡 " if item["priority"] == "important" else ""
+        marker = "🔴 " if item["priority"] == "urgent" else "🟡 " if item["priority"] == "important" else "📨 "
         rows.append([
             InlineKeyboardButton(
                 text=f"{marker}{str(item['title'])[:48]}",
@@ -146,14 +142,14 @@ def inbox_keyboard(items, page: int = 0, total: int | None = None) -> InlineKeyb
         ])
     paging: list[InlineKeyboardButton] = []
     if page > 0:
-        paging.append(InlineKeyboardButton(text="Предыдущие", callback_data=f"inbox:page:{page-1}"))
+        paging.append(InlineKeyboardButton(text="⬅️ Предыдущие", callback_data=f"inbox:page:{page-1}"))
     if (page + 1) * INBOX_PAGE_SIZE < total:
-        paging.append(InlineKeyboardButton(text="Следующие", callback_data=f"inbox:page:{page+1}"))
+        paging.append(InlineKeyboardButton(text="➡️ Следующие", callback_data=f"inbox:page:{page+1}"))
     if paging:
         rows.append(paging)
     rows.append([
-        InlineKeyboardButton(text="Обновить", callback_data=f"inbox:page:{page}"),
-        InlineKeyboardButton(text="Меню", callback_data="menu:home"),
+        button(REFRESH, callback_data=f"inbox:page:{page}"),
+        button(HOME),
     ])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -163,7 +159,7 @@ async def render_inbox(target: Message, game, simulation, player_id: int, *, fla
     simulation.advance(player_id)
     game.process_payroll(player_id)
     items, total, attention, page = _inbox_page(game.db, player_id, page)
-    body = f"<b>📨 Входящие · {total}</b>"
+    body = f"<b>{label(INBOX, total)}</b>"
     if attention:
         body += f"\n\n{attention} требуют внимания."
     elif not total:
@@ -202,26 +198,26 @@ def inbox_item_keyboard(item, page: int = 0) -> InlineKeyboardMarkup:
     kind = str(item["kind"])
     rows: list[list[InlineKeyboardButton]] = []
     if kind == "dispute":
-        rows.append([InlineKeyboardButton(text="Разобрать", callback_data=f"inbox:dispute:{item_id}:{page}")])
+        rows.append([InlineKeyboardButton(text="⚖️ Разобрать", callback_data=f"inbox:dispute:{item_id}:{page}")])
     elif kind == "recruitment_result":
-        rows.append([InlineKeyboardButton(text="Кандидаты", callback_data="team:candidates")])
-        rows.append([InlineKeyboardButton(text="Закрыть", callback_data=f"inbox:action:{item_id}:close:{page}")])
+        rows.append([InlineKeyboardButton(text="👥 Кандидаты", callback_data="team:candidates")])
+        rows.append([InlineKeyboardButton(text="❌ Закрыть", callback_data=f"inbox:action:{item_id}:close:{page}")])
     elif kind == "discount_request":
         rows.append([
-            InlineKeyboardButton(text="Согласиться", callback_data=f"inbox:action:{item_id}:approve:{page}"),
-            InlineKeyboardButton(text="Отказать", callback_data=f"inbox:action:{item_id}:deny:{page}"),
+            InlineKeyboardButton(text="✅ Согласиться", callback_data=f"inbox:action:{item_id}:approve:{page}"),
+            InlineKeyboardButton(text="❌ Отказать", callback_data=f"inbox:action:{item_id}:deny:{page}"),
         ])
     else:
-        rows.append([InlineKeyboardButton(text="Закрыть", callback_data=f"inbox:action:{item_id}:close:{page}")])
+        rows.append([InlineKeyboardButton(text="❌ Закрыть", callback_data=f"inbox:action:{item_id}:close:{page}")])
 
     payload = json.loads(item["payload_json"] or "{}")
     employee_id = payload.get("employee_id")
     if employee_id:
-        rows.append([InlineKeyboardButton(text="Профиль сотрудника", callback_data=f"team:employee:{employee_id}")])
+        rows.append([InlineKeyboardButton(text="👤 Профиль сотрудника", callback_data=f"team:employee:{employee_id}")])
     back = f"inbox:page:{page}" if page else "menu:inbox"
     rows.append([
-        InlineKeyboardButton(text="Входящие", callback_data=back),
-        InlineKeyboardButton(text="Меню", callback_data="menu:home"),
+        button(INBOX, callback_data=back),
+        button(HOME),
     ])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -239,7 +235,7 @@ def build_navigation_router(db, game, simulation, admin_ids: frozenset[int]) -> 
                 "<b>🌒 NIGHTSHIFT</b>\n\n"
                 "Ты управляешь магазином, который работает даже когда ты офлайн.\n\n"
                 "Закупай товар, распределяй его между сотрудниками, управляй витриной и разбирай проблемы.\n\n"
-                "<b>Товар. Склад. Закладчики. Витрина. Продажи.</b>",
+                f"📦 <b>Товар</b> · 📦 <b>Склад</b> · {role_html('courier', plural=True, capitalize=True)} · 🏷 <b>Витрина</b> · 💰 <b>Продажи</b>",
                 reply_markup=ReplyKeyboardRemove(),
             )
         await render_home(message, db, game, simulation, admin_ids, message.from_user.id, edit=False)

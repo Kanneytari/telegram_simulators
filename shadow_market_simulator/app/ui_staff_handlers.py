@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.presentation.vocabulary import HIRE, WAREHOUSE, button, nav_row
+from app.presentation.entities import employee_html, product_html, role_html, role_label
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
@@ -7,7 +9,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 from app.staff.couriers.management import PHONE, TRANSPORT
 from app.staff.rename import rename_employee
 from app.staff.recruitment import CHANNELS
-from .ui_common import clean, money, nav_row, notice, pct, present, tutorial_hint
+from .ui_common import clean, money, notice, pct, present, tutorial_hint
 from .ui_staff import (
     RenameEmployeeState,
     render_allocation,
@@ -62,15 +64,15 @@ async def render_batch(
         )
 
     warehouse_line = (
-        f"Складмен: 🚚 {clean(responsible['alias'])}"
+        f"{role_html('warehouse', capitalize=True)}: {employee_html(responsible['alias'], 'warehouse')}"
         if responsible
-        else "Складмен: не назначен"
+        else f"{role_html('warehouse', capitalize=True)}: не назначен"
     )
     if responsible and batch["status"] == "receiving":
         warehouse_line += " · получает"
 
     text = (
-        f"<b>{clean(product['title'])} · партия #{batch_id}</b>\n\n"
+        f"{product_html(product['title'])} · 📦 <b>партия #{batch_id}</b>\n\n"
         f"Осталось: {int(batch['remaining'])} ед. · "
         f"{money(int(batch['remaining'] * batch['unit_cost']))}\n"
         f"{warehouse_line}"
@@ -79,28 +81,28 @@ async def render_batch(
     tutorial = game.needs_first_handoff_tutorial(player_id)
 
     if not responsible:
-        text += "\n\n🔴 Сначала назначь складмена."
+        text += f"\n\n🔴 Сначала назначь {role_html('warehouse', form='складмена')}."
         if tutorial:
-            text += "\n\n" + tutorial_hint("Назначь складмена на эту партию.")
+            text += "\n\n" + tutorial_hint(f"Назначь {role_html('warehouse', form='складмена')} на эту партию.")
         if warehouse_count:
             rows.append([
                 InlineKeyboardButton(
-                    text="Назначить складмена",
+                    text="🚚 Назначить складмена",
                     callback_data=f"team:reassign:{batch_id}",
                 )
             ])
         else:
             rows.append([
                 InlineKeyboardButton(
-                    text="Нанять сотрудника",
+                    text="🔎 Нанять сотрудника",
                     callback_data="team:recruit",
                 )
             ])
     elif batch["status"] == "warehouse":
-        text += "\n\nВыберите кладмена"
+        text += f"\n\nВыберите {role_html('courier', form='кладмена')}"
         if tutorial:
             text += "\n\n" + tutorial_hint(
-                "Выбери закладчика, которому передашь стафф."
+                f"Выбери {role_html('courier', form='закладчика')}, которому передашь стафф."
             )
         employees = {int(row["id"]): row for row in game.employees(player_id)}
         for employee in staff:
@@ -127,16 +129,16 @@ async def render_batch(
         if warehouse_count > 1:
             rows.append([
                 InlineKeyboardButton(
-                    text="Сменить складмена",
+                    text="🚚 Сменить складмена",
                     callback_data=f"team:reassign:{batch_id}",
                 )
             ])
 
     if tutorial and responsible and batch["status"] == "receiving":
         text += "\n\n" + tutorial_hint(
-            "Складмен ещё получает партию. Вернись сюда, когда она будет готова."
+            f"{role_html('warehouse', capitalize=True)} ещё получает партию. Вернись сюда, когда она будет готова."
         )
-    rows.append(nav_row("team:batches", "← Склад"))
+    rows.append(nav_row(WAREHOUSE))
     await present(
         target,
         notice(flash, text),
@@ -153,11 +155,11 @@ async def render_candidate(target: Message, game, player_id: int, candidate_id: 
         ).fetchone()
         profile = conn.execute("SELECT transport_level, phone_level FROM courier_candidate_profiles WHERE candidate_id=?", (candidate_id,)).fetchone()
     if not row:
-        await present(target, "Кандидат уже недоступен.", InlineKeyboardMarkup(inline_keyboard=[nav_row("team:candidates", "← Кандидаты")]))
+        await present(target, "Кандидат уже недоступен.", InlineKeyboardMarkup(inline_keyboard=[nav_row("team:candidates", "👥 Кандидаты")]))
         return
-    role = str(row["role"]); role_text = "закладчик" if role == "courier" else "складмен"
+    role = str(row["role"]); role_text = role_html(role)
     experience = {0: "нет", 1: "есть", 2: "сильный"}.get(int(row["experience_level"] or 0), "нет данных")
-    lines = [f"<b>{'👤' if role == 'courier' else '🚚'} {clean(row['alias'])} · {role_text}</b>", "", f"Депозит: {money(row['deposit'])}", f"Опыт: {experience}"]
+    lines = [f"{employee_html(row['alias'], role)} · {role_text}", "", f"Депозит: {money(row['deposit'])}", f"Опыт: {experience}"]
     policy = game.compensation_policy(player_id, role)
     if role == "courier":
         transport_level = int(profile["transport_level"] if profile else 0)
@@ -172,8 +174,8 @@ async def render_candidate(target: Message, game, player_id: int, candidate_id: 
         terms = f"{pct(rate / 100, 1)} с передачи\n{deposit_pct}% заработка идёт в депозит"
     lines.extend(["", "<b>Условия</b>", terms])
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Нанять", callback_data=f"team:hire:{candidate_id}"), InlineKeyboardButton(text="Отказать", callback_data=f"team:reject:{candidate_id}")],
-        nav_row("team:candidates", "← Кандидаты"),
+        [button(HIRE, callback_data=f"team:hire:{candidate_id}"), InlineKeyboardButton(text="❌ Отказать", callback_data=f"team:reject:{candidate_id}")],
+        nav_row("team:candidates", "👥 Кандидаты"),
     ])
     await present(target, "\n".join(lines), keyboard)
 
@@ -182,14 +184,14 @@ def candidates_keyboard(candidates) -> InlineKeyboardMarkup:
         text=("🚚 " if row["role"] == "warehouse" else "👤 ") + f"{row['alias']} · депозит {money(row['deposit'])}",
         callback_data=f"team:candidate:{row['id']}",
     )] for row in candidates]
-    rows.append([InlineKeyboardButton(text="Новый поиск", callback_data="team:recruit:new")])
-    rows.append(nav_row("team:recruit", "← Найм"))
+    rows.append([InlineKeyboardButton(text="🔎 Новый поиск", callback_data="team:recruit:new")])
+    rows.append(nav_row("team:recruit", "🔎 Найм"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 async def render_candidates(target: Message, recruitment, player_id: int, *, flash: str | None = None) -> None:
     candidates = recruitment.candidates(player_id)
-    body = f"<b>Кандидаты · {len(candidates)}</b>"
+    body = f"<b>👥 Кандидаты · {len(candidates)}</b>"
     if not candidates:
         body += "\n\nСвежих откликов нет."
     await present(target, notice(flash, body), candidates_keyboard(candidates))
@@ -265,13 +267,13 @@ def build_staff_router(game, simulation, recruitment) -> Router:
         title, cost, _ = table[min(2, current + 1)]
         text = (
             f"<b>Подтвердить улучшение?</b>\n\n"
-            f"{clean(snapshot['alias'])} · {title}\n"
+            f"{employee_html(snapshot['alias'], 'courier')} · <b>{clean(title)}</b>\n"
             f"Стоимость: <b>{money(cost)}</b>\n\n"
             "Вложение закреплено за сотрудником и не возвращается при его уходе."
         )
         await present(callback.message, text, InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=f"Купить · {money(cost)}", callback_data=f"team:upgradedo:{employee_id}:{slot}")],
-            [InlineKeyboardButton(text="Отмена", callback_data=f"team:development:{employee_id}")],
+            [InlineKeyboardButton(text=f"🛒 Купить · {money(cost)}", callback_data=f"team:upgradedo:{employee_id}:{slot}")],
+            [InlineKeyboardButton(text="↩️ Отмена", callback_data=f"team:development:{employee_id}")],
         ]))
 
     @router.callback_query(F.data.startswith("team:upgradedo:"))
@@ -293,7 +295,7 @@ def build_staff_router(game, simulation, recruitment) -> Router:
         employee_id = int(callback.data.split(":")[2])
         with game.db.connect() as conn:
             employee = conn.execute(
-                "SELECT alias FROM employees WHERE id=? AND player_id=? AND active=1",
+                "SELECT alias, role FROM employees WHERE id=? AND player_id=? AND active=1",
                 (employee_id, callback.from_user.id),
             ).fetchone()
         if not employee:
@@ -302,8 +304,8 @@ def build_staff_router(game, simulation, recruitment) -> Router:
         await state.update_data(employee_id=employee_id)
         await present(
             callback.message,
-            f"<b>Переименовать {clean(employee['alias'])}</b>\n\nОтправь новое имя. Максимум 24 символа.",
-            InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Отмена", callback_data=f"team:more:{employee_id}")]]),
+            f"<b>Переименовать</b> · {employee_html(employee['alias'], str(employee['role']))}\n\nОтправь новое имя. Максимум 24 символа.",
+            InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="↩️ Отмена", callback_data=f"team:more:{employee_id}")]]),
         )
 
     @router.message(RenameEmployeeState.waiting_for_name)
@@ -316,7 +318,7 @@ def build_staff_router(game, simulation, recruitment) -> Router:
             return
         await state.clear()
         await message.answer(result["text"], reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
-            InlineKeyboardButton(text="Профиль", callback_data=f"team:employee:{employee_id}")
+            InlineKeyboardButton(text="👤 Профиль", callback_data=f"team:employee:{employee_id}")
         ]]))
 
     @router.callback_query(F.data.startswith("team:role:") & ~F.data.startswith("team:roleconfirm:"))
@@ -330,14 +332,17 @@ def build_staff_router(game, simulation, recruitment) -> Router:
             ).fetchone()
         if not employee:
             return
-        current = "складмен" if employee["role"] == "warehouse" else "закладчик"
-        new = "закладчик" if employee["role"] == "warehouse" else "складмен"
+        current_role = str(employee["role"])
+        new_role = "courier" if current_role == "warehouse" else "warehouse"
         await present(
             callback.message,
-            f"<b>Сменить роль · {clean(employee['alias'])}</b>\n\nСейчас: {current}\nНовая роль: <b>{new}</b>\n\nСмена возможна только без товара и активных задач.",
+            f"<b>Сменить роль</b> · {employee_html(employee['alias'], current_role)}\n\n"
+            f"Сейчас: {role_html(current_role)}\n"
+            f"Новая роль: {role_html(new_role)}\n\n"
+            "Смена возможна только без товара и активных задач.",
             InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text=f"Сменить на {new}", callback_data=f"team:roleconfirm:{employee_id}")],
-                [InlineKeyboardButton(text="Отмена", callback_data=f"team:more:{employee_id}")],
+                [InlineKeyboardButton(text=f"Сменить на {role_label(new_role)}", callback_data=f"team:roleconfirm:{employee_id}")],
+                [InlineKeyboardButton(text="↩️ Отмена", callback_data=f"team:more:{employee_id}")],
             ]),
         )
 
@@ -362,10 +367,10 @@ def build_staff_router(game, simulation, recruitment) -> Router:
         payout = int(employee["deposit"]) + int(employee["wages_accrued"])
         await present(
             callback.message,
-            f"<b>Уволить {clean(employee['alias'])}?</b>\n\nВернуть сотруднику: <b>{money(payout)}</b>\n\nУвольнение возможно только после завершения задач и освобождения от товара.",
+            f"<b>Уволить</b> · {employee_html(employee['alias'], str(employee['role']))}?\n\nВернуть сотруднику: <b>{money(payout)}</b>\n\nУвольнение возможно только после завершения задач и освобождения от товара.",
             InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="Уволить", callback_data=f"team:fireconfirm:{employee_id}")],
-                [InlineKeyboardButton(text="Отмена", callback_data=f"team:more:{employee_id}")],
+                [InlineKeyboardButton(text="🗑️ Уволить", callback_data=f"team:fireconfirm:{employee_id}")],
+                [InlineKeyboardButton(text="↩️ Отмена", callback_data=f"team:more:{employee_id}")],
             ]),
         )
 

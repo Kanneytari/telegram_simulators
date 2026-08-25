@@ -80,7 +80,7 @@ def test_primary_ui_screens_render_from_real_state(tmp_path):
     assert courier is not None
     asyncio.run(render_profile(target, game, PLAYER_ID, int(courier["id"])))
     assert "закладчик" in target.text
-    assert "Развитие" in [button.text for row in target.markup.inline_keyboard for button in row]
+    assert "📈 Развитие" in [button.text for row in target.markup.inline_keyboard for button in row]
 
     asyncio.run(render_batches(target, game, PLAYER_ID))
     assert "Склад" in target.text

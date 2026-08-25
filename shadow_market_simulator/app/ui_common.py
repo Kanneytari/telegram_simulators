@@ -4,7 +4,7 @@ import re
 from html import escape
 
 from aiogram.exceptions import TelegramBadRequest
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import InlineKeyboardMarkup, Message
 
 
 _THOUSANDS_COMMA = re.compile(r"(?<=\d),(?=\d{3}(?:\D|$))")
@@ -50,12 +50,10 @@ def clean(value: object) -> str:
 
 def _normalize_tutorial_button_mentions(text: str) -> str:
     text = (
-        text.replace("🚚 Склад", "📦 Склад")
-        .replace("—", "-")
+        text.replace("—", "-")
         .replace("«", "[")
         .replace("»", "]")
         .replace(" → ", ", затем ")
-        .replace("← ", "")
     )
     text = _TUTORIAL_ACTION_MENTION.sub(r"\1[\2]", text)
 
@@ -76,7 +74,9 @@ def _format_tutorial_blocks(text: str) -> str:
 
 def tutorial_hint(text: str) -> str:
     normalized = _normalize_tutorial_button_mentions(text)
-    return f"<blockquote>{clean(_format_tutorial_blocks(normalized))}</blockquote>"
+    safe = clean(_format_tutorial_blocks(normalized))
+    safe = safe.replace("&lt;b&gt;", "<b>").replace("&lt;/b&gt;", "</b>")
+    return f"<blockquote>{safe}</blockquote>"
 
 
 def normalize_text(text: str) -> str:
@@ -86,7 +86,6 @@ def normalize_text(text: str) -> str:
         .replace("»", '"')
         .replace(" → ", ", затем ")
         .replace("→ ", "")
-        .replace("← ", "")
     )
     return _THOUSANDS_COMMA.sub(" ", text)
 
@@ -100,42 +99,6 @@ def claim_tip(db, player_id: int, code: str) -> bool:
     return cur.rowcount > 0
 
 
-def _normalize_button_text(text: str) -> str:
-    return (
-        text.replace("—", "-")
-        .replace("«", '"')
-        .replace("»", '"')
-        .replace("← ", "")
-        .replace(" →", "")
-    )
-
-
-def _normalize_menu_buttons(markup: InlineKeyboardMarkup | None) -> InlineKeyboardMarkup | None:
-    if not markup:
-        return None
-    changed = False
-    rows: list[list[InlineKeyboardButton]] = []
-    for row in markup.inline_keyboard:
-        normalized_row: list[InlineKeyboardButton] = []
-        for button in row:
-            original_text = button.text or ""
-            replacement = _normalize_button_text(original_text)
-            if replacement == "Обновить":
-                replacement = "🔄 Обновить"
-            elif button.callback_data == "menu:home" and replacement == "Меню":
-                replacement = "🏠 Меню"
-            elif button.callback_data == "team:recruit" and replacement == "Нанять":
-                replacement = "🔎 Нанять"
-            elif button.callback_data == "team:terms" and replacement == "Оплата":
-                replacement = "⚙️ Оплата"
-            if replacement != original_text:
-                button = button.model_copy(update={"text": replacement})
-                changed = True
-            normalized_row.append(button)
-        rows.append(normalized_row)
-    return InlineKeyboardMarkup(inline_keyboard=rows) if changed else markup
-
-
 async def present(
     target: Message,
     text: str,
@@ -144,7 +107,6 @@ async def present(
     edit: bool = True,
 ) -> None:
     text = normalize_text(text)
-    markup = _normalize_menu_buttons(markup)
 
     if target.photo and edit:
         try:
@@ -162,34 +124,6 @@ async def present(
     except TelegramBadRequest as exc:
         if "message is not modified" not in str(exc).lower():
             raise
-
-
-def nav(
-    parent_callback: str | None = None,
-    parent_text: str = "Назад",
-    *,
-    menu: bool = True,
-) -> InlineKeyboardMarkup:
-    row: list[InlineKeyboardButton] = []
-    if parent_callback:
-        row.append(InlineKeyboardButton(text=parent_text, callback_data=parent_callback))
-    if menu:
-        row.append(InlineKeyboardButton(text="🏠 Меню", callback_data="menu:home"))
-    return InlineKeyboardMarkup(inline_keyboard=[row] if row else [])
-
-
-def nav_row(
-    parent_callback: str | None = None,
-    parent_text: str = "Назад",
-    *,
-    menu: bool = True,
-) -> list[InlineKeyboardButton]:
-    row: list[InlineKeyboardButton] = []
-    if parent_callback:
-        row.append(InlineKeyboardButton(text=parent_text, callback_data=parent_callback))
-    if menu:
-        row.append(InlineKeyboardButton(text="🏠 Меню", callback_data="menu:home"))
-    return row
 
 
 def notice(text: str | None, body: str) -> str:

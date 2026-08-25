@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.presentation.vocabulary import HOME, button
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
@@ -14,7 +15,7 @@ VIEWS = {"overview", "products", "finance"}
 def analytics_view_keyboard(view: str, period: str) -> InlineKeyboardMarkup:
     period = normalize_period(period)
     view = view if view in VIEWS else "overview"
-    labels = (("overview", "Обзор"), ("products", "Товары"), ("finance", "Деньги"))
+    labels = (("overview", "📊 Обзор"), ("products", "📦 Товары"), ("finance", "💰 Деньги"))
     rows = [
         [
             InlineKeyboardButton(
@@ -35,16 +36,16 @@ def analytics_view_keyboard(view: str, period: str) -> InlineKeyboardMarkup:
         ],
     ]
     if view == "finance":
-        rows.append([InlineKeyboardButton(text="Выплаты", callback_data=f"analytics:payroll:{period}")])
-    rows.append([InlineKeyboardButton(text="Меню", callback_data="menu:home")])
+        rows.append([InlineKeyboardButton(text="💸 Выплаты", callback_data=f"analytics:payroll:{period}")])
+    rows.append([button(HOME)])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def analytics_payroll_keyboard(period: str) -> InlineKeyboardMarkup:
     period = normalize_period(period)
     return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="← Деньги", callback_data=f"analytics:view:finance:{period}"),
-        InlineKeyboardButton(text="Меню", callback_data="menu:home"),
+        InlineKeyboardButton(text="💰 Деньги", callback_data=f"analytics:view:finance:{period}"),
+        button(HOME),
     ]])
 
 
