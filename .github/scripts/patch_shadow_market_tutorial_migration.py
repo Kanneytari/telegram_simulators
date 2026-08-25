@@ -4,8 +4,6 @@ import re
 path = Path('.github/scripts/migrate_shadow_market_tutorial.py')
 text = path.read_text(encoding='utf-8')
 
-# Avoid tutorial.core -> engine.simulation -> tutorial.hooks import cycle and
-# make tutorial behavior an explicit Database runtime capability.
 old = '''import json
 from datetime import timedelta
 
@@ -188,7 +186,11 @@ specific = r'''
 path = tests / "test_tutorial_flow.py"
 body = path.read_text(encoding="utf-8")
 body = body.replace("                from app.tutorial import (", "        from app.tutorial import (")
-body = body.replace("                            import app.tutorial as tutorial", "        import app.tutorial as tutorial")
+body = re.sub(
+    r"(?m)^\s*import app\.tutorial as tutorial$",
+    "        import app.tutorial as tutorial",
+    body,
+)
 for line in (
     "        from app.tutorial_copy_update import apply_tutorial_copy_update\n",
     "        from app.tutorial_runtime import apply_tutorial_runtime_fixes\n",
@@ -237,8 +239,6 @@ path.write_text(body, encoding="utf-8")
 '''
 text = text.replace(marker, specific + marker, 1)
 
-# The migration's final stale-symbol assertion should reject actual installers
-# and old module imports, not the legitimate runtime capability attribute name.
 old = '''forbidden = [
     "apply_tutorial_updates",
     "apply_tutorial_runtime_fixes",
