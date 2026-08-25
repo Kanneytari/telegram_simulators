@@ -166,6 +166,29 @@ def test_exact_replayed_handoff_confirmation_changes_inventory_once(tmp_path):
     assert allocations == 1
 
 
+def test_failed_one_shot_handler_can_be_retried():
+    event = _callback("team:roleconfirm:12", message_id=777)
+    middleware = OneShotCallbackMiddleware()
+    calls = 0
+
+    async def handler(_callback, _data):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("transient failure")
+        return "ok"
+
+    async def run_retry():
+        try:
+            await middleware(handler, event, {})
+        except RuntimeError:
+            pass
+        return await middleware(handler, event, {})
+
+    assert asyncio.run(run_retry()) == "ok"
+    assert calls == 2
+
+
 def test_role_and_upgrade_confirms_are_one_shot_callbacks():
     assert OneShotCallbackMiddleware._is_one_shot("team:roleconfirm:12")
     assert OneShotCallbackMiddleware._is_one_shot("team:upgradedo:12:transport")
