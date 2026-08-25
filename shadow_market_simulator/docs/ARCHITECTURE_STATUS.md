@@ -1,70 +1,91 @@
-# NIGHTSHIFT architecture refactor status
+# NIGHTSHIFT: состояние архитектуры v2
 
-This file records the concrete state of the architecture-v2 migration. `ARCHITECTURE.md` remains the design direction; this file describes what is already canonical and what is intentionally transitional.
+Архитектура v2 завершена и находится в `main`. Этот файл фиксирует фактическое состояние проекта после структурного рефакторинга.
 
-## Canonical packages
+## Канонические пакеты
 
-The following packages now own the real implementation:
+Реальная реализация находится в feature-пакетах:
 
-- `app/core/` — configuration, database/schema boundary and base `GameService`;
-- `app/engine/` — base simulation, per-player time semantics and timer scaling;
-- `app/commerce/` — inventory/operations, workflow, procurement and packaging;
-- `app/staff/` — recruitment, compensation, relationships, insights, idle semantics and employee helpers;
-- `app/staff/couriers/` — courier model, recruitment, core simulation and management;
+- `app/core/` — конфигурация, database/schema boundary и базовый `GameService`;
+- `app/engine/` — базовая симуляция, персональное игровое время и таймеры;
+- `app/commerce/` — inventory/operations, workflow, procurement и packaging;
+- `app/staff/` — recruitment, compensation, relationships, insights и idle-семантика;
+- `app/staff/couriers/` — courier model, recruitment, core simulation и management;
 - `app/trust/` — customer trust/rating behavior;
 - `app/disputes/` — dispute payment behavior;
-- `app/analytics/` — event logging, business analytics and analytics handlers;
-- `app/inbox/` — inbox lifecycle;
-- `app/bot/` — Telegram middleware and notification runtime.
+- `app/analytics/` — event logging, business analytics и analytics handlers;
+- `app/inbox/` — lifecycle входящих сообщений;
+- `app/bot/` — Telegram middleware и notification runtime;
+- `app/tutorial/` — onboarding state/flow и гарантии первого цикла.
 
-Legacy root compatibility facades have been removed. Production code and tests import canonical package paths directly.
+Старые root compatibility-facades удалены. Production-код и тесты используют канонические package-paths напрямую.
+
+## Корень `app/`
+
+В корне остаются только assembly/UI-модули:
+
+- `main.py`;
+- `bootstrap.py`;
+- `ui_admin.py`;
+- `ui_commerce.py`;
+- `ui_common.py`;
+- `ui_disputes.py`;
+- `ui_navigation.py`;
+- `ui_staff.py`;
+- `ui_staff_handlers.py`;
+- `__init__.py`.
+
+Архитектурный guardrail запрещает расширять этот список доменными модулями.
 
 ## Runtime assembly
 
-`app/main.py` is a thin entry point. Application construction lives in `app/bootstrap.py`; notification processing is separated into `app/bot/notifications.py`.
+`app/main.py` — минимальная точка входа. Сборка приложения выполняется в `app/bootstrap.py`. Фоновая обработка уведомлений находится в `app/bot/notifications.py`.
 
-The production bootstrap already uses canonical package imports for the migrated core domains, including analytics and courier management.
-
-## Simulation and service inheritance
-
-The existing cooperative `SimulationEngine` / `GameService` inheritance staircase is frozen by `tests/test_architecture_guardrails.py`. Existing layers may be reduced or relocated, but new mechanics must not add another terminal inheritance layer.
-
-Base simulation now lives in `app/engine/simulation.py`. Internal feature bridges point to that canonical module instead of round-tripping through the legacy root `app.simulation` facade.
+Bootstrap использует только канонические package-imports.
 
 ## Runtime overlays
 
-Runtime overlay debt is now zero.
+Runtime overlay debt: **0**.
 
-Removed completely:
+Полностью удалены:
 
 - `release_fixes.py`;
 - `handoff_copy_update.py`;
 - `product_ui_update.py`;
 - `gameplay_updates.py`;
-- `tutorial.py` as a runtime installer;
+- старый `tutorial.py` как runtime installer;
 - `tutorial_runtime.py`;
 - `tutorial_copy_update.py`.
 
-Onboarding now lives in `app/tutorial/`. Tutorial state and flow are in `core.py`; cross-cutting first-cycle behavior is attached explicitly through static decorators in `hooks.py`. `app/bootstrap.py` does not install or mutate tutorial behavior at runtime.
+`LEGACY_OVERLAY_MODULES` пуст.
 
-No runtime overlay module is allowed by the architecture guardrail.
+Tutorial находится в `app/tutorial/`; bootstrap только явно включает tutorial capability для production `Database`. Методы и renderer'ы при старте приложения не подменяются.
 
-## Compatibility policy
+## Compatibility layer
 
-The temporary root compatibility layer has been removed. Old import paths are intentionally unsupported inside this application; architecture guardrails prevent those facade modules from returning.
+Временный root compatibility-слой удалён полностью. Старые внутренние import-paths намеренно не поддерживаются.
 
-## Validation policy
+Повторное появление facade-файлов должно рассматриваться как архитектурная регрессия, а не как допустимый способ совместимости.
 
-Every migration checkpoint is validated by the NIGHTSHIFT CI workflow:
+## Наследование
+
+Существующая cooperative MRO-цепочка `SimulationEngine` / `GameService` ещё присутствует в активной реализации, но заморожена guardrail-тестом. Её можно сокращать; новые feature-слои поверх неё добавлять нельзя без отдельного архитектурного обоснования.
+
+Новые механики должны предпочитать feature services, композицию и lifecycle hooks.
+
+## Проверка
+
+Финальное состояние architecture v2 прошло NIGHTSHIFT CI:
 
 - Python compile check;
-- full pytest suite;
-- unused/import checks with ruff;
-- fresh database and UI smoke test;
-- stale contract/documentation audit.
+- полный pytest suite;
+- ruff import/name checks;
+- fresh SQLite database + UI smoke;
+- stale contract/documentation audit;
+- architecture guardrails.
 
-The refactor is considered safe only when all of these checks are green on the current branch head.
+## Статус
 
-## Remaining work
+Структурная миграция завершена. Отдельного архитектурного migration backlog больше нет.
 
-The architecture-v2 structural migration is complete for the active runtime. Future changes should extend the canonical feature packages directly rather than recreating root facades, runtime overlays, or one-class-per-feature inheritance layers.
+Дальнейшие изменения должны развивать канонические feature-пакеты напрямую и не возвращать root facades, runtime overlays или новый inheritance-layer на каждую механику.
