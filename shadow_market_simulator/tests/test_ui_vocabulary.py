@@ -102,3 +102,45 @@ def test_ui_common_does_not_repair_semantic_labels() -> None:
     source = (APP / "ui_common.py").read_text(encoding="utf-8")
     assert "🚚 Склад" not in source
     assert "📦 Склад" not in source
+
+
+VISUAL_MARKERS = (
+    "🏠", "📦", "⚖️", "🤝", "🏷", "➡️", "💵", "💬", "🏪", "💸", "👥", "📊", "📨", "🛠", "🔎", "✅", "⚙️",
+    "🔄", "👤", "🚚", "💰", "🛌", "📈", "📱", "🚗", "🚲", "🛒", "❌",
+    "↩️", "⬅️", "➖", "➕", "🎓", "📣", "⏱", "▶️", "ℹ️", "📂", "🟨", "🧱",
+    "🕸", "⚠️", "💎", "⭐", "🔴", "🟢", "⚪", "⏩", "✏️", "🗑️", "🎯",
+)
+
+
+def _expr_has_visual_marker(node: ast.AST) -> bool:
+    source = ast.unparse(node)
+    if ".label" in source or ".icon" in source or "role_label(" in source or "role_icon" in source or source == "inbox":
+        return True
+    return any(marker in source for marker in VISUAL_MARKERS)
+
+
+def test_inline_buttons_have_visual_markers() -> None:
+    offenders: list[str] = []
+    for source_path in APP.rglob("*.py"):
+        if source_path.name == "vocabulary.py":
+            continue
+        tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            name = func.id if isinstance(func, ast.Name) else func.attr if isinstance(func, ast.Attribute) else ""
+            if name == "InlineKeyboardButton":
+                text_kw = next((kw.value for kw in node.keywords if kw.arg == "text"), None)
+                if text_kw is not None and not _expr_has_visual_marker(text_kw):
+                    offenders.append(
+                        f"{source_path.relative_to(APP)}:{getattr(node, 'lineno', '?')} text={ast.unparse(text_kw)}"
+                    )
+            elif name == "nav_row" and len(node.args) >= 2:
+                parent_text = node.args[1]
+                if isinstance(parent_text, ast.Constant) and isinstance(parent_text.value, str):
+                    if not any(parent_text.value.startswith(marker) for marker in VISUAL_MARKERS):
+                        offenders.append(
+                            f"{source_path.relative_to(APP)}:{getattr(node, 'lineno', '?')} nav={parent_text.value!r}"
+                        )
+    assert not offenders, "buttons without visual markers: " + "; ".join(offenders)

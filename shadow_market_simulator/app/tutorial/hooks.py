@@ -433,7 +433,7 @@ def soft_sales_product(original):
         product, listings, published, avg, n = ui_commerce._product_listings(db, player_id, product_id)
         if not product:
             return
-        rows = [[InlineKeyboardButton(text=f"×{listing['pack_size']} · {money(listing['price'])} · доступно {int(listing['positions'])}", callback_data=f"sales:listing:{listing['id']}")] for listing in listings]
+        rows = [[InlineKeyboardButton(text=f"🏷 ×{listing['pack_size']} · {money(listing['price'])} · доступно {int(listing['positions'])}", callback_data=f"sales:listing:{listing['id']}")] for listing in listings]
         rows.append([button(STOREFRONT)])
         text = f"<b>{clean(product['title'])}</b>\n\n{published} ед. готовы к продаже · оценка {rating(avg, n)}\n\n" + tutorial_hint('Выбери фасовку.')
         await present(target, text, InlineKeyboardMarkup(inline_keyboard=rows))
@@ -470,7 +470,7 @@ def soft_listing(original):
             text += '\n\n' + tutorial_hint('Измени цену на −5% или +5%.')
         else:
             text += '\n\n' + tutorial_hint('Цена выставлена. Теперь дождись первой продажи или нажми ⏩ Пропустить ожидание.')
-        rows = [[InlineKeyboardButton(text='−5%', callback_data=f'sales:price:{listing_id}:-5'), InlineKeyboardButton(text='+5%', callback_data=f'sales:price:{listing_id}:5')], [InlineKeyboardButton(text=f"{str(row['title'])[:18]}", callback_data=f"sales:product:{row['product_id']}")]]
+        rows = [[InlineKeyboardButton(text='➖ 5%', callback_data=f'sales:price:{listing_id}:-5'), InlineKeyboardButton(text='➕ 5%', callback_data=f'sales:price:{listing_id}:5')], [InlineKeyboardButton(text=f"📦 {str(row['title'])[:18]}", callback_data=f"sales:product:{row['product_id']}")]]
         markup = InlineKeyboardMarkup(inline_keyboard=rows)
         markup = _append_tutorial_action(markup, state)
         await present(target, text, markup)

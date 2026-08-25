@@ -15,28 +15,28 @@ VIEWS = {"overview", "products", "finance"}
 def analytics_view_keyboard(view: str, period: str) -> InlineKeyboardMarkup:
     period = normalize_period(period)
     view = view if view in VIEWS else "overview"
-    labels = (("overview", "Обзор"), ("products", "Товары"), ("finance", "Деньги"))
+    labels = (("overview", "📊 Обзор"), ("products", "📦 Товары"), ("finance", "💰 Деньги"))
     rows = [
         [
             InlineKeyboardButton(
-                text=("✓ " if view == key else "") + label,
+                text=("✅ " if view == key else "⚪ ") + label,
                 callback_data=f"analytics:view:{key}:{period}",
             )
             for key, label in labels
         ],
         [
             InlineKeyboardButton(
-                text=("✓ " if period == "7" else "") + "7 дней",
+                text=("✅ " if period == "7" else "⚪ ") + "7 дней",
                 callback_data=f"analytics:view:{view}:7",
             ),
             InlineKeyboardButton(
-                text=("✓ " if period == "30" else "") + "30 дней",
+                text=("✅ " if period == "30" else "⚪ ") + "30 дней",
                 callback_data=f"analytics:view:{view}:30",
             ),
         ],
     ]
     if view == "finance":
-        rows.append([InlineKeyboardButton(text="Выплаты", callback_data=f"analytics:payroll:{period}")])
+        rows.append([InlineKeyboardButton(text="💸 Выплаты", callback_data=f"analytics:payroll:{period}")])
     rows.append([button(HOME)])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -44,7 +44,7 @@ def analytics_view_keyboard(view: str, period: str) -> InlineKeyboardMarkup:
 def analytics_payroll_keyboard(period: str) -> InlineKeyboardMarkup:
     period = normalize_period(period)
     return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="Деньги", callback_data=f"analytics:view:finance:{period}"),
+        InlineKeyboardButton(text="💰 Деньги", callback_data=f"analytics:view:finance:{period}"),
         button(HOME),
     ]])
 

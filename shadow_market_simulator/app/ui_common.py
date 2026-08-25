@@ -74,7 +74,9 @@ def _format_tutorial_blocks(text: str) -> str:
 
 def tutorial_hint(text: str) -> str:
     normalized = _normalize_tutorial_button_mentions(text)
-    return f"<blockquote>{clean(_format_tutorial_blocks(normalized))}</blockquote>"
+    safe = clean(_format_tutorial_blocks(normalized))
+    safe = safe.replace("&lt;b&gt;", "<b>").replace("&lt;/b&gt;", "</b>")
+    return f"<blockquote>{safe}</blockquote>"
 
 
 def normalize_text(text: str) -> str:

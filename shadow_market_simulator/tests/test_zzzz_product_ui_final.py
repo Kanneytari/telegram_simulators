@@ -50,9 +50,9 @@ def test_final_product_screen_contract(tmp_path):
     for product, label in zip(products, product_labels):
         stock_status = ui_commerce._stock_status(db, PLAYER_ID, int(product["id"]))
         if stock_status == "нет запаса":
-            assert label == product["title"]
+            assert label == f"📦 {product['title']}"
         else:
-            assert label == f"{product['title']} · 🚚 {stock_status}"
+            assert label == f"📦 {product['title']} · 🚚 {stock_status}"
 
     assert labels[len(products)] == "📦 Товар"
     assert labels[-1] == "🏠 Меню"

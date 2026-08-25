@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.presentation.vocabulary import INBOX, nav_row
+from app.presentation.entities import employee_html, product_html, role_html
 import json
 
 from aiogram import F, Router
@@ -29,13 +30,13 @@ def decision_keyboard(dispute_id: int, page: int = 0, *, has_reply: bool = False
     back = f"inbox:page:{page}" if page else "menu:inbox"
     rows: list[list[InlineKeyboardButton]] = []
     if not has_reply:
-        rows.append([InlineKeyboardButton(text="Запросить пояснение", callback_data=f"dispute:ask:{dispute_id}:{page}")])
+        rows.append([InlineKeyboardButton(text="💬 Запросить пояснение", callback_data=f"dispute:ask:{dispute_id}:{page}")])
     rows.extend([
         [
             InlineKeyboardButton(text="💵 Вернуть 100%", callback_data=f"dispute:amount:{dispute_id}:refund:{page}"),
             InlineKeyboardButton(text="💵 Вернуть 50%", callback_data=f"dispute:amount:{dispute_id}:partial:{page}"),
         ],
-        [InlineKeyboardButton(text="🚫 Отказать", callback_data=f"dispute:reject:{dispute_id}:{page}")],
+        [InlineKeyboardButton(text="❌ Отказать", callback_data=f"dispute:reject:{dispute_id}:{page}")],
         nav_row(INBOX, callback_data=back),
     ])
     return InlineKeyboardMarkup(inline_keyboard=rows)
@@ -49,8 +50,8 @@ async def render_dispute(target: Message, game, player_id: int, dispute_id: int,
     text = (
         f"<b>⚖️ Заказ #{row['order_id']} · {money(row['revenue'])}</b>\n\n"
         f"{clean(row['message'])}\n\n"
-        f"Товар: {clean(row['product_title'])} · оценка {product_rating}\n"
-        f"Закладчик: {clean(row['employee_alias'])} · оценка {courier_rating}"
+        f"Товар: {product_html(row['product_title'])} · оценка {product_rating}\n"
+        f"{role_html('courier', capitalize=True)}: {employee_html(row['employee_alias'], 'courier')} · оценка {courier_rating}"
     )
     if row["courier_reply"]:
         text += f"\n\n<b>Пояснение закладчика</b>\n{clean(row['courier_reply'])}"
@@ -64,10 +65,10 @@ def source_keyboard(context, decision: str, page: int = 0) -> InlineKeyboardMark
     amount = int(context["amount"])
     rows: list[list[InlineKeyboardButton]] = []
     if int(context["shop_balance"]) >= amount:
-        rows.append([InlineKeyboardButton(text="Со счёта магазина", callback_data=f"dispute:pay:{dispute_id}:{decision}:shop:{page}")])
+        rows.append([InlineKeyboardButton(text="🏪 Со счёта магазина", callback_data=f"dispute:pay:{dispute_id}:{decision}:shop:{page}")])
     if int(context["employee_deposit"]) >= amount:
-        rows.append([InlineKeyboardButton(text=f"Из депозита {context['employee_alias']}", callback_data=f"dispute:pay:{dispute_id}:{decision}:employee:{page}")])
-    rows.append(nav_row(f"dispute:view:{dispute_id}:{page}", "Диспут"))
+        rows.append([InlineKeyboardButton(text=f"💰 Из депозита {context['employee_alias']}", callback_data=f"dispute:pay:{dispute_id}:{decision}:employee:{page}")])
+    rows.append(nav_row(f"dispute:view:{dispute_id}:{page}", "⚖️ Диспут"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 

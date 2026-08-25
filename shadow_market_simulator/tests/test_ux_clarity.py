@@ -159,13 +159,13 @@ def test_first_handoff_tutorial_guides_product_warehouse_and_batch(tmp_path):
     assert any("📦 Склад" in label for label in product_labels)
     assert not any("Обновить" in label for label in product_labels)
     asyncio.run(render_batches(target, game, PLAYER_ID))
-    assert "<blockquote>Выбери партию стаффа, которую хочешь передать закладчику.</blockquote>" in target.text
+    assert "<blockquote>Выбери партию стаффа, которую хочешь передать 👤 <b>закладчику</b>.</blockquote>" in target.text
     with db.connect() as conn:
         batch = conn.execute("SELECT id FROM batches WHERE player_id=? AND status='warehouse' AND remaining>0 ORDER BY id LIMIT 1", (PLAYER_ID,)).fetchone()
     assert batch
     batch_id = int(batch["id"])
     asyncio.run(render_batch(target, game, PLAYER_ID, batch_id))
-    assert "<blockquote>Выбери закладчика, которому передашь стафф.</blockquote>" in target.text
+    assert "<blockquote>Выбери 👤 <b>закладчика</b>, которому передашь стафф.</blockquote>" in target.text
     _, staff = game.retail_staff_for_batch(PLAYER_ID, batch_id)
     recipient = max(staff, key=lambda row: int(row["recommended_quantity"]))
     quantity = int(recipient["recommended_quantity"])
@@ -173,9 +173,9 @@ def test_first_handoff_tutorial_guides_product_warehouse_and_batch(tmp_path):
     asyncio.run(render_allocation(target, game, PLAYER_ID, batch_id, int(recipient["id"]), quantity))
     assert f"<blockquote>Проверь количество и нажми кнопку [✅ Отправить {quantity} ед.].</blockquote>" in target.text
     allocation_rows = [[button.text for button in row] for row in target.reply_markup.inline_keyboard]
-    assert allocation_rows[0] == ["−5", f"📦 {quantity} ед.", "+5"]
+    assert allocation_rows[0] == ["➖ 5", f"📦 {quantity} ед.", "➕ 5"]
     assert allocation_rows[1] == [f"✅ Отправить {quantity} ед."]
-    assert allocation_rows[-1] == ["Назад", "🏠 Меню"]
+    assert allocation_rows[-1] == ["⬅️ Назад", "🏠 Меню"]
     assert not any("Всё" in label for row in allocation_rows for label in row)
 
 

@@ -139,9 +139,9 @@ def test_procurement_storefront_and_global_menu_labels(tmp_path):
     for product, label in zip(products, product_labels):
         stock_status = ui_commerce._stock_status(db, PLAYER_ID, int(product["id"]))
         if stock_status == "нет запаса":
-            assert label == product["title"]
+            assert label == f"📦 {product['title']}"
         else:
-            assert label == f"{product['title']} · 🚚 {stock_status}"
+            assert label == f"📦 {product['title']} · 🚚 {stock_status}"
     assert procurement_labels[len(EXPECTED_PRODUCTS)] == "📦 Товар"
     assert procurement_labels[-1] == "🏠 Меню"
     assert not any(label.startswith("📦 Склад") for label in procurement_labels)
@@ -265,7 +265,7 @@ def test_handoff_copy_icons_and_master_stash_status(tmp_path):
         )
     )
     assert target.text.startswith("<b>✅ Принято</b>")
-    assert f"Складмен: 🚚 {warehouse['alias']}" in target.text
+    assert f"🚚 <b>Складмен</b>: 🚚 <b>{warehouse['alias']}</b>" in target.text
     assert "готова к передаче" not in target.text
     assert "Выберите кладмена" in target.text
 

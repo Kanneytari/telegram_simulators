@@ -30,8 +30,8 @@ def test_inbox_is_flat_without_category_screen():
         {"id": 2, "priority": "normal", "title": "Обычное событие"},
     ]
     assert labels(inbox_keyboard(items)) == [
-        "🔴 Срочное событие",
-        "Обычное событие",
+        "📨 🔴 Срочное событие",
+        "📨 ⚪ Обычное событие",
         "🔄 Обновить",
         "🏠 Меню",
     ]
@@ -39,15 +39,15 @@ def test_inbox_is_flat_without_category_screen():
 
 def test_courier_profile_separates_frequent_and_rare_actions():
     profile = labels(_profile_keyboard(42, "courier"))
-    assert "Премия · 5 000 ₽" in profile
-    assert "Отдых" in profile
-    assert "Развитие" in profile
-    assert "Ещё" in profile
+    assert "💰 Премия · 5 000 ₽" in profile
+    assert "🛌 Отдых" in profile
+    assert "📈 Развитие" in profile
+    assert "⚙️ Ещё" in profile
     assert "Переименовать" not in profile
     assert "Уволить" not in profile
 
     more = labels(more_keyboard(42))
-    assert more[:3] == ["Переименовать", "Сменить роль", "Уволить"]
+    assert more[:3] == ["✏️ Переименовать", "🔄 Сменить роль", "🗑️ Уволить"]
 
 
 def test_packaging_is_nested_under_sales():
@@ -77,17 +77,17 @@ def test_suppliers_screen_contains_product_categories(monkeypatch):
             {"id": 3, "title": "Кокаин"},
         ],
     )
-    assert labels(markup) == ["Амфетамин", "Кокаин", "📦 Товар", "🏠 Меню"]
+    assert labels(markup) == ["📦 Амфетамин", "📦 Кокаин", "📦 Товар", "🏠 Меню"]
     assert callbacks(markup) == [
         "proc:product:1", "proc:product:3", "menu:product", "menu:home"
     ]
 
 def test_analytics_uses_same_compact_navigation_language():
     assert labels(analytics_view_keyboard("overview", "7")) == [
-        "✓ Обзор",
-        "Товары",
-        "Деньги",
-        "✓ 7 дней",
-        "30 дней",
+        "✅ 📊 Обзор",
+        "⚪ 📦 Товары",
+        "⚪ 💰 Деньги",
+        "✅ 7 дней",
+        "⚪ 30 дней",
         "🏠 Меню",
     ]
