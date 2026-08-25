@@ -1,0 +1,70 @@
+name: NIGHTSHIFT screen ownership audit
+
+on:
+  push:
+    branches:
+      - ux/product-suppliers-screen-audit
+    paths:
+      - .github/workflows/audit-shadow-market-screen-ownership.yml
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Audit duplicate UI and inbox ownership
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import ast
+          import re
+
+          root = Path('shadow_market_simulator/app')
+          files = list(root.rglob('*.py'))
+
+          print('=== INBOX WRITES ===')
+          for path in files:
+              lines = path.read_text(encoding='utf-8').splitlines()
+              for i, line in enumerate(lines, 1):
+                  low = line.lower()
+                  if any(token in low for token in ('update inbox', 'insert into inbox', 'insert or replace into inbox', 'delete from inbox')):
+                      print(f'{path}:{i}: {line.strip()}')
+
+          print('\n=== ensure_player DEFINITIONS ===')
+          for path in files:
+              try:
+                  tree = ast.parse(path.read_text(encoding='utf-8'))
+              except SyntaxError:
+                  continue
+              parents = []
+              for node in ast.walk(tree):
+                  if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == 'ensure_player':
+                      print(f'{path}:{node.lineno}')
+
+          print('\n=== DECORATED render_* FUNCTIONS ===')
+          for path in files:
+              try:
+                  tree = ast.parse(path.read_text(encoding='utf-8'))
+              except SyntaxError:
+                  continue
+              for node in ast.walk(tree):
+                  if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith('render_') and node.decorator_list:
+                      decorators = []
+                      for dec in node.decorator_list:
+                          try:
+                              decorators.append(ast.unparse(dec))
+                          except Exception:
+                              decorators.append(type(dec).__name__)
+                      print(f'{path}:{node.lineno}: {node.name}: {decorators}')
+
+          print('\n=== CROSS-MODULE FUNCTION REASSIGNMENTS ===')
+          pattern = re.compile(r'^\s*([A-Za-z_][\w]*)\.([A-Za-z_][\w]*)\s*=')
+          for path in files:
+              for i, line in enumerate(path.read_text(encoding='utf-8').splitlines(), 1):
+                  match = pattern.match(line)
+                  if match and not line.lstrip().startswith('#'):
+                      print(f'{path}:{i}: {line.strip()}')
+          PY
