@@ -13,3 +13,8 @@ text = text.replace(
     1,
 )
 path.write_text(text, encoding='utf-8')
+
+Path('shadow_market_simulator/tests/test_refresh_button_emoji.py').write_text(
+    '''from app.presentation.vocabulary import REFRESH, button\n\n\ndef test_refresh_button_uses_canonical_refresh_label():\n    refresh = button(REFRESH, callback_data="anything:refresh")\n    assert refresh.text == "🔄 Обновить"\n    assert refresh.callback_data == "anything:refresh"\n\n\ndef test_refresh_label_has_single_emoji_source():\n    assert REFRESH.label == "🔄 Обновить"\n    assert REFRESH.label.count("🔄") == 1\n''',
+    encoding='utf-8',
+)
