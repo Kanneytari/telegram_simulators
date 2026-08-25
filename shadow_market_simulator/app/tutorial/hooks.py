@@ -319,12 +319,36 @@ def soft_product_root(original):
         if not state or not state['active'] or state['stage'] != STAGE_PROCUREMENT:
             await original(target, db, game, player_id, flash=flash)
             return
+        body = f'<b>📦 Товар</b>\n\nСвободно: <b>{money(_free_cash(game, player_id))}</b>\n\n' + tutorial_hint('Нажми [🤝 Поставщики]')
+        if flash:
+            body = f'{flash}\n\n{body}'
+        markup = ui_commerce._product_root_keyboard(ui_commerce._warehouse_batch_count(db, player_id))
+        await present(target, body, markup)
+    decorated = render_product_root
+
+    @wraps(original)
+    def guarded(*args, **kwargs):
+        db = _runtime_db(args, kwargs)
+        if not runtime_enabled(db):
+            return original(*args, **kwargs)
+        return decorated(*args, **kwargs)
+
+    return guarded
+
+def soft_suppliers_root(original):
+    @wraps(original)
+    async def render_suppliers_root(target, db, game, player_id: int, *, flash: str | None=None) -> None:
+        from .. import ui_commerce
+        state = sync_tutorial_state(db, player_id)
+        if not state or not state['active'] or state['stage'] != STAGE_PROCUREMENT:
+            await original(target, db, game, player_id, flash=flash)
+            return
         products = game.procurement_products(player_id)
-        body = f'<b>📦 Товар</b>\n\nСвободно: <b>{money(_free_cash(game, player_id))}</b>\n\n' + tutorial_hint('Выбери товар для первой закупки.')
+        body = '<b>🤝 Поставщики</b>\n\n' + tutorial_hint('Выбери товар для первой закупки.')
         if flash:
             body = f'{flash}\n\n{body}'
         await present(target, body, ui_commerce._procurement_products_keyboard(db, player_id, products))
-    decorated = render_product_root
+    decorated = render_suppliers_root
 
     @wraps(original)
     def guarded(*args, **kwargs):
@@ -476,8 +500,30 @@ def affordable_empty_product_root(original):
         with db.connect() as conn:
             free_cash = game._free_cash_conn(conn, player_id)
         body = f'<b>📦 Товар</b>\n\nСвободно: <b>{money(free_cash)}</b>\n\nДоступных предложений нет.'
-        await present(target, notice(flash, body), ui_commerce._procurement_products_keyboard(db, player_id, products))
+        markup = ui_commerce._product_root_keyboard(ui_commerce._warehouse_batch_count(db, player_id))
+        await present(target, notice(flash, body), markup)
     decorated = render_product_root
+
+    @wraps(original)
+    def guarded(*args, **kwargs):
+        db = _runtime_db(args, kwargs)
+        if not runtime_enabled(db):
+            return original(*args, **kwargs)
+        return decorated(*args, **kwargs)
+
+    return guarded
+
+def affordable_empty_suppliers_root(original):
+    @wraps(original)
+    async def render_suppliers_root(target, db, game, player_id: int, *, flash: str | None=None) -> None:
+        from .. import ui_commerce
+        products = game.procurement_products(player_id)
+        if any((int(product.get('total', 0)) > 0 for product in products)):
+            await original(target, db, game, player_id, flash=flash)
+            return
+        body = '<b>🤝 Поставщики</b>\n\nДоступных предложений нет.'
+        await present(target, notice(flash, body), ui_commerce._procurement_products_keyboard(db, player_id, products))
+    decorated = render_suppliers_root
 
     @wraps(original)
     def guarded(*args, **kwargs):
@@ -523,11 +569,27 @@ def handoff_product_root(original):
         if not _handoff_state(db, player_id):
             await original(target, db, game, player_id, flash=flash)
             return
-        products = game.procurement_products(player_id)
         free_cash = tutorial._free_cash(game, player_id)
         body = f'<b>📦 Товар</b>\n\nСвободно: <b>{money(free_cash)}</b>\n\n' + tutorial_hint('Нажми [📦 Склад]')
-        await present(target, notice(flash, body), ui_commerce._procurement_products_keyboard(db, player_id, products))
+        markup = ui_commerce._product_root_keyboard(ui_commerce._warehouse_batch_count(db, player_id))
+        await present(target, notice(flash, body), markup)
     decorated = render_product_root
+
+    @wraps(original)
+    def guarded(*args, **kwargs):
+        db = _runtime_db(args, kwargs)
+        if not runtime_enabled(db):
+            return original(*args, **kwargs)
+        return decorated(*args, **kwargs)
+
+    return guarded
+
+def handoff_suppliers_root(original):
+    @wraps(original)
+    async def render_suppliers_root(target, db, game, player_id: int, *, flash: str | None=None) -> None:
+        wrapped = _return_target(target) if _handoff_state(db, player_id) else target
+        await original(wrapped, db, game, player_id, flash=flash)
+    decorated = render_suppliers_root
 
     @wraps(original)
     def guarded(*args, **kwargs):

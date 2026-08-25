@@ -54,6 +54,23 @@ def _stock_status(db, player_id: int, product_id: int) -> str:
     return f"~{max(1, round(days))} дн."
 
 
+def _warehouse_batch_count(db, player_id: int) -> int:
+    with db.connect() as conn:
+        return int(conn.execute(
+            """SELECT COUNT(*) FROM batches
+               WHERE player_id=? AND status IN ('receiving','warehouse') AND remaining>0""",
+            (player_id,),
+        ).fetchone()[0])
+
+
+def _product_root_keyboard(batch_count: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🤝 Поставщики", callback_data="proc:suppliers")],
+        [InlineKeyboardButton(text=f"📦 Склад · {batch_count}", callback_data="team:batches")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:home")],
+    ])
+
+
 def _procurement_products_keyboard(db, player_id: int, products) -> InlineKeyboardMarkup:
     rows: list[list[InlineKeyboardButton]] = []
     for product in products:
@@ -67,30 +84,25 @@ def _procurement_products_keyboard(db, player_id: int, products) -> InlineKeyboa
                 callback_data=f"proc:product:{product['id']}",
             )
         ])
-
-    with db.connect() as conn:
-        batch_count = int(conn.execute(
-            """SELECT COUNT(*) FROM batches
-               WHERE player_id=? AND status IN ('receiving','warehouse') AND remaining>0""",
-            (player_id,),
-        ).fetchone()[0])
-    rows.append([InlineKeyboardButton(text=f"📦 Склад · {batch_count}", callback_data="team:batches")])
-    rows.append([InlineKeyboardButton(text="🏠 Меню", callback_data="menu:home")])
+    rows.append(nav_row("menu:product", "← Товар"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
-
-@tutorial_hooks.handoff_product_root
-@tutorial_hooks.affordable_empty_product_root
-@tutorial_hooks.soft_product_root
 async def render_product_root(target: Message, db, game, player_id: int, *, flash: str | None = None) -> None:
-    products = game.procurement_products(player_id)
     with db.connect() as conn:
         free_cash = game._free_cash_conn(conn, player_id) if hasattr(game, "_free_cash_conn") else int(
             conn.execute("SELECT balance FROM shops WHERE player_id=?", (player_id,)).fetchone()[0]
         )
     body = f"<b>📦 Товар</b>\n\nСвободно: <b>{money(free_cash)}</b>"
     if game.needs_first_handoff_tutorial(player_id):
-        body += "\n\n" + tutorial_hint("Нажми на кнопку 🚚 Склад")
+        body += "\n\n" + tutorial_hint("Нажми на кнопку 📦 Склад")
+    await present(target, notice(flash, body), _product_root_keyboard(_warehouse_batch_count(db, player_id)))
+
+@tutorial_hooks.handoff_suppliers_root
+@tutorial_hooks.affordable_empty_suppliers_root
+@tutorial_hooks.soft_suppliers_root
+async def render_suppliers_root(target: Message, db, game, player_id: int, *, flash: str | None = None) -> None:
+    products = game.procurement_products(player_id)
+    body = "<b>🤝 Поставщики</b>\n\nВыберите категорию товара."
     await present(target, notice(flash, body), _procurement_products_keyboard(db, player_id, products))
 
 
@@ -103,7 +115,7 @@ def _offers_keyboard(product_id: int, offers) -> InlineKeyboardMarkup:
             text=f"{_offer_marker(str(offer['market_profile']))}×{offer['quantity']} · {money(total)} · {quality}",
             callback_data=f"proc:offer:{offer['id']}",
         )])
-    rows.append(nav_row("menu:product", "← Товар"))
+    rows.append(nav_row("proc:suppliers", "← Поставщики"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -375,6 +387,11 @@ def build_commerce_router(db, game, simulation) -> Router:
     async def procurement(callback: CallbackQuery) -> None:
         await callback.answer()
         await render_product_root(callback.message, db, game, callback.from_user.id)
+
+    @router.callback_query(F.data == "proc:suppliers")
+    async def suppliers(callback: CallbackQuery) -> None:
+        await callback.answer()
+        await render_suppliers_root(callback.message, db, game, callback.from_user.id)
 
     @router.callback_query(F.data.startswith("proc:product:"))
     async def product(callback: CallbackQuery) -> None:

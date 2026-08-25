@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import re
 from pathlib import Path
 
 
@@ -138,4 +139,20 @@ def test_new_packages_do_not_monkey_patch_imported_modules() -> None:
     assert not offenders, (
         "assigning into imported modules is runtime monkey-patching; "
         f"offenders: {sorted(offenders)}"
+    )
+
+
+def test_tutorial_inbox_copy_has_single_owner() -> None:
+    pattern = re.compile(
+        r"UPDATE\s+inbox\b.{0,700}?kind\s*=\s*['\"]tutorial['\"]",
+        re.IGNORECASE | re.DOTALL,
+    )
+    owners = {
+        path.relative_to(APP).as_posix()
+        for path in APP.rglob("*.py")
+        if pattern.search(path.read_text(encoding="utf-8"))
+    }
+    assert owners == {"tutorial/hooks.py"}, (
+        "tutorial inbox copy must have one owning module; "
+        f"found: {sorted(owners)}"
     )

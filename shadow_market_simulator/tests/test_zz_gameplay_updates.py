@@ -144,9 +144,18 @@ def test_procurement_storefront_and_global_menu_labels(tmp_path):
             assert label == product["title"]
         else:
             assert label == f"{product['title']} · 🚚 {stock_status}"
-    assert procurement_labels[len(EXPECTED_PRODUCTS)].startswith("📦 Склад · ")
-    assert not any(label.startswith("🚚 Склад") for label in procurement_labels)
+    assert procurement_labels[len(EXPECTED_PRODUCTS)] == "← Товар"
     assert procurement_labels[-1] == "🏠 Меню"
+    assert not any(label.startswith("📦 Склад") for label in procurement_labels)
+
+    product_root = ui_commerce._product_root_keyboard(
+        ui_commerce._warehouse_batch_count(db, PLAYER_ID)
+    )
+    product_root_labels = _labels(product_root)
+    assert product_root_labels[0] == "🤝 Поставщики"
+    assert product_root_labels[1].startswith("📦 Склад · ")
+    assert product_root_labels[-1] == "🏠 Меню"
+    assert not any(label.startswith("🚚 Склад") for label in product_root_labels)
 
     storefront = ui_commerce._sales_root_keyboard([])
     assert _labels(storefront) == ["⚙️ Фасовки", "🏠 Меню"]
