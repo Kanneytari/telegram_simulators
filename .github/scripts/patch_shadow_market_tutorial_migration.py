@@ -180,54 +180,6 @@ replacement = '''    text = text.replace(
 assert needle in text
 text = text.replace(needle, replacement, 1)
 
-# Explicitly qualify the one extracted closure reference that depended on a
-# sibling wrapper function in the old installer.
-needle = '''hooks_source = hooks_header + "\\n\\n" + "\\n\\n".join(generated)
-(package / "hooks.py").write_text(hooks_source, encoding="utf-8")
-
-init_source = '''
-assert needle in text
-replacement = '''hooks_source = hooks_header + "\\n\\n" + "\\n\\n".join(generated)
-hooks_source, qualified_count = re.subn(
-    r"(?m)^(\\s*)await render_product_root\\(",
-    r"\\1from .. import ui_commerce\\n\\1await ui_commerce.render_product_root(",
-    hooks_source,
-    count=1,
-)
-assert qualified_count == 1, qualified_count
-(package / "hooks.py").write_text(hooks_source, encoding="utf-8")
-
-init_source = '''
-text = text.replace(needle, replacement, 1)
-
-# Ruff requires underscored compatibility re-exports to be explicit aliases.
-old = '''init_source = '''from .core import *
-from .core import (
-    _active_task_for_stage,
-    _append_tutorial_action,
-    _ensure_schema_conn,
-    _finish_tutorial,
-    _free_cash,
-    _instruction,
-    _set_stage,
-)
-'''
-'''
-new = '''init_source = '''from .core import *
-from .core import (
-    _active_task_for_stage as _active_task_for_stage,
-    _append_tutorial_action as _append_tutorial_action,
-    _ensure_schema_conn as _ensure_schema_conn,
-    _finish_tutorial as _finish_tutorial,
-    _free_cash as _free_cash,
-    _instruction as _instruction,
-    _set_stage as _set_stage,
-)
-'''
-'''
-assert old in text
-text = text.replace(old, new, 1)
-
 marker = 'path = tests / "test_architecture_guardrails.py"\n'
 assert marker in text
 specific = r'''
