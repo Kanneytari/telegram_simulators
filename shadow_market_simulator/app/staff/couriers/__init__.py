@@ -13,11 +13,9 @@ from .model import (
     pace_band,
     relationship_band,
 )
-from .recruitment import CourierRecruitmentService
 
 __all__ = [
     "CourierBlueprint",
-    "CourierRecruitmentService",
     "TRAIT_CONCEALS",
     "TRAIT_LEARNER",
     "TRAIT_METICULOUS",
