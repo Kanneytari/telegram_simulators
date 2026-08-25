@@ -14,7 +14,7 @@ from .core import Database, Settings, load_settings
 from .courier_management import CourierManagementGameService, CourierManagementSimulationEngine
 from .courier_recruitment import CourierRecruitmentService
 from .gameplay_updates import apply_gameplay_updates
-from .inbox_lifecycle import install_inbox_lifecycle
+from .inbox import install_inbox_lifecycle
 from .tutorial import apply_tutorial_updates, build_tutorial_router
 from .tutorial_copy_update import apply_tutorial_copy_update
 from .tutorial_runtime import apply_tutorial_runtime_fixes
