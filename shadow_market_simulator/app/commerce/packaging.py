@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from ..staff.idle import IdleAwareGameService
+from ..staff.idle import IdleAwareMixin
+from ..staff_relationships import StaffRelationshipGameService
 
 
-class GlobalPackagingGameService(IdleAwareGameService):
+class GlobalPackagingGameService(IdleAwareMixin, StaffRelationshipGameService):
     def global_packaging_rule(self, player_id: int) -> dict[str, int]:
         self.simulation._ensure_packaging_rules(player_id)
         with self.db.connect() as conn:
