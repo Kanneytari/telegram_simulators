@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from ..tutorial import hooks as tutorial_hooks
+
 from collections import defaultdict
 from datetime import timedelta
 
@@ -478,6 +480,8 @@ class ProcurementMarketGameService(StaffInsightGameService):
         volume_discount = VOLUME_DISCOUNTS.get(int(offer["quantity"]), 1.0)
         return float(offer["base_market_price"]) * 0.56 * volume_discount
 
+    @tutorial_hooks.first_batch_quality_protection
+    @tutorial_hooks.first_purchase_protection
     def buy_offer_for_employee(
         self, player_id: int, offer_id: int, employee_id: int
     ) -> str:

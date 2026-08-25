@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from .tutorial import hooks as tutorial_hooks
+
 import json
 
 from aiogram import F, Router
@@ -102,6 +104,7 @@ def _home_snapshot(db, game, simulation, player_id: int) -> tuple[str, int, int]
         text += f"\n\n{next_step}"
     return text, opened, urgent
 
+@tutorial_hooks.soft_home
 async def render_home(target: Message, db, game, simulation, admin_ids: frozenset[int], player_id: int, *, edit: bool = True) -> None:
     text, opened, urgent = _home_snapshot(db, game, simulation, player_id)
     await present(target, text, home_keyboard(opened, urgent, is_admin=player_id in admin_ids), edit=edit)
@@ -155,6 +158,7 @@ def inbox_keyboard(items, page: int = 0, total: int | None = None) -> InlineKeyb
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
+@tutorial_hooks.handoff_inbox
 async def render_inbox(target: Message, game, simulation, player_id: int, *, flash: str | None = None, page: int = 0) -> None:
     simulation.advance(player_id)
     game.process_payroll(player_id)

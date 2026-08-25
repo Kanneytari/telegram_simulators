@@ -9,9 +9,7 @@ from aiogram.types import CallbackQuery, Chat, Message, User
 from app.bot import OneShotCallbackMiddleware
 from app.courier_management import CourierManagementGameService, CourierManagementSimulationEngine
 from app.db import Database
-from app.tutorial import STARTING_FREE_CASH, apply_tutorial_updates
-from app.tutorial_copy_update import apply_tutorial_copy_update
-from app.tutorial_runtime import apply_tutorial_runtime_fixes
+from app.tutorial import STARTING_FREE_CASH, enable_runtime, enable_runtime
 
 
 PLAYER_ID = 987654
@@ -22,11 +20,9 @@ def make_release_system(tmp_path):
     db = Database(str(tmp_path / "release.db"))
     db.init()
     db.init()
+    enable_runtime(db)
 
-    apply_tutorial_updates()
-    apply_tutorial_runtime_fixes()
-    apply_tutorial_copy_update()
-
+            
     simulation = CourierManagementSimulationEngine(
         db, speed=1.0, rng=random.Random(701)
     )

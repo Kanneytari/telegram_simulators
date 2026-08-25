@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from ..tutorial import hooks as tutorial_hooks
+
 import json
 import random
 
@@ -284,6 +286,7 @@ class GameService:
                 (player_id,),
             ).fetchall()
 
+    @tutorial_hooks.price_progress
     def change_listing_price(self, player_id: int, listing_id: int, percent: int) -> str:
         if percent not in {-5, 5}:
             raise ValueError("Price step must be ±5")

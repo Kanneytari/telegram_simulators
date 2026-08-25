@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from .tutorial import hooks as tutorial_hooks
+
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
@@ -77,6 +79,9 @@ def _procurement_products_keyboard(db, player_id: int, products) -> InlineKeyboa
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
+@tutorial_hooks.handoff_product_root
+@tutorial_hooks.affordable_empty_product_root
+@tutorial_hooks.soft_product_root
 async def render_product_root(target: Message, db, game, player_id: int, *, flash: str | None = None) -> None:
     products = game.procurement_products(player_id)
     with db.connect() as conn:
@@ -102,6 +107,9 @@ def _offers_keyboard(product_id: int, offers) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
+@tutorial_hooks.handoff_procurement_product
+@tutorial_hooks.affordable_empty_procurement_product
+@tutorial_hooks.soft_procurement_product
 async def render_procurement_product(target: Message, game, player_id: int, product_id: int, *, flash: str | None = None) -> None:
     offers = game.offers(player_id, product_id)
     with game.db.connect() as conn:
@@ -235,6 +243,8 @@ def _sales_root_keyboard(rows) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
+@tutorial_hooks.handoff_storefront
+@tutorial_hooks.soft_storefront
 async def render_storefront_root(target: Message, db, game, simulation, player_id: int) -> None:
     simulation.advance(player_id)
     rows = _sales_products(db, player_id)
@@ -274,6 +284,8 @@ def _product_listings(db, player_id: int, product_id: int):
     return product, listings, published, float(stats["avg"]), int(stats["n"])
 
 
+@tutorial_hooks.handoff_sales_product
+@tutorial_hooks.soft_sales_product
 async def render_sales_product(target: Message, db, player_id: int, product_id: int) -> None:
     product, listings, published, avg, n = _product_listings(db, player_id, product_id)
     if not product:
@@ -304,6 +316,8 @@ def _listing_context(db, player_id: int, listing_id: int):
         ).fetchone()
 
 
+@tutorial_hooks.handoff_listing
+@tutorial_hooks.soft_listing
 async def render_listing(target: Message, db, game, player_id: int, listing_id: int) -> None:
     row = _listing_context(db, player_id, listing_id)
     if not row:

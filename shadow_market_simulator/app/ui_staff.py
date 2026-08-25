@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from .tutorial import hooks as tutorial_hooks
+
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
@@ -49,6 +51,7 @@ def _team_keyboard(game, player_id: int, employees) -> InlineKeyboardMarkup:
     rows.append([InlineKeyboardButton(text="Меню", callback_data="menu:home")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
+@tutorial_hooks.handoff_team
 async def render_team(target: Message, game, simulation, player_id: int, *, flash: str | None = None) -> None:
     simulation.advance(player_id)
     employees = _employee_dicts(game, player_id)

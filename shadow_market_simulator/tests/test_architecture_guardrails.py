@@ -38,9 +38,6 @@ ALLOWED_FLAT_MODULES = {
     "staff_idle.py",
     "staff_insights.py",
     "staff_relationships.py",
-    "tutorial.py",
-    "tutorial_copy_update.py",
-    "tutorial_runtime.py",
     "ui_admin.py",
     "ui_commerce.py",
     "ui_common.py",
@@ -53,11 +50,7 @@ ALLOWED_FLAT_MODULES = {
 
 # Existing runtime overlays are migration debt, not an extension mechanism.
 # This exact set can only shrink.
-LEGACY_OVERLAY_MODULES = {
-    "tutorial.py",
-    "tutorial_copy_update.py",
-    "tutorial_runtime.py",
-}
+LEGACY_OVERLAY_MODULES: set[str] = set()
 
 # The existing inheritance staircase is frozen. The migration may relocate or
 # remove entries, but a new feature must not extend it with another layer.
