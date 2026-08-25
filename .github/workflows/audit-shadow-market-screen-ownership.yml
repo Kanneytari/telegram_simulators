@@ -1,4 +1,4 @@
-name: NIGHTSHIFT screen ownership audit
+name: NIGHTSHIFT suppliers screen verification
 
 on:
   push:
@@ -7,64 +7,39 @@ on:
     paths:
       - .github/workflows/audit-shadow-market-screen-ownership.yml
 
+permissions:
+  contents: write
+
 jobs:
-  audit:
+  verify:
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}/shadow_market_simulator
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ux/product-suppliers-screen-audit
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Audit duplicate UI and inbox ownership
+      - name: Install dependencies
+        working-directory: shadow_market_simulator
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          import ast
-          import re
-
-          root = Path('shadow_market_simulator/app')
-          files = list(root.rglob('*.py'))
-
-          print('=== INBOX WRITES ===')
-          for path in files:
-              lines = path.read_text(encoding='utf-8').splitlines()
-              for i, line in enumerate(lines, 1):
-                  low = line.lower()
-                  if any(token in low for token in ('update inbox', 'insert into inbox', 'insert or replace into inbox', 'delete from inbox')):
-                      print(f'{path}:{i}: {line.strip()}')
-
-          print('\n=== ensure_player DEFINITIONS ===')
-          for path in files:
-              try:
-                  tree = ast.parse(path.read_text(encoding='utf-8'))
-              except SyntaxError:
-                  continue
-              parents = []
-              for node in ast.walk(tree):
-                  if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == 'ensure_player':
-                      print(f'{path}:{node.lineno}')
-
-          print('\n=== DECORATED render_* FUNCTIONS ===')
-          for path in files:
-              try:
-                  tree = ast.parse(path.read_text(encoding='utf-8'))
-              except SyntaxError:
-                  continue
-              for node in ast.walk(tree):
-                  if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith('render_') and node.decorator_list:
-                      decorators = []
-                      for dec in node.decorator_list:
-                          try:
-                              decorators.append(ast.unparse(dec))
-                          except Exception:
-                              decorators.append(type(dec).__name__)
-                      print(f'{path}:{node.lineno}: {node.name}: {decorators}')
-
-          print('\n=== CROSS-MODULE FUNCTION REASSIGNMENTS ===')
-          pattern = re.compile(r'^\s*([A-Za-z_][\w]*)\.([A-Za-z_][\w]*)\s*=')
-          for path in files:
-              for i, line in enumerate(path.read_text(encoding='utf-8').splitlines(), 1):
-                  match = pattern.match(line)
-                  if match and not line.lstrip().startswith('#'):
-                      print(f'{path}:{i}: {line.strip()}')
-          PY
+          python -m pip install -r requirements.txt
+          python -m pip install ruff
+      - name: Apply suppliers screen change
+        run: python .github/scripts/apply_product_suppliers_screen.py
+      - name: Verify
+        working-directory: shadow_market_simulator
+        run: |
+          python -m compileall -q app tests
+          python -m pytest -q
+          ruff check app tests --select F401,F821,F841
+      - name: Commit project changes
+        run: |
+          git config user.name "Kanneytari"
+          git config user.email "hitroplan@yandex.ru"
+          git add shadow_market_simulator/app/ui_commerce.py shadow_market_simulator/app/tutorial/hooks.py shadow_market_simulator/tests/test_compact_ui.py shadow_market_simulator/tests/test_architecture_guardrails.py
+          git commit -m "feat(shadow-market): nest procurement under suppliers"
+          git push origin HEAD:ux/product-suppliers-screen-audit
