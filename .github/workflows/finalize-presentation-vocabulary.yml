@@ -27,7 +27,9 @@ jobs:
           python -m pip install -r requirements.txt
           python -m pip install ruff
       - name: Apply final entity text consistency
-        run: python .github/scripts/finalize_entity_text_consistency.py
+        run: |
+          python .github/scripts/finalize_entity_text_consistency.py
+          python .github/scripts/fix_entity_text_test.py
       - name: Verify
         run: |
           cd shadow_market_simulator
