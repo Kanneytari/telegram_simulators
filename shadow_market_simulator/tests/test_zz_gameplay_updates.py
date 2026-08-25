@@ -137,11 +137,8 @@ def test_procurement_storefront_and_global_menu_labels(tmp_path):
     assert all("предлож" not in label.lower() for label in product_labels)
     assert all("нет запаса" not in label.lower() for label in product_labels)
     for product, label in zip(products, product_labels):
-        stock_status = ui_commerce._stock_status(db, PLAYER_ID, int(product["id"]))
-        if stock_status == "нет запаса":
-            assert label == f"📦 {product['title']}"
-        else:
-            assert label == f"📦 {product['title']} · 🚚 {stock_status}"
+        warehouse_units = ui_commerce._warehouse_stock_units(db, PLAYER_ID, int(product["id"]))
+        assert label == f"{product['title']} · 🚚 {warehouse_units} ед."
     assert procurement_labels[len(EXPECTED_PRODUCTS)] == "📦 Товар"
     assert procurement_labels[-1] == "🏠 Меню"
     assert not any(label.startswith("📦 Склад") for label in procurement_labels)

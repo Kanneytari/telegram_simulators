@@ -34,7 +34,7 @@ def test_canonical_section_vocabulary() -> None:
 
 
 def test_product_back_button_uses_canonical_product_label(monkeypatch) -> None:
-    monkeypatch.setattr(ui_commerce, "_stock_status", lambda *_args: "нет запаса")
+    monkeypatch.setattr(ui_commerce, "_warehouse_stock_units", lambda *_args: 0)
     markup = ui_commerce._procurement_products_keyboard(
         object(),
         1,
@@ -110,7 +110,7 @@ def test_gameplay_entity_buttons_keep_semantic_markers() -> None:
     staff_handlers = (APP / "ui_staff_handlers.py").read_text(encoding="utf-8")
     disputes = (APP / "ui_disputes.py").read_text(encoding="utf-8")
 
-    assert 'text=f"📦 {text}"' in commerce
+    assert 'text=f"{product[\'title\']} · 🚚 {warehouse_units} ед."' in commerce
     assert 'text=f"🚚 {employee[\'alias\']}{suffix}"' in commerce
     assert 'text=f"📦 {batch[\'product_title\']} · {batch[\'remaining\']} ед. · 🚚 {batch[\'employee_alias\']} · {state}"' in staff
     assert 'text=f"Сменить на {role_label(new_role)}"' in staff_handlers
