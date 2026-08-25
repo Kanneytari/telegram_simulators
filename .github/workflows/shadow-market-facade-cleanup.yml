@@ -66,4 +66,4 @@ jobs:
           git commit -m "refactor(shadow-market): remove legacy compatibility facades"
           git push origin HEAD:refactor/shadow-market-tutorial-overlays
 
-# retry package-level legacy imports
+# retry without modifying the permanent CI workflow
