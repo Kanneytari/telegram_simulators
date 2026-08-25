@@ -66,7 +66,7 @@ LEGACY_OVERLAY_MODULES = {
 LEGACY_ENGINE_INHERITANCE = {
     ("commerce/inventory.py", "OperationsSimulationEngine"),
     ("commerce/workflow.py", "WorkflowSimulationEngine"),
-    ("staff_insights.py", "StaffInsightSimulationEngine"),
+    ("staff/insights.py", "StaffInsightSimulationEngine"),
     ("procurement_market.py", "ProcurementMarketSimulationEngine"),
     ("compensation.py", "CompensationSimulationEngine"),
     ("staff_relationships.py", "StaffRelationshipSimulationEngine"),
@@ -78,7 +78,7 @@ LEGACY_ENGINE_INHERITANCE = {
 LEGACY_SERVICE_INHERITANCE = {
     ("commerce/inventory.py", "OperationsGameService"),
     ("commerce/workflow.py", "WorkflowGameService"),
-    ("staff_insights.py", "StaffInsightGameService"),
+    ("staff/insights.py", "StaffInsightGameService"),
     ("procurement_market.py", "ProcurementMarketGameService"),
     ("compensation.py", "CompensationGameService"),
     ("staff_relationships.py", "StaffRelationshipGameService"),
