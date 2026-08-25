@@ -1,5 +1,6 @@
 from app.commerce.inventory import OperationsGameService, OperationsSimulationEngine
 from app.commerce.packaging import GlobalPackagingGameService
+from app.commerce.workflow import TASK_LABELS, WorkflowGameService, WorkflowSimulationEngine
 from app.config import Settings as LegacySettings
 from app.core.config import Settings
 from app.core.database import Database
@@ -24,6 +25,9 @@ from app.staff.couriers.recruitment import CourierRecruitmentService
 from app.staff.idle import IdleAwareMixin
 from app.staff.rename import rename_employee
 from app.staff_idle import IdleAwareGameService as LegacyIdleAwareGameService
+from app.workflow import TASK_LABELS as LegacyTaskLabels
+from app.workflow import WorkflowGameService as LegacyWorkflowGameService
+from app.workflow import WorkflowSimulationEngine as LegacyWorkflowSimulationEngine
 
 
 def test_legacy_imports_are_thin_aliases_to_canonical_packages() -> None:
@@ -41,3 +45,6 @@ def test_legacy_imports_are_thin_aliases_to_canonical_packages() -> None:
     assert LegacyPlayerSimulationMixin is PlayerSimulationMixin
     assert LegacyOperationsGameService is OperationsGameService
     assert LegacyOperationsSimulationEngine is OperationsSimulationEngine
+    assert LegacyWorkflowGameService is WorkflowGameService
+    assert LegacyWorkflowSimulationEngine is WorkflowSimulationEngine
+    assert LegacyTaskLabels is TASK_LABELS
