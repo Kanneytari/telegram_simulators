@@ -85,7 +85,6 @@ LEGACY_SERVICE_INHERITANCE = {
     ("procurement_market.py", "ProcurementMarketGameService"),
     ("compensation.py", "CompensationGameService"),
     ("staff_relationships.py", "StaffRelationshipGameService"),
-    ("staff/idle.py", "IdleAwareGameService"),
     ("commerce/packaging.py", "GlobalPackagingGameService"),
     ("customer_trust.py", "CustomerTrustGameService"),
     ("courier_core.py", "CourierCoreGameService"),
