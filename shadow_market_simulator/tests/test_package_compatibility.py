@@ -23,6 +23,10 @@ from app.core.database import Database
 from app.courier_core import CourierCoreGameService as LegacyCourierCoreGameService
 from app.courier_core import CourierCoreSimulationEngine as LegacyCourierCoreSimulationEngine
 from app.courier_idle import courier_idle_ready as legacy_courier_idle_ready
+from app.courier_management import PHONE as LegacyPhone
+from app.courier_management import TRANSPORT as LegacyTransport
+from app.courier_management import CourierManagementGameService as LegacyCourierManagementGameService
+from app.courier_management import CourierManagementSimulationEngine as LegacyCourierManagementSimulationEngine
 from app.courier_model import CourierBlueprint as LegacyCourierBlueprint
 from app.courier_recruitment import CourierRecruitmentService as LegacyCourierRecruitmentService
 from app.customer_trust import CustomerTrustGameService as LegacyCustomerTrustGameService
@@ -60,6 +64,7 @@ from app.staff.compensation import (
 )
 from app.staff.couriers.core import CourierCoreGameService, CourierCoreSimulationEngine
 from app.staff.couriers.idle import courier_idle_ready
+from app.staff.couriers.management import PHONE, TRANSPORT, CourierManagementGameService, CourierManagementSimulationEngine
 from app.staff.couriers.model import CourierBlueprint
 from app.staff.couriers.recruitment import CourierRecruitmentService
 from app.staff.idle import IdleAwareMixin
@@ -138,3 +143,7 @@ def test_legacy_imports_are_thin_aliases_to_canonical_packages() -> None:
     assert legacy_trust_band is trust_band
     assert LegacyCourierCoreGameService is CourierCoreGameService
     assert LegacyCourierCoreSimulationEngine is CourierCoreSimulationEngine
+    assert LegacyCourierManagementGameService is CourierManagementGameService
+    assert LegacyCourierManagementSimulationEngine is CourierManagementSimulationEngine
+    assert LegacyPhone is PHONE
+    assert LegacyTransport is TRANSPORT
