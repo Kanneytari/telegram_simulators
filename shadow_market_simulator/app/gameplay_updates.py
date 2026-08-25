@@ -215,84 +215,10 @@ async def _render_batch(
     )
 
 
-def _install_handoff_update() -> None:
+def apply_gameplay_updates() -> None:
+    """Install the remaining legacy presentation overlay."""
     workflow.TASK_LABELS["handoff"] = "готовит мастер-клад"
-    original = workflow.WorkflowGameService.allocate_to_retail
-    if not getattr(original, "_nightshift_updated", False):
-
-        def allocate_to_retail(
-            self,
-            player_id: int,
-            batch_id: int,
-            retail_employee_id: int,
-            quantity: int,
-        ) -> str:
-            result = original(
-                self,
-                player_id,
-                batch_id,
-                retail_employee_id,
-                quantity,
-            )
-            if not result.startswith("Назначено "):
-                return result
-
-            with self.db.connect() as conn:
-                allocation = conn.execute(
-                    """SELECT a.quantity, a.unit_cost, p.title product_title,
-                              w.alias wholesale_alias, r.alias retail_alias,
-                              r.deposit retail_deposit
-                       FROM retail_allocations a
-                       JOIN products p ON p.id=a.product_id
-                       JOIN employees w ON w.id=a.wholesale_employee_id
-                       JOIN employees r ON r.id=a.retail_employee_id
-                       WHERE a.player_id=? AND a.batch_id=?
-                         AND a.retail_employee_id=?
-                       ORDER BY a.id DESC LIMIT 1""",
-                    (player_id, batch_id, retail_employee_id),
-                ).fetchone()
-            if not allocation:
-                return result
-
-            allocated = int(allocation["quantity"])
-            retail_after = (
-                self._employee_exposure(player_id, retail_employee_id)
-                + allocated * int(allocation["unit_cost"])
-            )
-            unsecured = max(
-                0,
-                retail_after - int(allocation["retail_deposit"]),
-            )
-            warning = (
-                "\n\n🔴 После получения у закладчика будет не покрыто "
-                f"депозитом: {unsecured:,} ₽."
-                if unsecured
-                else ""
-            )
-            return (
-                "<b>✅ Принято</b>\n\n"
-                f"Назначено <b>{allocated} ед.</b> "
-                f"{allocation['product_title']} сотруднику "
-                f"👤 {allocation['retail_alias']}.\n\n"
-                f"🚚 {allocation['wholesale_alias']} готовит мастер-клад. "
-                f"После завершения 👤 {allocation['retail_alias']} "
-                f"автоматически начнёт подготовку товара к витрине."
-                f"{warning}"
-            )
-
-        allocate_to_retail._nightshift_updated = True
-        workflow.WorkflowGameService.allocate_to_retail = allocate_to_retail
-
     ui_staff_handlers.render_batch = _render_batch
-
-
-def _install_ui_update() -> None:
     ui_commerce._procurement_products_keyboard = _procurement_products_keyboard
     ui_commerce._sales_root_keyboard = _sales_root_keyboard
     ui_commerce.render_packaging = _render_packaging
-
-
-def apply_gameplay_updates() -> None:
-    """Install the two remaining legacy presentation/handoff overlays."""
-    _install_handoff_update()
-    _install_ui_update()
