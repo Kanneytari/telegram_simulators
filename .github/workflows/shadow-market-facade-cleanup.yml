@@ -1,0 +1,67 @@
+name: NIGHTSHIFT one-shot facade cleanup
+
+on:
+  push:
+    branches:
+      - refactor/shadow-market-tutorial-overlays
+    paths:
+      - .github/workflows/shadow-market-facade-cleanup.yml
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}/shadow_market_simulator
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/shadow-market-tutorial-overlays
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install verification dependencies
+        working-directory: shadow_market_simulator
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install ruff
+
+      - name: Remove legacy facades and rewrite imports
+        run: python .github/scripts/cleanup_shadow_market_facades.py
+
+      - name: Verify cleaned architecture
+        working-directory: shadow_market_simulator
+        run: |
+          python -m compileall -q app tests
+          python -m pytest -q
+          ruff check app tests --select F401,F821,F841
+
+      - name: Verify no facade modules remain
+        working-directory: shadow_market_simulator
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          app = Path("app")
+          allowed = {
+              "__init__.py", "bootstrap.py", "main.py",
+              "ui_admin.py", "ui_commerce.py", "ui_common.py",
+              "ui_disputes.py", "ui_navigation.py", "ui_staff.py",
+              "ui_staff_handlers.py",
+          }
+          flat = {p.name for p in app.glob("*.py")}
+          assert flat == allowed, (flat - allowed, allowed - flat)
+          PY
+
+      - name: Commit facade cleanup
+        run: |
+          git config user.name "Kanneytari"
+          git config user.email "hitroplan@yandex.ru"
+          git add -A
+          git commit -m "refactor(shadow-market): remove legacy compatibility facades"
+          git push origin HEAD:refactor/shadow-market-tutorial-overlays
