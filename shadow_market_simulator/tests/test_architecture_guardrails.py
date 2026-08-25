@@ -28,13 +28,11 @@ ALLOWED_FLAT_MODULES = {
     "game.py",
     "gameplay_updates.py",
     "global_packaging.py",
-    "handoff_copy_update.py",
     "inbox_lifecycle.py",
     "main.py",
     "nightshift.py",
     "operations.py",
     "procurement_market.py",
-    "product_ui_update.py",
     "recruitment.py",
     "runtime.py",
     "simulation.py",
@@ -58,8 +56,6 @@ ALLOWED_FLAT_MODULES = {
 # This exact set can only shrink.
 LEGACY_OVERLAY_MODULES = {
     "gameplay_updates.py",
-    "handoff_copy_update.py",
-    "product_ui_update.py",
     "tutorial.py",
     "tutorial_copy_update.py",
     "tutorial_runtime.py",
