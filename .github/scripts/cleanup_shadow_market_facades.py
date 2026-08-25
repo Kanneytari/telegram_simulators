@@ -154,7 +154,6 @@ for base in text_roots:
         if path.is_file() and path.suffix in {".py", ".md", ".yml", ".yaml"}:
             rewrite_file(path)
 rewrite_file(ROOT / "README.md")
-rewrite_file(Path(".github/workflows/shadow-market-tests.yml"))
 
 compat_test = TESTS / "test_package_compatibility.py"
 if compat_test.exists():
@@ -203,16 +202,12 @@ status_text = re.sub(
 )
 status.write_text(status_text, encoding="utf-8")
 
-scan_files = [
-    *APP.rglob("*.py"),
-    *TESTS.rglob("*.py"),
-    Path(".github/workflows/shadow-market-tests.yml"),
-]
+scan_files = [*APP.rglob("*.py"), *TESTS.rglob("*.py")]
 leftovers: list[str] = []
 for path in scan_files:
     body = path.read_text(encoding="utf-8")
     try:
-        tree = ast.parse(body, filename=str(path)) if path.suffix == ".py" else None
+        tree = ast.parse(body, filename=str(path))
     except SyntaxError:
         tree = None
     for old in FACADES:
