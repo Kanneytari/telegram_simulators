@@ -10,7 +10,7 @@ from app.core.config import Settings
 from app.core.database import Database
 from app.staff.couriers.idle import courier_idle_ready
 from app.staff.couriers.model import CourierBlueprint
-from app.staff.idle import IdleAwareGameService
+from app.staff.idle import IdleAwareMixin
 from app.staff.rename import rename_employee
 
 
@@ -20,5 +20,5 @@ def test_legacy_imports_are_thin_aliases_to_canonical_packages() -> None:
     assert LegacyCourierBlueprint is CourierBlueprint
     assert legacy_courier_idle_ready is courier_idle_ready
     assert legacy_rename_employee is rename_employee
-    assert LegacyIdleAwareGameService is IdleAwareGameService
+    assert LegacyIdleAwareGameService is IdleAwareMixin
     assert LegacyPackagingService is GlobalPackagingGameService
