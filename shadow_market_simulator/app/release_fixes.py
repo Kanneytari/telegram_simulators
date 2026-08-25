@@ -1,34 +1,12 @@
 from __future__ import annotations
 
-from . import compensation, staff_insights
+from . import compensation
 from .bot.middleware import OneShotCallbackMiddleware
 
 
-# Compatibility export while release correctness overlays are being absorbed by
-# their canonical feature modules.
+# Compatibility export while the last release correctness overlay is being
+# absorbed by its canonical feature module.
 __all__ = ["OneShotCallbackMiddleware", "apply_release_fixes"]
-
-
-def _install_start_copy_fix() -> None:
-    current = staff_insights.StaffInsightSimulationEngine.ensure_player
-    if getattr(current, "_nightshift_release_copy", False):
-        return
-
-    def ensure_player(self, player_id: int, username: str | None) -> bool:
-        created = current(self, player_id, username)
-        if created:
-            with self.db.connect() as conn:
-                conn.execute(
-                    """UPDATE inbox
-                       SET title='Первая смена',
-                           body='Склад пуст. Начни с первой закупки в разделе Товар.'
-                       WHERE player_id=? AND kind='tutorial' AND status='open'""",
-                    (player_id,),
-                )
-        return created
-
-    ensure_player._nightshift_release_copy = True
-    staff_insights.StaffInsightSimulationEngine.ensure_player = ensure_player
 
 
 def _install_compensation_draft_fix() -> None:
@@ -134,6 +112,5 @@ def _install_compensation_draft_fix() -> None:
 
 
 def apply_release_fixes() -> None:
-    """Install remaining release correctness overlays during architecture migration."""
-    _install_start_copy_fix()
+    """Install the last release correctness overlay during architecture migration."""
     _install_compensation_draft_fix()
