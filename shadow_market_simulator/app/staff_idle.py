@@ -1,3 +1,5 @@
-from .staff.idle import IdleAwareGameService
+from .staff.idle import IdleAwareMixin
 
-__all__ = ["IdleAwareGameService"]
+IdleAwareGameService = IdleAwareMixin
+
+__all__ = ["IdleAwareMixin", "IdleAwareGameService"]
