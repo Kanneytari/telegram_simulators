@@ -14,7 +14,6 @@ from .core import Database, Settings, load_settings
 from .courier_management import CourierManagementGameService, CourierManagementSimulationEngine
 from .courier_recruitment import CourierRecruitmentService
 from .gameplay_updates import apply_gameplay_updates
-from .handoff_copy_update import apply_handoff_copy_update
 from .inbox_lifecycle import install_inbox_lifecycle
 from .product_ui_update import apply_product_ui_update
 from .release_fixes import apply_release_fixes
@@ -50,7 +49,6 @@ def build_application() -> Application:
     # Transitional boundary: all remaining runtime overlays are deliberately
     # installed here and nowhere else while their behavior is made canonical.
     apply_gameplay_updates()
-    apply_handoff_copy_update()
     apply_product_ui_update()
 
     db = Database(settings.db_path)
