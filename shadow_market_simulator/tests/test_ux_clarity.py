@@ -156,7 +156,7 @@ def test_first_handoff_tutorial_guides_product_warehouse_and_batch(tmp_path):
     asyncio.run(render_product_root(target, db, game, PLAYER_ID))
     assert "<blockquote>Нажми на кнопку [📦 Склад]</blockquote>" in target.text
     product_labels = button_texts(target.reply_markup)
-    assert any("🚚 Склад" in label for label in product_labels)
+    assert any("📦 Склад" in label for label in product_labels)
     assert not any("Обновить" in label for label in product_labels)
     asyncio.run(render_batches(target, game, PLAYER_ID))
     assert "<blockquote>Выбери партию стаффа, которую хочешь передать закладчику.</blockquote>" in target.text

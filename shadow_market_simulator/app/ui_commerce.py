@@ -53,19 +53,29 @@ def _stock_status(db, player_id: int, product_id: int) -> str:
 
 
 def _procurement_products_keyboard(db, player_id: int, products) -> InlineKeyboardMarkup:
-    rows = [[InlineKeyboardButton(
-        text=f"{product['title']} · {_stock_status(db, player_id, int(product['id']))} · {product['total']} предложений",
-        callback_data=f"proc:product:{product['id']}",
-    )] for product in products]
+    rows: list[list[InlineKeyboardButton]] = []
+    for product in products:
+        status = _stock_status(db, player_id, int(product["id"]))
+        text = str(product["title"])
+        if status != "нет запаса":
+            text += f" · 🚚 {status}"
+        rows.append([
+            InlineKeyboardButton(
+                text=text,
+                callback_data=f"proc:product:{product['id']}",
+            )
+        ])
+
     with db.connect() as conn:
         batch_count = int(conn.execute(
             """SELECT COUNT(*) FROM batches
                WHERE player_id=? AND status IN ('receiving','warehouse') AND remaining>0""",
             (player_id,),
         ).fetchone()[0])
-    rows.append([InlineKeyboardButton(text=f"🚚 Склад · {batch_count}", callback_data="team:batches")])
-    rows.append([InlineKeyboardButton(text="Меню", callback_data="menu:home")])
+    rows.append([InlineKeyboardButton(text=f"📦 Склад · {batch_count}", callback_data="team:batches")])
+    rows.append([InlineKeyboardButton(text="🏠 Меню", callback_data="menu:home")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
 
 async def render_product_root(target: Message, db, game, player_id: int, *, flash: str | None = None) -> None:
     products = game.procurement_products(player_id)
@@ -170,6 +180,7 @@ async def render_offer(target: Message, game, player_id: int, offer_id: int, emp
         text += "\n\n🔴 Нет активного складмена."
     await present(target, text, _offer_keyboard(offer_id, int(offer["product_id"]), selected, staff))
 
+
 async def render_offer_staff(target: Message, game, player_id: int, offer_id: int) -> None:
     offer = game.procurement_offer(player_id, offer_id)
     if not offer:
@@ -218,8 +229,8 @@ def _sales_root_keyboard(rows) -> InlineKeyboardMarkup:
         callback_data=f"sales:product:{row['id']}",
     )] for row in rows]
     buttons.append([
-        InlineKeyboardButton(text="Фасовки", callback_data="sales:packaging"),
-        InlineKeyboardButton(text="Меню", callback_data="menu:home"),
+        InlineKeyboardButton(text="⚙️ Фасовки", callback_data="sales:packaging"),
+        InlineKeyboardButton(text="🏠 Меню", callback_data="menu:home"),
     ])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -332,7 +343,7 @@ def packaging_keyboard(rule) -> InlineKeyboardMarkup:
 async def render_packaging(target: Message, game, player_id: int) -> None:
     rule = game.global_packaging_rule(player_id)
     text = (
-        "<b>Фасовки</b>\n\n"
+        "<b>⚙️ Фасовки</b>\n\n"
         "Новые партии распределяются так:\n\n"
         f"×1 · <b>{rule['pct_1']}%</b>\n"
         f"×2 · <b>{rule['pct_2']}%</b>\n"
@@ -341,6 +352,7 @@ async def render_packaging(target: Message, game, player_id: int) -> None:
     if claim_tip(game.db, player_id, "packaging"):
         text += "\n\n💡 Эти доли применяются к товару, который закладчики будут готовить к витрине после следующих передач."
     await present(target, text, packaging_keyboard(rule))
+
 
 def build_commerce_router(db, game, simulation) -> Router:
     router = Router(name="compact-commerce")

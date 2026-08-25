@@ -9,6 +9,17 @@ from app.db import Database
 from app.simulation import iso, utcnow
 
 
+CURRENT_PRODUCT_TITLES = [
+    "Amphetamine",
+    "MDMA",
+    "Cocaine",
+    "Mephedrone",
+    "LSD",
+    "Hash",
+    "Weed",
+]
+
+
 def make_game(tmp_path):
     db = Database(str(tmp_path / "game.db"))
     db.init()
@@ -53,11 +64,14 @@ def create_dispute(db, revenue: int = 10000):
 def test_current_catalog_and_listing_prices(tmp_path):
     db, _, _ = make_game(tmp_path)
     with db.connect() as conn:
-        products = conn.execute("SELECT title FROM products ORDER BY id").fetchall()
+        products = conn.execute(
+            "SELECT title FROM products WHERE active=1 ORDER BY id"
+        ).fetchall()
         listings = conn.execute(
             "SELECT price FROM listings WHERE player_id=1001 AND pack_size=1 ORDER BY product_id"
         ).fetchall()
-    assert [row["title"] for row in products] == ["Амфетамин", "MDMA", "Кокаин", "Мефедрон", "Кетамин", "LSD"]
+    assert [row["title"] for row in products] == CURRENT_PRODUCT_TITLES
+    assert len(listings) == len(CURRENT_PRODUCT_TITLES)
     assert all(int(row["price"]) > 0 for row in listings)
 
 

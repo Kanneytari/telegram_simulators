@@ -281,7 +281,7 @@ def test_products_show_leaders_and_actionable_problems(tmp_path):
     text = products_text(db, PLAYER, "7", now=NOW)
     assert "Хорошо идут" in text
     assert "Требуют внимания" in text
-    assert "Амфетамин" in text
+    assert "Amphetamine" in text
     assert "MDMA" in text
     assert "Оценка 3.0/5" in text
     assert "заработано" in text

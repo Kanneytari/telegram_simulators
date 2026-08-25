@@ -20,8 +20,6 @@ def test_tutorial_is_nonblocking_and_uses_plain_copy() -> None:
         )
         from app.db import Database
         from app.gameplay_updates import apply_gameplay_updates
-        from app.handoff_copy_update import apply_handoff_copy_update
-        from app.product_ui_update import apply_product_ui_update
         from app.tutorial_runtime import apply_tutorial_runtime_fixes
 
 
@@ -50,8 +48,6 @@ def test_tutorial_is_nonblocking_and_uses_plain_copy() -> None:
 
 
         apply_gameplay_updates()
-        apply_handoff_copy_update()
-        apply_product_ui_update()
 
         with tempfile.TemporaryDirectory() as tmp:
             db = Database(str(Path(tmp) / "tutorial-nonblocking.db"))
