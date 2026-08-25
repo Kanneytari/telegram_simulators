@@ -29,7 +29,9 @@ jobs:
           python -m pip install -r requirements.txt
           python -m pip install ruff
       - name: Apply suppliers screen change
-        run: python .github/scripts/apply_product_suppliers_screen.py
+        run: |
+          python .github/scripts/apply_product_suppliers_screen.py
+          python .github/scripts/adjust_product_suppliers_tests.py
       - name: Verify
         working-directory: shadow_market_simulator
         run: |
@@ -40,6 +42,6 @@ jobs:
         run: |
           git config user.name "Kanneytari"
           git config user.email "hitroplan@yandex.ru"
-          git add shadow_market_simulator/app/ui_commerce.py shadow_market_simulator/app/tutorial/hooks.py shadow_market_simulator/tests/test_compact_ui.py shadow_market_simulator/tests/test_architecture_guardrails.py
+          git add shadow_market_simulator/app/ui_commerce.py shadow_market_simulator/app/tutorial/hooks.py shadow_market_simulator/tests/test_compact_ui.py shadow_market_simulator/tests/test_architecture_guardrails.py shadow_market_simulator/tests/test_zz_gameplay_updates.py shadow_market_simulator/tests/test_zzzz_product_ui_final.py
           git commit -m "feat(shadow-market): nest procurement under suppliers"
           git push origin HEAD:ux/product-suppliers-screen-audit
