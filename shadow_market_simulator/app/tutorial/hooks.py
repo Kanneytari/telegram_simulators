@@ -92,7 +92,7 @@ def new_player_setup(original):
             conn.execute('DELETE FROM batches WHERE player_id=?', (player_id,))
             conn.execute('UPDATE shops SET balance=?, reserve_target=? WHERE player_id=?', (STARTING_CAPITAL, STARTING_RESERVE, player_id))
             conn.execute("UPDATE ledger\n                   SET amount=?, note='Стартовый капитал'\n                   WHERE player_id=? AND kind='capital'", (STARTING_CAPITAL, player_id))
-            conn.execute("UPDATE inbox\n                   SET title='Первая смена',\n                       body='Склад пуст. Начни с первой закупки в разделе «Товар».'\n                   WHERE player_id=? AND kind='tutorial'", (player_id,))
+            conn.execute("UPDATE inbox\n                   SET title='Первая смена',\n                       body='Сейчас у тебя нет товара. Начни с первой закупки в разделе «Товар».'\n                   WHERE player_id=? AND kind='tutorial'", (player_id,))
             conn.execute("INSERT OR REPLACE INTO tutorial_state(player_id, stage, data_json, active)\n                   VALUES (?, ?, '{}', 1)", (player_id, STAGE_PROCUREMENT))
         return True
     decorated = ensure_player
@@ -130,6 +130,13 @@ def first_purchase_protection(original):
             batch = conn.execute("SELECT id, product_id FROM batches\n                   WHERE player_id=? AND responsible_employee_id=? AND status='receiving'\n                   ORDER BY id DESC LIMIT 1", (player_id, employee_id)).fetchone()
         if batch:
             _set_stage(self.db, player_id, STAGE_PICKUP_WAIT, batch_id=int(batch['id']), product_id=int(batch['product_id']), warehouse_employee_id=employee_id)
+            with self.db.connect() as conn:
+                conn.execute(
+                    """UPDATE inbox
+                       SET body='Складмен забирает первую партию. Обычно это занимает игровое время.'
+                       WHERE player_id=? AND kind='tutorial' AND status='open'""",
+                    (player_id,),
+                )
             result += '\n\n' + tutorial_hint('Складмен забирает товар. Обычно это занимает время. Можешь продолжать играть или вернуться в меню и нажать ⏩ Пропустить ожидание.')
         return result
     decorated = buy_offer_for_employee
@@ -456,25 +463,6 @@ def soft_listing(original):
 
     return guarded
 
-
-def copy_rules(original):
-    @wraps(original)
-    def ensure_player(self, player_id: int, username: str | None) -> bool:
-        created = original(self, player_id, username)
-        if created:
-            with self.db.connect() as conn:
-                conn.execute("UPDATE inbox\n                       SET body='Склад пуст. Начни с первой закупки в разделе Товар.'\n                       WHERE player_id=? AND kind='tutorial'", (player_id,))
-        return created
-    decorated = ensure_player
-
-    @wraps(original)
-    def guarded(*args, **kwargs):
-        db = _runtime_db(args, kwargs)
-        if not runtime_enabled(db):
-            return original(*args, **kwargs)
-        return decorated(*args, **kwargs)
-
-    return guarded
 
 
 def affordable_empty_product_root(original):

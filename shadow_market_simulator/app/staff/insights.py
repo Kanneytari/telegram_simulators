@@ -17,14 +17,6 @@ class StaffInsightSimulationEngine(WorkflowSimulationEngine):
                 "INSERT OR IGNORE INTO game_clock(player_id, game_hours) VALUES (?, 0)",
                 (player_id,),
             )
-            if created:
-                conn.execute(
-                    """UPDATE inbox
-                       SET title='Первая смена',
-                           body='Склад пуст. Начни с первой закупки в разделе Товар.'
-                       WHERE player_id=? AND kind='tutorial' AND status='open'""",
-                    (player_id,),
-                )
         return created
 
     def current_game_hour(self, player_id: int, now=None) -> float:
