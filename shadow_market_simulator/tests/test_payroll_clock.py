@@ -1,7 +1,7 @@
 import random
 
-from app.courier_management import CourierManagementGameService, CourierManagementSimulationEngine
-from app.db import Database
+from app.staff.couriers.management import CourierManagementGameService, CourierManagementSimulationEngine
+from app.core.database import Database
 
 
 def test_new_player_initializes_payroll_clock_on_creation(tmp_path):

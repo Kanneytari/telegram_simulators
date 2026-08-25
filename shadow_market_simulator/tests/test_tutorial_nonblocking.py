@@ -14,11 +14,11 @@ def test_tutorial_is_nonblocking_and_uses_plain_copy() -> None:
         from pathlib import Path
 
         from app import tutorial, ui_commerce, ui_navigation
-        from app.courier_management import (
+        from app.staff.couriers.management import (
             CourierManagementGameService,
             CourierManagementSimulationEngine,
         )
-        from app.db import Database
+        from app.core.database import Database
                 
 
         class Target:

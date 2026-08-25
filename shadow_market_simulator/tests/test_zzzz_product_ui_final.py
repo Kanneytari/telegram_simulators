@@ -1,8 +1,8 @@
 import asyncio
 import random
 
-from app.courier_management import CourierManagementGameService, CourierManagementSimulationEngine
-from app.db import Database
+from app.staff.couriers.management import CourierManagementGameService, CourierManagementSimulationEngine
+from app.core.database import Database
 
 
 PLAYER_ID = 93001

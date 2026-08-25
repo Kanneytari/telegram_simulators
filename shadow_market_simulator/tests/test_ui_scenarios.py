@@ -3,9 +3,9 @@ from __future__ import annotations
 import asyncio
 import random
 
-from app.courier_management import CourierManagementGameService, CourierManagementSimulationEngine
-from app.courier_recruitment import CourierRecruitmentService
-from app.db import Database
+from app.staff.couriers.management import CourierManagementGameService, CourierManagementSimulationEngine
+from app.staff.couriers.recruitment import CourierRecruitmentService
+from app.core.database import Database
 from app.ui_commerce import render_product_root, render_storefront_root
 from app.ui_navigation import _home_snapshot, render_inbox
 from app.ui_staff import render_batches, render_profile, render_recruitment_root, render_team

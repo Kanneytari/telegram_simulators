@@ -3,9 +3,9 @@ from __future__ import annotations
 import random
 from datetime import timedelta
 
-from app.db import Database
-from app.courier_management import CourierManagementGameService, CourierManagementSimulationEngine
-from app.simulation import iso, utcnow
+from app.core.database import Database
+from app.staff.couriers.management import CourierManagementGameService, CourierManagementSimulationEngine
+from app.engine.simulation import iso, utcnow
 
 
 def make_game(tmp_path):

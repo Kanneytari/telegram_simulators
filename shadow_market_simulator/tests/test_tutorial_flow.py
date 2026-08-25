@@ -12,8 +12,8 @@ def test_guided_first_cycle_end_to_end() -> None:
         import tempfile
         from pathlib import Path
 
-        from app.courier_management import CourierManagementGameService, CourierManagementSimulationEngine
-        from app.db import Database
+        from app.staff.couriers.management import CourierManagementGameService, CourierManagementSimulationEngine
+        from app.core.database import Database
         from app.tutorial import (
             STAGE_DISPUTE,
             STAGE_HANDOFF,

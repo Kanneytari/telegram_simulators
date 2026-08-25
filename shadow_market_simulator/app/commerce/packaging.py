@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ..staff.idle import IdleAwareMixin
-from ..staff_relationships import StaffRelationshipGameService
+from app.staff.relationships import StaffRelationshipGameService
 
 
 class GlobalPackagingGameService(IdleAwareMixin, StaffRelationshipGameService):

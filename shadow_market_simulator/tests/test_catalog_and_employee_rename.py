@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import random
 
-from app.courier_management import CourierManagementGameService, CourierManagementSimulationEngine
-from app.db import Database
-from app.employee_rename import rename_employee
+from app.staff.couriers.management import CourierManagementGameService, CourierManagementSimulationEngine
+from app.core.database import Database
+from app.staff.rename import rename_employee
 
 
 PLAYER_ID = 1001

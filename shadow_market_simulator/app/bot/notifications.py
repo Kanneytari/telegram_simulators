@@ -7,7 +7,7 @@ from aiogram import Bot
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from ..core.database import Database
-from ..simulation import iso, utcnow
+from app.engine.simulation import iso, utcnow
 from ..ui_common import normalize_text
 
 

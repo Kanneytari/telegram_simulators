@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ...simulation import clamp
+from app.engine.simulation import clamp
 
 
 TRAIT_OVERHEATS = "overheats"

@@ -8,7 +8,7 @@ from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message, ReplyKeyboardRemove
 
-from .business_analytics import _comparison_ready, _order_metrics, _product_metrics, _window
+from app.analytics.business_analytics import _comparison_ready, _order_metrics, _product_metrics, _window
 from .ui_common import clean, money, notice, present, signed_pct_change
 
 

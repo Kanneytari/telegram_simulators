@@ -1,4 +1,4 @@
-from app.db import Database
+from app.core.database import Database
 
 
 def test_database_init_can_run_twice_without_losing_data(tmp_path):

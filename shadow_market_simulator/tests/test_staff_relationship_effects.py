@@ -3,9 +3,9 @@ from __future__ import annotations
 import random
 from datetime import timedelta
 
-from app.db import Database
-from app.simulation import iso, utcnow
-from app.staff_relationships import StaffRelationshipGameService, StaffRelationshipSimulationEngine
+from app.core.database import Database
+from app.engine.simulation import iso, utcnow
+from app.staff.relationships import StaffRelationshipGameService, StaffRelationshipSimulationEngine
 
 
 def make_system(tmp_path):

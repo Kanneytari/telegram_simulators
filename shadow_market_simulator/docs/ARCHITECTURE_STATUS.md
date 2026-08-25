@@ -17,7 +17,7 @@ The following packages now own the real implementation:
 - `app/inbox/` — inbox lifecycle;
 - `app/bot/` — Telegram middleware and notification runtime.
 
-Large legacy files in the root of `app/` that correspond to these domains are compatibility facades. New production code must import the canonical package path, not add behavior to those facades.
+Legacy root compatibility facades have been removed. Production code and tests import canonical package paths directly.
 
 ## Runtime assembly
 
@@ -51,9 +51,7 @@ No runtime overlay module is allowed by the architecture guardrail.
 
 ## Compatibility policy
 
-Legacy import paths are kept only where existing tests or external code can still depend on them. Compatibility tests assert object identity between old and canonical imports for migrated domains.
-
-A compatibility facade must not become a second source of business behavior. New code goes directly into feature packages.
+The temporary root compatibility layer has been removed. Old import paths are intentionally unsupported inside this application; architecture guardrails prevent those facade modules from returning.
 
 ## Validation policy
 
@@ -69,4 +67,4 @@ The refactor is considered safe only when all of these checks are green on the c
 
 ## Remaining work
 
-Architecture-v2 structural migration is complete for the active runtime. Remaining root compatibility facades may be removed later only when no production code, tests or external imports depend on them; they are not a second implementation layer and do not install runtime behavior.
+The architecture-v2 structural migration is complete for the active runtime. Future changes should extend the canonical feature packages directly rather than recreating root facades, runtime overlays, or one-class-per-feature inheritance layers.

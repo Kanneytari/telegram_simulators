@@ -4,9 +4,9 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-from .courier_management import PHONE, TRANSPORT
-from .employee_rename import rename_employee
-from .recruitment import CHANNELS
+from app.staff.couriers.management import PHONE, TRANSPORT
+from app.staff.rename import rename_employee
+from app.staff.recruitment import CHANNELS
 from .ui_common import clean, money, nav_row, notice, pct, present, tutorial_hint
 from .ui_staff import (
     RenameEmployeeState,

@@ -3,9 +3,9 @@ from __future__ import annotations
 import random
 from datetime import datetime, timedelta, timezone
 
-from app.business_analytics import finance_text, normalize_period, overview_text, products_text
-from app.courier_management import CourierManagementSimulationEngine
-from app.db import Database
+from app.analytics.business_analytics import finance_text, normalize_period, overview_text, products_text
+from app.staff.couriers.management import CourierManagementSimulationEngine
+from app.core.database import Database
 
 
 PLAYER = 1001

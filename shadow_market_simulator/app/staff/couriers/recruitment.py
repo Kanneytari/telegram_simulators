@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from ...recruitment import RecruitmentService
-from ...simulation import clamp, iso
+from app.staff.recruitment import RecruitmentService
+from app.engine.simulation import clamp, iso
 from .model import generate_courier_blueprint
 
 

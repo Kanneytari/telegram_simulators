@@ -3,14 +3,14 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 
-from app.db import Database
-from app.procurement_market import (
+from app.core.database import Database
+from app.commerce.procurement import (
     MINIMUM_BATCH_SIZE,
     PROCUREMENT_BATCH_SIZES,
     ProcurementMarketGameService,
     ProcurementMarketSimulationEngine,
 )
-from app.simulation import iso, utcnow
+from app.engine.simulation import iso, utcnow
 
 
 CURRENT_PRODUCT_COUNT = 7

@@ -1,4 +1,4 @@
-from app.recruitment import (
+from app.staff.recruitment import (
     CHANNELS as LegacyChannels,
     DURATION_OPTIONS as LegacyDurationOptions,
     RETAIL_STARTING_DEPOSIT_CAP as LegacyRetailStartingDepositCap,

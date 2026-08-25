@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import random
 
-from app.compensation import CompensationSimulationEngine
-from app.db import Database
-from app.recruitment import RecruitmentService
+from app.staff.compensation import CompensationSimulationEngine
+from app.core.database import Database
+from app.staff.recruitment import RecruitmentService
 
 
 def make_recruitment(tmp_path):

@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import random
 
-from app.analytics_log import AnalyticsLogger, normalize_callback
-from app.courier_management import CourierManagementGameService, CourierManagementSimulationEngine
-from app.courier_recruitment import CourierRecruitmentService
-from app.db import Database
+from app.analytics.analytics_log import AnalyticsLogger, normalize_callback
+from app.staff.couriers.management import CourierManagementGameService, CourierManagementSimulationEngine
+from app.staff.couriers.recruitment import CourierRecruitmentService
+from app.core.database import Database
 
 
 def make_system(tmp_path):
