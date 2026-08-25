@@ -52,6 +52,52 @@ class IdleAwareGameService(StaffRelationshipGameService):
             return (
                 "Сотрудник сейчас на паузе или недоступен и не может принять новую передачу."
             )
-        return super().allocate_to_retail(
+
+        result = super().allocate_to_retail(
             player_id, batch_id, retail_employee_id, quantity
+        )
+        if not result.startswith("Назначено "):
+            return result
+
+        with self.db.connect() as conn:
+            allocation = conn.execute(
+                """SELECT a.quantity, a.unit_cost, p.title product_title,
+                          w.alias wholesale_alias, r.alias retail_alias,
+                          r.deposit retail_deposit
+                   FROM retail_allocations a
+                   JOIN products p ON p.id=a.product_id
+                   JOIN employees w ON w.id=a.wholesale_employee_id
+                   JOIN employees r ON r.id=a.retail_employee_id
+                   WHERE a.player_id=? AND a.batch_id=?
+                     AND a.retail_employee_id=?
+                   ORDER BY a.id DESC LIMIT 1""",
+                (player_id, batch_id, retail_employee_id),
+            ).fetchone()
+        if not allocation:
+            return result
+
+        allocated = int(allocation["quantity"])
+        retail_after = (
+            self._employee_exposure(player_id, retail_employee_id)
+            + allocated * int(allocation["unit_cost"])
+        )
+        unsecured = max(
+            0,
+            retail_after - int(allocation["retail_deposit"]),
+        )
+        warning = (
+            "\n\n🔴 После получения у закладчика будет не покрыто "
+            f"депозитом: {unsecured:,} ₽."
+            if unsecured
+            else ""
+        )
+        return (
+            "<b>✅ Принято</b>\n\n"
+            f"Назначено <b>{allocated} ед.</b> "
+            f"{allocation['product_title']} сотруднику "
+            f"👤 {allocation['retail_alias']}.\n\n"
+            f"🚚 {allocation['wholesale_alias']} готовит мастер-клад. "
+            f"После завершения 👤 {allocation['retail_alias']} "
+            f"автоматически начнёт подготовку товара к витрине."
+            f"{warning}"
         )
