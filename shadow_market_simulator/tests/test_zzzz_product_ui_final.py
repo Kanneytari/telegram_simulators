@@ -32,10 +32,8 @@ class Target:
 
 def test_final_product_screen_contract(tmp_path):
     from app import ui_commerce
-    from app.gameplay_updates import apply_gameplay_updates
-    from app.ui_common import tutorial_hint
+        from app.ui_common import tutorial_hint
 
-    apply_gameplay_updates()
 
     db = Database(str(tmp_path / "product-ui-final.db"))
     db.init()

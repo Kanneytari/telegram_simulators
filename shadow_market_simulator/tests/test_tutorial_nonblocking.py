@@ -19,8 +19,7 @@ def test_tutorial_is_nonblocking_and_uses_plain_copy() -> None:
             CourierManagementSimulationEngine,
         )
         from app.db import Database
-        from app.gameplay_updates import apply_gameplay_updates
-        from app.tutorial_runtime import apply_tutorial_runtime_fixes
+                from app.tutorial_runtime import apply_tutorial_runtime_fixes
 
 
         class Target:
@@ -47,8 +46,7 @@ def test_tutorial_is_nonblocking_and_uses_plain_copy() -> None:
             }
 
 
-        apply_gameplay_updates()
-
+    
         with tempfile.TemporaryDirectory() as tmp:
             db = Database(str(Path(tmp) / "tutorial-nonblocking.db"))
             db.init()

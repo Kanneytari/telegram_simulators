@@ -12,7 +12,7 @@ from .simulation import clamp, iso, parse_dt, utcnow
 
 TASK_LABELS = {
     "receive_batch": "получает партию",
-    "handoff": "готовит передачу закладчику",
+    "handoff": "готовит мастер-клад",
     "place_stashes": "раскидывает клады",
 }
 

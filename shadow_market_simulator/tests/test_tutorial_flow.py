@@ -14,8 +14,7 @@ def test_guided_first_cycle_end_to_end() -> None:
 
         from app.courier_management import CourierManagementGameService, CourierManagementSimulationEngine
         from app.db import Database
-        from app.gameplay_updates import apply_gameplay_updates
-        from app.tutorial import (
+                from app.tutorial import (
             STAGE_DISPUTE,
             STAGE_HANDOFF,
             STAGE_HANDOFF_WAIT,
@@ -33,8 +32,7 @@ def test_guided_first_cycle_end_to_end() -> None:
         from app.tutorial_runtime import apply_tutorial_runtime_fixes
         import app.tutorial as tutorial
 
-        apply_gameplay_updates()
-
+    
         with tempfile.TemporaryDirectory() as tmp:
             db = Database(str(Path(tmp) / "tutorial.db"))
             db.init()

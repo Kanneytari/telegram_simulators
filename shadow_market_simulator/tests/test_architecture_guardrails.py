@@ -26,7 +26,6 @@ ALLOWED_FLAT_MODULES = {
     "dispute_payments.py",
     "employee_rename.py",
     "game.py",
-    "gameplay_updates.py",
     "global_packaging.py",
     "inbox_lifecycle.py",
     "main.py",
@@ -55,7 +54,6 @@ ALLOWED_FLAT_MODULES = {
 # Existing runtime overlays are migration debt, not an extension mechanism.
 # This exact set can only shrink.
 LEGACY_OVERLAY_MODULES = {
-    "gameplay_updates.py",
     "tutorial.py",
     "tutorial_copy_update.py",
     "tutorial_runtime.py",

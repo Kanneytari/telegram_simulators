@@ -11,7 +11,6 @@ from .analytics.analytics_handlers import build_analytics_router
 from .analytics.analytics_log import AnalyticsLogger, AnalyticsLoggingMiddleware
 from .bot import OneShotCallbackMiddleware
 from .core import Database, Settings, load_settings
-from .gameplay_updates import apply_gameplay_updates
 from .inbox import install_inbox_lifecycle
 from .staff.couriers.management import CourierManagementGameService, CourierManagementSimulationEngine
 from .staff.couriers.recruitment import CourierRecruitmentService
@@ -43,9 +42,6 @@ def build_application() -> Application:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
-
-    # Transitional boundary: only behavior that is not canonical yet is installed here.
-    apply_gameplay_updates()
 
     db = Database(settings.db_path)
     db.init()
