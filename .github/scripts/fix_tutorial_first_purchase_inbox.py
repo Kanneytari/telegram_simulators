@@ -22,12 +22,12 @@ hooks.write_text(text, encoding='utf-8')
 test = Path('shadow_market_simulator/tests/test_tutorial_flow.py')
 text = test.read_text(encoding='utf-8')
 old_assert = '                assert onboarding and "Склад пуст" in onboarding["body"]\n'
-new_assert = '                assert onboarding and "Сейчас у тебя нет товара" in onboarding["body"]\n                assert "Склад пуст" not in onboarding["body"]\n'
+new_assert = '                assert onboarding, "tutorial inbox missing"\n                assert "Сейчас у тебя нет товара" in onboarding["body"], repr(onboarding["body"])\n                assert "Склад пуст" not in onboarding["body"], repr(onboarding["body"])\n'
 if old_assert not in text:
     raise SystemExit('starter tutorial assertion not found')
 text = text.replace(old_assert, new_assert, 1)
 old_batch = """                batch = conn.execute(\n                    \"SELECT status FROM batches WHERE id=? AND player_id=?\",\n                    (batch_id, player_id),\n                ).fetchone()\n                assert batch and batch[\"status\"] == \"receiving\"\n"""
-new_batch = """                batch = conn.execute(\n                    \"SELECT status FROM batches WHERE id=? AND player_id=?\",\n                    (batch_id, player_id),\n                ).fetchone()\n                assert batch and batch[\"status\"] == \"receiving\"\n                onboarding = conn.execute(\n                    \"\"\"SELECT body FROM inbox\n                       WHERE player_id=? AND kind='tutorial' AND status='open'\"\"\",\n                    (player_id,),\n                ).fetchone()\n                assert onboarding and \"Складмен забирает первую партию\" in onboarding[\"body\"]\n                assert \"Склад пуст\" not in onboarding[\"body\"]\n"""
+new_batch = """                batch = conn.execute(\n                    \"SELECT status FROM batches WHERE id=? AND player_id=?\",\n                    (batch_id, player_id),\n                ).fetchone()\n                assert batch and batch[\"status\"] == \"receiving\"\n                onboarding = conn.execute(\n                    \"\"\"SELECT body FROM inbox\n                       WHERE player_id=? AND kind='tutorial' AND status='open'\"\"\",\n                    (player_id,),\n                ).fetchone()\n                assert onboarding, \"tutorial inbox missing after purchase\"\n                assert \"Складмен забирает первую партию\" in onboarding[\"body\"], repr(onboarding[\"body\"])\n                assert \"Склад пуст\" not in onboarding[\"body\"], repr(onboarding[\"body\"])\n"""
 if old_batch not in text:
     raise SystemExit('receiving batch assertion block not found')
 text = text.replace(old_batch, new_batch, 1)
