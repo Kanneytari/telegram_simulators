@@ -26,11 +26,12 @@ jobs:
           cd shadow_market_simulator
           python -m pip install -r requirements.txt
           python -m pip install ruff
-      - name: Apply final vocabulary cleanup
+      - name: Apply final presentation cleanup
         run: |
           python .github/scripts/finalize_presentation_vocabulary.py
           python .github/scripts/strengthen_ui_vocabulary_guardrail.py
           python .github/scripts/finalize_hire_action_vocabulary.py
+          python .github/scripts/unify_nightshift_entity_presentation.py
       - name: Verify
         run: |
           cd shadow_market_simulator
@@ -42,5 +43,5 @@ jobs:
           git config user.name "Kanneytari"
           git config user.email "hitroplan@yandex.ru"
           git add shadow_market_simulator/app shadow_market_simulator/tests
-          git commit -m "refactor(shadow-market): enforce canonical UI vocabulary"
+          git commit -m "refactor(shadow-market): unify entity presentation"
           git push origin HEAD:refactor/nightshift-ui-vocabulary
