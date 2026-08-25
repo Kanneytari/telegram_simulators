@@ -33,16 +33,27 @@ patch(TESTS / 'test_analytics_navigation.py', [
     ('assert "✓ Обзор" in names', 'assert "✅ 📊 Обзор" in names'),
     ('assert "Товары" in names', 'assert "⚪ 📦 Товары" in names'),
     ('assert "Деньги" in names', 'assert "⚪ 💰 Деньги" in names'),
+    ('assert "✓ 7 дней" in names', 'assert "✅ 7 дней" in names'),
+    ('assert "30 дней" in names', 'assert "⚪ 30 дней" in names'),
 ])
 patch(TESTS / 'test_compact_ui.py', [
-    ('            "Обычное событие",', '            "📨 ⚪ Обычное событие",'),
-    ('            "🔴 Срочное событие",', '            "📨 🔴 Срочное событие",'),
+    ('        "🔴 Срочное событие",\n        "Обычное событие",', '        "📨 🔴 Срочное событие",\n        "📨 ⚪ Обычное событие",'),
+    ('assert "Премия · 5 000 ₽" in profile', 'assert "💰 Премия · 5 000 ₽" in profile'),
+    ('assert "Отдых" in profile', 'assert "🛌 Отдых" in profile'),
+    ('assert "Развитие" in profile', 'assert "📈 Развитие" in profile'),
+    ('assert "Ещё" in profile', 'assert "⚙️ Ещё" in profile'),
     ('assert more[:3] == ["Переименовать", "Сменить роль", "Уволить"]', 'assert more[:3] == ["✏️ Переименовать", "🔄 Сменить роль", "🗑️ Уволить"]'),
     ('assert labels(markup) == ["Амфетамин", "Кокаин", "📦 Товар", "🏠 Меню"]', 'assert labels(markup) == ["📦 Амфетамин", "📦 Кокаин", "📦 Товар", "🏠 Меню"]'),
     ('        "✓ Обзор",\n        "Товары",\n        "Деньги",\n        "✓ 7 дней",\n        "30 дней",', '        "✅ 📊 Обзор",\n        "⚪ 📦 Товары",\n        "⚪ 💰 Деньги",\n        "✅ 7 дней",\n        "⚪ 30 дней",'),
 ])
+patch(TESTS / 'test_ui_scenarios.py', [
+    ('assert "Развитие" in [button.text for row in target.markup.inline_keyboard for button in row]', 'assert "📈 Развитие" in [button.text for row in target.markup.inline_keyboard for button in row]'),
+])
 patch(TESTS / 'test_ux_clarity.py', [
+    ('<blockquote>Выбери партию стаффа, которую хочешь передать закладчику.</blockquote>', '<blockquote>Выбери партию стаффа, которую хочешь передать 👤 <b>закладчику</b>.</blockquote>'),
     ('<blockquote>Выбери закладчика, которому передашь стафф.</blockquote>', '<blockquote>Выбери 👤 <b>закладчика</b>, которому передашь стафф.</blockquote>'),
+    ('assert allocation_rows[0] == ["−5", f"📦 {quantity} ед.", "+5"]', 'assert allocation_rows[0] == ["➖ 5", f"📦 {quantity} ед.", "➕ 5"]'),
+    ('assert allocation_rows[-1] == ["Назад", "🏠 Меню"]', 'assert allocation_rows[-1] == ["⬅️ Назад", "🏠 Меню"]'),
 ])
 
 # Product buttons now intentionally identify the product entity with 📦.
@@ -51,6 +62,7 @@ for filename in ('test_zz_gameplay_updates.py', 'test_zzzz_product_ui_final.py')
     text = path.read_text(encoding='utf-8')
     text = text.replace('assert label == product["title"]', 'assert label == f"📦 {product[\'title\']}"')
     text = text.replace('assert label == f"{product[\'title\']} · 🚚 {stock_status}"', 'assert label == f"📦 {product[\'title\']} · 🚚 {stock_status}"')
+    text = text.replace('assert f"Складмен: 🚚 {warehouse[\'alias\']}" in target.text', 'assert f"🚚 <b>Складмен</b>: 🚚 <b>{warehouse[\'alias\']}</b>" in target.text')
     path.write_text(text, encoding='utf-8')
 
 print('final entity presentation contracts applied')
