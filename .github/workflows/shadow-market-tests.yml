@@ -156,6 +156,9 @@ jobs:
               app / "workflow_allocation_handlers.py",
               app / "workflow_dashboard_handlers.py",
               app / "workflow_reassign_handlers.py",
+              app / "handoff_copy_update.py",
+              app / "product_ui_update.py",
+              app / "release_fixes.py",
           ]
           leftovers = [str(path) for path in removed_files if path.exists()]
           if leftovers:
