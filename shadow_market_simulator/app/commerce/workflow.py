@@ -20,6 +20,16 @@ TASK_LABELS = {
 }
 
 
+def _format_game_duration(hours: float) -> str:
+    total_minutes = max(1, math.ceil(max(0.0, float(hours)) * 60.0))
+    whole_hours, minutes = divmod(total_minutes, 60)
+    if whole_hours and minutes:
+        return f"{whole_hours} ч {minutes} м"
+    if whole_hours:
+        return f"{whole_hours} ч"
+    return f"{minutes} м"
+
+
 class WorkflowSimulationEngine(OperationsSimulationEngine):
     """Stateful employee workflow with explicit inventory accountability."""
 
@@ -470,7 +480,7 @@ class WorkflowGameService(OperationsGameService):
             return "свободен"
         remaining_real = max(0.0, (parse_dt(task["completes_at"]) - utcnow()).total_seconds() / 3600.0)
         remaining_game = remaining_real * self.simulation.effective_speed(player_id)
-        eta = "<1 ч" if remaining_game < 1 else f"~{remaining_game:.1f} ч"
+        eta = _format_game_duration(remaining_game)
         return f"{TASK_LABELS.get(task['kind'], task['kind'])} · {eta}"
 
     def employees(self, player_id: int):
