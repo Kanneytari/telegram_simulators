@@ -64,24 +64,39 @@ python -m app.main
 
 ## Структура проекта
 
-Проект переводится с плоского `app/` на feature-oriented архитектуру. Инфраструктура уже вынесена в `app/core/`; существующие корневые импорты временно сохраняются как compatibility-слой на время миграции.
+Архитектура v2 завершена. Игровая логика разнесена по feature-пакетам; старые root compatibility-файлы и runtime overlay-модули удалены. В корне `app/` остаются только сборка приложения и Telegram UI.
 
 ```text
 shadow_market_simulator/
 ├── app/
-│   ├── core/            # конфигурация, Database и каноническая SQLite-схема
-│   └── ...              # игровые подсистемы переносятся поэтапно
+│   ├── main.py
+│   ├── bootstrap.py
+│   ├── core/              # конфигурация, Database, базовый GameService, schema.sql
+│   ├── engine/            # базовая симуляция, игровое время и таймеры
+│   ├── bot/               # middleware и фоновые уведомления
+│   ├── commerce/          # закупка, склад, workflow, фасовки
+│   ├── staff/             # найм, оплата, отношения, аналитика сотрудников
+│   │   └── couriers/      # модель и управление курьерами
+│   ├── disputes/          # выплаты по диспутам
+│   ├── trust/             # рейтинг и доверие покупателей
+│   ├── analytics/         # бизнес-аналитика и event log
+│   ├── inbox/             # lifecycle входящих сообщений
+│   ├── tutorial/          # onboarding и гарантии первого цикла
+│   └── ui_*.py            # Telegram routers/renderers
 ├── docs/
 │   ├── ARCHITECTURE.md
+│   ├── ARCHITECTURE_STATUS.md
 │   ├── GAMEPLAY.md
 │   └── DATA_MODEL.md
-├── tests/               # unit, integration, UI, release и architecture regression
+├── tests/
 ├── .env.example
 ├── requirements.txt
 └── README.md
 ```
 
-`docs/ARCHITECTURE.md` описывает целевую архитектуру, допустимые зависимости и порядок миграции. `docs/DATA_MODEL.md` перечисляет важные для понимания игры таблицы и связи.
+Внутренний код импортирует только канонические package-paths. Новые `*_update.py`, `*_fixes.py`, compatibility-facades и runtime monkey-patching запрещены архитектурными guardrails.
+
+`docs/ARCHITECTURE.md` описывает актуальные архитектурные правила и границы ответственности. `docs/ARCHITECTURE_STATUS.md` фиксирует фактическое состояние architecture v2. `docs/DATA_MODEL.md` перечисляет важные таблицы и связи.
 
 ## Тестирование
 
