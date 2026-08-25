@@ -65,7 +65,9 @@ def test_guided_first_cycle_end_to_end() -> None:
                        WHERE player_id=? AND kind='tutorial' AND status='open'""",
                     (player_id,),
                 ).fetchone()
-                assert onboarding and "Склад пуст" in onboarding["body"]
+                assert onboarding, "tutorial inbox missing"
+                assert "Сейчас у тебя нет товара" in onboarding["body"], repr(onboarding["body"])
+                assert "Склад пуст" not in onboarding["body"], repr(onboarding["body"])
 
             products = game.procurement_products(player_id)
             assert products
@@ -94,6 +96,14 @@ def test_guided_first_cycle_end_to_end() -> None:
                     (batch_id, player_id),
                 ).fetchone()
                 assert batch and batch["status"] == "receiving"
+                onboarding = conn.execute(
+                    """SELECT body FROM inbox
+                       WHERE player_id=? AND kind='tutorial' AND status='open'""",
+                    (player_id,),
+                ).fetchone()
+                assert onboarding, "tutorial inbox missing after purchase"
+                assert "Складмен забирает первую партию" in onboarding["body"], repr(onboarding["body"])
+                assert "Склад пуст" not in onboarding["body"], repr(onboarding["body"])
 
             tutorial.skip_tutorial_wait(game, simulation, player_id)
             state = tutorial_state(db, player_id)

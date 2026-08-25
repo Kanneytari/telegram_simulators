@@ -59,7 +59,8 @@ def test_fresh_release_start_has_empty_stock_and_current_copy(tmp_path):
     assert batch_count == 0
     assert tutorial is not None
     assert tutorial["title"] == "Первая смена"
-    assert "Склад пуст" in tutorial["body"]
+    assert "Сейчас у тебя нет товара" in tutorial["body"]
+    assert "Склад пуст" not in tutorial["body"]
     assert "Стартовые партии" not in tutorial["body"]
     assert state["stage"] == "procurement"
     assert int(state["active"]) == 1

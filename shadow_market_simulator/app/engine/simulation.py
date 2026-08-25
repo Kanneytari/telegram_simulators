@@ -149,7 +149,6 @@ class SimulationEngine:
                             (player_id, product_id, pack_size, price),
                         )
 
-    @tutorial_hooks.copy_rules
     @tutorial_hooks.new_player_setup
     def ensure_player(self, player_id: int, username: str | None) -> bool:
         self.seed_catalog()
