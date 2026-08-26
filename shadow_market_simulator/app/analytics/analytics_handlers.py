@@ -64,7 +64,8 @@ def build_analytics_router(db: Database, game, simulation) -> Router:
         view = view if view in VIEWS else "overview"
         simulation.advance(player_id)
         game.process_payroll(player_id)
-        await present(target, render(player_id, view, period), analytics_view_keyboard(view, period))
+        text = render(player_id, view, period).replace(" · сравнение появится позже", "")
+        await present(target, text, analytics_view_keyboard(view, period))
 
     @router.callback_query(F.data == "menu:analytics")
     async def analytics(callback: CallbackQuery) -> None:
