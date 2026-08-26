@@ -93,7 +93,7 @@ def _home_snapshot(db, game, simulation, player_id: int) -> tuple[str, int, int]
         f"Баланс: <b>{money(shop['balance'])}</b>\n"
         f"Свободно: <b>{money(free_cash)}</b>\n"
         f"За 7 дней: <b>{money(current['earned'])}</b>{earned_trend} · "
-        f"{current['orders']} заказов{orders_trend}\n\n"
+        f"{current['orders']} продаж{orders_trend}\n\n"
         + "\n".join(alerts[:2])
     )
     if next_step:
