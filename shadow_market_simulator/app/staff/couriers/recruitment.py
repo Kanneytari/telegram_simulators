@@ -26,26 +26,25 @@ class CourierRecruitmentService(RecruitmentService):
     """Recruitment with deliberately distinct hidden courier personalities."""
 
     def _courier_alias(self, conn, player_id: int) -> str:
-        seen = {
+        blocked = {
             str(row[0])
             for row in conn.execute(
-                """SELECT alias FROM candidates WHERE player_id=? AND role='courier'
+                """SELECT alias FROM candidates
+                   WHERE player_id=? AND role='courier' AND status='open'
                    UNION
-                   SELECT alias FROM employees WHERE player_id=? AND role='courier'""",
+                   SELECT alias FROM employees
+                   WHERE player_id=? AND role='courier' AND active=1""",
                 (player_id, player_id),
             ).fetchall()
         }
-        available = [alias for alias in COURIER_ALIASES if alias not in seen]
+        available = [alias for alias in COURIER_ALIASES if alias not in blocked]
         if available:
             return self.rng.choice(available)
 
-        # Numeric suffixes are only a last-resort fallback after the full pool
-        # has already been seen by this player.
-        for _ in range(100):
+        while True:
             alias = f"{self.rng.choice(COURIER_ALIASES)}{self.rng.randint(10, 99)}"
-            if alias not in seen:
+            if alias not in blocked:
                 return alias
-        return f"{self.rng.choice(COURIER_ALIASES)}{self.rng.randint(100, 999)}"
 
     def _create_candidate(self, conn, player_id: int, campaign, channel, now) -> None:
         if campaign["role"] != "courier":
