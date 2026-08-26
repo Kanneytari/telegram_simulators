@@ -459,7 +459,7 @@ class SimulationEngine:
         conn.execute(
             """INSERT INTO ledger(
                    player_id, amount, kind, reference_type, reference_id, note)
-               ) VALUES (?, ?, 'refund', 'order', ?, ?)""",
+               VALUES (?, ?, 'refund', 'order', ?, ?)""",
             (
                 player_id,
                 -refund,
