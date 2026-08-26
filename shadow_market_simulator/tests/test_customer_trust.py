@@ -6,6 +6,7 @@ from app.trust.customer import (
     CustomerTrustGameService,
     CustomerTrustSimulationEngine,
     premium_allowance,
+    price_demand_multiplier,
 )
 from app.core.database import Database
 
@@ -110,6 +111,13 @@ def test_trust_unlocks_price_premium_but_is_capped():
     assert premium_allowance(50, 0.0) == 0.0
     assert premium_allowance(85, 0.25) > premium_allowance(65, 0.0)
     assert premium_allowance(100, 1.0) <= 0.30
+
+
+def test_price_demand_uses_market_price_and_trust_allowance_once():
+    assert price_demand_multiplier(90, 100, 0.10) > 1.0
+    assert price_demand_multiplier(100, 100, 0.10) == 1.0
+    assert price_demand_multiplier(105, 100, 0.10) == 1.0
+    assert price_demand_multiplier(125, 100, 0.10) < 1.0
 
 
 def test_customer_metrics_expose_core_progression(tmp_path):
