@@ -7,8 +7,45 @@ from app.engine.simulation import clamp, iso
 from .model import generate_courier_blueprint
 
 
+COURIER_ALIASES = (
+    "Гриф", "Луна", "Рысь", "Штрих", "Кедр", "Ноль", "Фаза", "Север", "Ток", "Сова", "Мята",
+    "Ворон", "Лис", "Барс", "Ястреб", "Крот", "Шмель", "Жук", "Скат", "Волк", "Шакал", "Кобра", "Уж",
+    "Блик", "Дым", "Тень", "Иней", "Гром", "Шум", "Пыль", "Пепел", "Кварц", "Кремень", "Гранит", "Графит",
+    "Неон", "Хром", "Оникс", "Янтарь", "Ртуть", "Азот", "Вольт", "Импульс", "Контур", "Пиксель", "Код",
+    "Байт", "Порт", "Кэш", "Слот", "Радар", "Реле", "Маяк", "Риф", "Штиль", "Прибой", "Ветер", "Бриз",
+    "Снег", "Лёд", "Туман", "Облако", "Дождь", "Град", "Сумрак", "Закат", "Рассвет", "Полночь", "Марс",
+    "Комета", "Спутник", "Орбита", "Вега", "Атлас", "Омега", "Зенит", "Азимут", "Вектор", "Модуль", "Спектр",
+    "Призма", "Фокус", "Кадр", "Дубль", "Трек", "Бит", "Бас", "Ритм", "Эхо", "Шёпот", "Гул", "Звон", "Клик",
+    "Пульс", "Нерв", "Шрам", "Клык", "Коготь", "Шип", "Игла", "Стриж", "Чиж", "Филин", "Сыч", "Коршун",
+    "Беркут", "Енот", "Хорёк", "Барсук", "Куница", "Норка", "Тритон", "Геккон", "Бобр", "Выдра", "Сом",
+    "Окунь", "Щука", "Краб", "Скорпион", "Паук",
+)
+
+
 class CourierRecruitmentService(RecruitmentService):
     """Recruitment with deliberately distinct hidden courier personalities."""
+
+    def _courier_alias(self, conn, player_id: int) -> str:
+        seen = {
+            str(row[0])
+            for row in conn.execute(
+                """SELECT alias FROM candidates WHERE player_id=? AND role='courier'
+                   UNION
+                   SELECT alias FROM employees WHERE player_id=? AND role='courier'""",
+                (player_id, player_id),
+            ).fetchall()
+        }
+        available = [alias for alias in COURIER_ALIASES if alias not in seen]
+        if available:
+            return self.rng.choice(available)
+
+        # Numeric suffixes are only a last-resort fallback after the full pool
+        # has already been seen by this player.
+        for _ in range(100):
+            alias = f"{self.rng.choice(COURIER_ALIASES)}{self.rng.randint(10, 99)}"
+            if alias not in seen:
+                return alias
+        return f"{self.rng.choice(COURIER_ALIASES)}{self.rng.randint(100, 999)}"
 
     def _create_candidate(self, conn, player_id: int, campaign, channel, now) -> None:
         if campaign["role"] != "courier":
@@ -50,21 +87,7 @@ class CourierRecruitmentService(RecruitmentService):
             quality_bonus=quality_bonus,
             experience_level=experience_level,
         )
-        alias = self.rng.choice(
-            [
-                "Гриф",
-                "Луна",
-                "Рысь",
-                "Штрих",
-                "Кедр",
-                "Ноль",
-                "Фаза",
-                "Север",
-                "Ток",
-                "Сова",
-                "Мята",
-            ]
-        ) + str(self.rng.randint(10, 99))
+        alias = self._courier_alias(conn, player_id)
 
         if transport_required >= 2:
             transport_level = 2
@@ -153,4 +176,4 @@ class CourierRecruitmentService(RecruitmentService):
         )
 
 
-__all__ = ["CourierRecruitmentService"]
+__all__ = ["CourierRecruitmentService", "COURIER_ALIASES"]
