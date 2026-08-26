@@ -97,6 +97,10 @@ def _offers_keyboard(product_id: int, offers) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
+def _purchase_confirmation_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[nav_row(SUPPLIERS)])
+
+
 @tutorial_hooks.handoff_procurement_product
 @tutorial_hooks.affordable_empty_procurement_product
 @tutorial_hooks.soft_procurement_product
@@ -403,11 +407,13 @@ def build_commerce_router(db, game, simulation) -> Router:
         offer = game.procurement_offer(callback.from_user.id, int(offer_raw))
         product_id = int(offer["product_id"]) if offer else None
         result = game.buy_offer_for_employee(callback.from_user.id, int(offer_raw), int(employee_raw))
-        flash = result
+        if result.startswith("✅ Куплено"):
+            await present(callback.message, result, _purchase_confirmation_keyboard())
+            return
         if product_id is None:
-            await render_product_root(callback.message, db, game, callback.from_user.id, flash=flash)
+            await render_product_root(callback.message, db, game, callback.from_user.id, flash=result)
         else:
-            await render_procurement_product(callback.message, game, callback.from_user.id, product_id, flash=flash)
+            await render_procurement_product(callback.message, game, callback.from_user.id, product_id, flash=result)
 
     @router.callback_query(F.data == "menu:storefront")
     async def sales(callback: CallbackQuery) -> None:
