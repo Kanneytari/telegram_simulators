@@ -83,6 +83,12 @@ def test_suppliers_screen_contains_product_categories(monkeypatch):
     ]
 
 
+def test_purchase_confirmation_has_only_suppliers_and_menu():
+    markup = ui_commerce._purchase_confirmation_keyboard()
+    assert labels(markup) == ["🤝 Поставщики", "🏠 Меню"]
+    assert callbacks(markup) == ["proc:suppliers", "menu:home"]
+
+
 def test_sales_price_hint_is_short_and_directional():
     assert ui_commerce._sales_price_hint(-5, 10) == "Цена ниже рынка — спрос немного выше."
     assert ui_commerce._sales_price_hint(5, 10) == "Покупатели принимают такую цену спокойно."
