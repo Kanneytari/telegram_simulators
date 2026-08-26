@@ -55,9 +55,6 @@ class ProcurementMarketSimulationEngine(StaffInsightSimulationEngine):
         self.refresh_procurement_market(player_id, now)
         return result
 
-    def _maybe_refresh_offer(self, conn, player_id: int, now) -> None:
-        return None
-
     def refresh_procurement_market(self, player_id: int, now=None) -> int:
         now = now or utcnow()
         with self.db.connect() as conn:
