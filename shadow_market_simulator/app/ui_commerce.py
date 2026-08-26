@@ -316,12 +316,12 @@ async def render_listing(target: Message, db, game, player_id: int, listing_id: 
     unit_price = float(row["price"]) / max(1, int(row["pack_size"]))
     delta = (unit_price / float(row["base_market_price"]) - 1.0) * 100.0
     allowance = float(trust["premium_allowance"]) * 100.0
-    status = "нормально" if delta <= allowance + 0.01 else "спрос будет снижаться"
+    status = "" if delta <= allowance + 0.01 else " · <b>спрос будет снижаться</b>"
     text = (
         f"📦 <b>{clean(row['title'])} · ×{row['pack_size']}</b>\n\n"
         f"Цена: <b>{money(row['price'])}</b> · рынок ~{money(row['base_market_price'] * row['pack_size'])}\n"
         f"Наценка: {delta:+.0f}%\n\n"
-        f"При текущем доверии до ~+{allowance:.0f}% переносится нормально · <b>{status}</b>.\n\n"
+        f"При текущем доверии до ~+{allowance:.0f}% переносится нормально{status}.\n\n"
         f"Доступно: {int(row['positions'])}"
     )
     await present(target, text, InlineKeyboardMarkup(inline_keyboard=[
