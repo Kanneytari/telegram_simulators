@@ -82,6 +82,14 @@ def test_suppliers_screen_contains_product_categories(monkeypatch):
         "proc:product:1", "proc:product:3", "menu:product", "menu:home"
     ]
 
+
+def test_sales_price_hint_is_short_and_directional():
+    assert ui_commerce._sales_price_hint(-5, 10) == "Цена ниже рынка — спрос немного выше."
+    assert ui_commerce._sales_price_hint(5, 10) == "Покупатели принимают такую цену спокойно."
+    assert ui_commerce._sales_price_hint(15, 10) == "Цена выше привычной — спрос немного ниже."
+    assert ui_commerce._sales_price_hint(25, 10) == "Цена сильно выше рынка — спрос заметно ниже."
+
+
 def test_analytics_uses_same_compact_navigation_language():
     assert labels(analytics_view_keyboard("overview", "7")) == [
         "✓ 📊 Обзор",
