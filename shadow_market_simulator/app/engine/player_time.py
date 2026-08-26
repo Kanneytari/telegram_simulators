@@ -38,7 +38,6 @@ class PlayerSimulationMixin:
             )
             self._reactivate_employees(conn, player_id, now)
             self._expire_items(conn, player_id, now)
-            self._maybe_refresh_offer(conn, player_id, now)
             conn.execute(
                 "UPDATE shops SET last_simulated_at=?, last_seen_at=? WHERE player_id=?",
                 (iso(now), iso(now), player_id),
