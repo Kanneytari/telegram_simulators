@@ -306,6 +306,16 @@ def _listing_context(db, player_id: int, listing_id: int):
         ).fetchone()
 
 
+def _sales_price_hint(delta: float, allowance: float) -> str:
+    if delta < -0.5:
+        return "Цена ниже рынка — спрос немного выше."
+    if delta <= allowance + 0.01:
+        return "Покупатели принимают такую цену спокойно."
+    if delta <= allowance + 10.0:
+        return "Цена выше привычной — спрос немного ниже."
+    return "Цена сильно выше рынка — спрос заметно ниже."
+
+
 @tutorial_hooks.handoff_listing
 @tutorial_hooks.soft_listing
 async def render_listing(target: Message, db, game, player_id: int, listing_id: int) -> None:
@@ -316,12 +326,11 @@ async def render_listing(target: Message, db, game, player_id: int, listing_id: 
     unit_price = float(row["price"]) / max(1, int(row["pack_size"]))
     delta = (unit_price / float(row["base_market_price"]) - 1.0) * 100.0
     allowance = float(trust["premium_allowance"]) * 100.0
-    status = "" if delta <= allowance + 0.01 else " · <b>спрос будет снижаться</b>"
     text = (
         f"📦 <b>{clean(row['title'])} · ×{row['pack_size']}</b>\n\n"
         f"Цена: <b>{money(row['price'])}</b> · рынок ~{money(row['base_market_price'] * row['pack_size'])}\n"
         f"Наценка: {delta:+.0f}%\n\n"
-        f"При текущем доверии до ~+{allowance:.0f}% переносится нормально{status}.\n\n"
+        f"{_sales_price_hint(delta, allowance)}\n\n"
         f"Доступно: {int(row['positions'])}"
     )
     await present(target, text, InlineKeyboardMarkup(inline_keyboard=[
