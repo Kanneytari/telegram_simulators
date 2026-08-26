@@ -235,7 +235,6 @@ class SimulationEngine:
                    VALUES (?, 150000, 'capital', 'Стартовый капитал')""",
                 (player_id,),
             )
-            self._create_offer(conn, player_id, now)
             conn.execute(
                 """INSERT INTO inbox(
                        player_id, kind, priority, title, body, payload_json, expires_at
@@ -267,7 +266,6 @@ class SimulationEngine:
             )
             self._reactivate_employees(conn, player_id, now)
             self._expire_items(conn, player_id, now)
-            self._maybe_refresh_offer(conn, player_id, now)
             conn.execute(
                 "UPDATE shops SET last_simulated_at = ?, last_seen_at = ? WHERE player_id = ?",
                 (iso(now), iso(now), player_id),
@@ -440,50 +438,6 @@ class SimulationEngine:
             (player_id, iso(now)),
         )
 
-    def _maybe_refresh_offer(self, conn, player_id: int, now: datetime) -> None:
-        count = conn.execute(
-            "SELECT COUNT(*) FROM supplier_offers WHERE player_id = ? AND status = 'open'",
-            (player_id,),
-        ).fetchone()[0]
-        if count < 2:
-            self._create_offer(conn, player_id, now)
-
-    def _create_offer(self, conn, player_id: int, now: datetime) -> None:
-        supplier = conn.execute(
-            "SELECT * FROM suppliers ORDER BY RANDOM() LIMIT 1"
-        ).fetchone()
-        product = conn.execute(
-            "SELECT * FROM products WHERE active=1 ORDER BY RANDOM() LIMIT 1"
-        ).fetchone()
-        qty = self.rng.choice([50, 100, 200, 400])
-        volume_discount = {50: 1.00, 100: 0.93, 200: 0.86, 400: 0.78}[qty]
-        wholesale_base = product["base_market_price"] * 0.56
-        unit_cost = int(
-            wholesale_base * supplier["price_modifier"] * volume_discount
-        )
-        quality_hint = (
-            "стабильное"
-            if supplier["quality_sigma"] < 5
-            else "с переменным качеством"
-            if supplier["quality_sigma"] > 9
-            else "обычное"
-        )
-        conn.execute(
-            """INSERT INTO supplier_offers(
-                   player_id, supplier_id, product_id, quantity, unit_cost,
-                   quality_hint, expires_at
-               ) VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (
-                player_id,
-                supplier["id"],
-                product["id"],
-                qty,
-                unit_cost,
-                quality_hint,
-                iso(now + timedelta(hours=8)),
-            ),
-        )
-
     def _has_stock(self, conn, player_id: int, product_id: int, qty: int) -> bool:
         available = conn.execute(
             """SELECT COALESCE(SUM(remaining), 0) FROM batches
@@ -504,7 +458,7 @@ class SimulationEngine:
         )
         conn.execute(
             """INSERT INTO ledger(
-                   player_id, amount, kind, reference_type, reference_id, note
+                   player_id, amount, kind, reference_type, reference_id, note)
                ) VALUES (?, ?, 'refund', 'order', ?, ?)""",
             (
                 player_id,
