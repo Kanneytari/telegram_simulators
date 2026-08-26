@@ -130,42 +130,6 @@ class ProcurementMarketSimulationEngine(StaffInsightSimulationEngine):
                     now,
                 )
 
-    def _group_counts_conn(
-        self, conn, player_id: int
-    ) -> dict[tuple[int, int], int]:
-        counts: dict[tuple[int, int], int] = defaultdict(int)
-        for row in conn.execute(
-            """SELECT product_id, quantity, COUNT(*) count
-               FROM supplier_offers
-               WHERE player_id=? AND status='open'
-               GROUP BY product_id, quantity""",
-            (player_id,),
-        ).fetchall():
-            counts[(int(row["product_id"]), int(row["quantity"]))] = int(
-                row["count"]
-            )
-        return counts
-
-    def _ensure_minimum_lots_conn(
-        self,
-        conn,
-        player_id: int,
-        now,
-        products: list[int],
-        counts,
-    ) -> None:
-        for product_id in products:
-            if counts.get((product_id, MINIMUM_BATCH_SIZE), 0) >= 1:
-                continue
-            self._create_market_offer_conn(
-                conn,
-                player_id,
-                product_id,
-                MINIMUM_BATCH_SIZE,
-                now,
-            )
-            counts[(product_id, MINIMUM_BATCH_SIZE)] = 1
-
     def _ensure_bounds_conn(self, conn, player_id: int, now) -> None:
         placeholders = ",".join("?" for _ in PROCUREMENT_BATCH_SIZES)
         conn.execute(
