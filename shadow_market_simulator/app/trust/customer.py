@@ -44,6 +44,13 @@ def premium_allowance(score: float, regular_share: float = 0.0) -> float:
     return clamp(base + max(0.0, float(regular_share)) * 0.05, 0.0, 0.30)
 
 
+def price_demand_multiplier(unit_price: float, market_price: float, allowance: float) -> float:
+    markup = float(unit_price) / max(1.0, float(market_price)) - 1.0
+    discount = max(0.0, -markup)
+    excess = max(0.0, markup - max(0.0, float(allowance)))
+    return clamp(1.0 + discount * 1.2 - excess * 2.0, 0.45, 1.35)
+
+
 class CustomerTrustSimulationEngine(StaffRelationshipSimulationEngine):
     """Final live economy: structured ratings, repeat buyers and long-term trust."""
 
@@ -462,9 +469,11 @@ class CustomerTrustSimulationEngine(StaffRelationshipSimulationEngine):
             )
             quality_effect = 0.70 + (product_rating / 5.0) * 0.65
             unit_price = float(listing["price"]) / max(1, int(listing["pack_size"]))
-            trusted_market_price = float(listing["base_market_price"]) * (1.0 + allowance)
-            price_ratio = unit_price / max(1.0, trusted_market_price)
-            price_effect = clamp(math.exp(-1.45 * (price_ratio - 1.0)), 0.45, 1.40)
+            price_effect = price_demand_multiplier(
+                unit_price,
+                float(listing["base_market_price"]),
+                allowance,
+            )
             pack_effect = {1: 1.0, 2: 0.68, 5: 0.28}.get(int(listing["pack_size"]), 0.2)
             expected = (
                 float(listing["base_demand"]) / 24.0
