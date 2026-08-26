@@ -12,13 +12,13 @@ from .core.database import Database
 
 
 PRODUCTS = (
-    (1, "AMPHETAMINE", "Amphetamine", 6000, 18.0, 0.95),
-    (2, "MDMA", "MDMA", 8000, 10.0, 1.10),
-    (3, "COCAINE", "Cocaine", 11000, 6.0, 0.90),
+    (1, "AMPHETAMINE", "Amphetamine", 5000, 18.0, 0.95),
+    (2, "MDMA", "MDMA", 3500, 10.0, 1.10),
+    (3, "COCAINE", "Cocaine", 14000, 6.0, 0.90),
     (4, "MEPHEDRONE", "Mephedrone", 7000, 15.0, 1.00),
-    (6, "LSD", "LSD", 9000, 7.0, 0.85),
-    (7, "HASH", "Hash", 5000, 14.0, 0.90),
-    (8, "WEED", "Weed", 4000, 20.0, 0.85),
+    (6, "LSD", "LSD", 2000, 7.0, 0.85),
+    (7, "HASH", "Hash", 4000, 14.0, 0.90),
+    (8, "WEED", "Weed", 3000, 20.0, 0.85),
 )
 
 SUPPLIERS = (
